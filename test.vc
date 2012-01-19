@@ -1,21 +1,20 @@
-*:(@{int}<9> in) printarr; 
-*:(@{int}<9>, int b, int e) qsort;
+*:(@{int}<*> in) printarr; 
+*:(@{int}<*>, int b, int e) qsort;
 
 cexp:int:() main =
 {
-	{int}<9> foo = {3,7,2,8,1,6,2,3,8};
-	{int}<*> bar = foo;
+	{int}<*> foo = {3,7,2,8,1,6,2,3,8};
 	printarr:(foo);
-	qsort:(foo, 0, 8);
+	qsort:(foo, 0, foo(length));
 	printarr:(foo);
 	return 0;
 };
 
 cexp:int:(int) putchar;
-*:(@{int}<9> in) printarr = 
+*:(@{int}<*> in) printarr = 
 {
 	int i = 0;
-	while (i < 9)
+	while (i < in(length))
 	{
 		putchar:(in{i} + 48);
 		putchar:(32);
@@ -24,7 +23,7 @@ cexp:int:(int) putchar;
 	putchar:(10);
 };
 
-int:(@{int}<9> l, int b, int e, int p) partition =
+int:(@{int}<*> l, int b, int e, int p) partition =
 {
 	int pv = l{p};
 	int tmp = l{e};
@@ -49,7 +48,7 @@ int:(@{int}<9> l, int b, int e, int p) partition =
 	return st;
 };
 
-*:(@{int}<9> l, int b, int e) qsort = 
+*:(@{int}<*> l, int b, int e) qsort = 
 {
 	if (b >= e)
 		return;

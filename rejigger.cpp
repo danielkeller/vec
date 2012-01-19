@@ -14,9 +14,9 @@
 #define ERR_STMT 2 //error that makes the statement useless
 
 #define REJ_ERR(x, e)		\
-do {					\
+do {				\
 	yyerror(x, loc);	\
-	throw e;			\
+	throw e;		\
 } while(0)
 
 using namespace Rejigger; //allows us to mess around with func_cur and blocks_cur
@@ -132,7 +132,7 @@ Type * AssignExpr::DoExpr()
 		if (IS(ListType, rt))
 		{
 			ListType * lrt = dynamic_cast<ListType*>(rt);
-			after += lrt->contents->size() + ", " + lrt->length;
+			after += to_string(lrt->contents->size()) + ", " + to_string(lrt->length);
 		}
 		after += ")";
 	}

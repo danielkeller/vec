@@ -170,24 +170,26 @@ string ListAccExpr::output()
 	return "(" + lhs->output() + ".a[" + rhs->output() + "])";
 }
 
+//NOTE: temp expr does not include deref, to allow & use on -ify exprs
+//remember to put it in expressions that need it.
 string TmpExpr::output()
 {
-	return "(*__tmp" + to_string(num) + ")";
+	return "(__tmp" + to_string(num) + ")";
 };
 
 string TuplifyExpr::output()
 {
-	string ret = "(";
+	string ret = "*(";
 	for (int i = 0; i < exprs.size(); ++i)
-		ret += tmp->output() + ".a" + to_string(i) + " = " + exprs[i]->output() + ", ";
+		ret += tmp->output() + "->a" + to_string(i) + " = " + exprs[i]->output() + ", ";
 	return ret + tmp->output() + ")";
 }
 
 string ListifyExpr::output()
 {
-	string ret = "(";
+	string ret = "*(";
 	for (int i = 0; i < exprs.size(); ++i)
-		ret += tmp->output() + ".a[" + to_string(i) + "] = " + exprs[i]->output() + ", ";
+		ret += tmp->output() + "->a[" + to_string(i) + "] = " + exprs[i]->output() + ", ";
 	return ret + tmp->output() + ")";
 }
 
