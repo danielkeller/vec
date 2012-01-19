@@ -116,7 +116,6 @@ Type * AssignExpr::DoExpr()
 {
 	Type * ret = DoRef(lhs);
 	Type * rt = DoRef(rhs);
-
 	if (!ret->compatible(rt))
 		REJ_ERR("Expression uses incompatible types, "
 			+ ret->to_str() + " != " + rt->to_str(), ERR_STMT);
