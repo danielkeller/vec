@@ -5,7 +5,7 @@ cexp:int:() main =
 {
 	{int}<*> foo = {3,7,2,8,1,6,2,3,8};
 	printarr:(foo);
-	qsort:(foo, 0, foo(length));
+	qsort:(foo, 0, foo(length) - 1);
 	printarr:(foo);
 	return 0;
 };
@@ -53,7 +53,7 @@ int:(@{int}<*> l, int b, int e, int p) partition =
 	if (b >= e)
 		return;
 	printarr:(l);
-	int pv = b;
+	int pv = (b+e)/2;
 	pv = partition:(l, b, e, pv);
 	qsort:(l, b, pv-1);
 	qsort:(l, pv+1, e);
