@@ -193,6 +193,11 @@ string ListifyExpr::output()
 	return ret + tmp->output() + ")";
 }
 
+string ConcatExpr::output()
+{
+	return "";
+}
+
 string RefExpr::output()
 {
 	return "(&" + to->output() + ")";

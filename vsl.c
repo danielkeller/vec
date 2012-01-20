@@ -8,11 +8,15 @@ void vsl_init_LaX(LaX * La, size_t sz, int num)
 	La->len = num;
 }
 
-LaX * vsl_LaX_assign_LnX(LaX * La, void * Ln, size_t sz, int num)
+LaX vsl_LaX_assign_LnX(LaX * La, void * Ln, size_t sz, int num)
 {
 	free(La->a);
 	posix_memalign(&(La->a), 16, sz * num);
 	memcpy(La->a, Ln, sz * num);
 	La->len = num;
-	return La;
+	return *La;
 }
+/*
+LaX * vsl_LaX_concat_LaX(LaX * Ll, LaX * Lr, size_t sz)
+{
+*/

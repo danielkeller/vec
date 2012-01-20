@@ -235,6 +235,11 @@ Type * ListifyExpr::DoExpr()
 	return t;
 }
 
+Type * ConcatExpr::DoExpr()
+{
+	return 0;
+}
+
 Type * RefExpr::DoExpr()
 {
 	return to->DoExpr();
@@ -372,7 +377,8 @@ void VarDecl::DoStmt()
 			init = 0;
 		}
 	}
-	else if (type->nontriv())
+
+	if (type->nontriv())
 	{
 	//	ListType * lt = dynamic_cast<ListType*>(type->to);
 	//	if (lt && lt->length == ANY)

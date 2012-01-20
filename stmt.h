@@ -236,6 +236,15 @@ struct ListifyExpr : public Expr, public EList , public TmpUser
 	ListifyExpr(EList & li, YYLTYPE l) : EList(li) {loc = l;}
 };
 
+struct ConcatExpr : public Expr, public TmpUser
+{
+	Expr *lhs, *rhs;
+	string output();
+	Type * DoExpr();
+	bool lval() {return false;}
+	ConcatExpr(Expr * l, Expr * r, YYLTYPE lo) : lhs(l), rhs(r) {loc = lo;}
+};
+
 struct RefExpr : public Expr
 {
 	Expr * to;

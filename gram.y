@@ -313,6 +313,9 @@ inclusive_or_expression
 concat_expression
 	: inclusive_or_expression
 	| concat_expression '$' inclusive_or_expression
+	{
+		$$ = new ConcatExpr($1, $3, @2);
+	}
 	;
 
 logical_and_expression
