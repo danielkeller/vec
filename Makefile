@@ -32,4 +32,5 @@ rem : clean vec
 
 test : vec test.vc vsl.c
 	./v $@.vc > $@.c
-	gcc -g $@.c vsl.c -o $@
+	./v vvsl.vc > vvsl.c
+	gcc -g $@.c vsl.c vvsl.c -o $@
