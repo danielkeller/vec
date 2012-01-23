@@ -186,10 +186,10 @@ void AnyType::mergep(Type *t)
 
 string ListType::c_equiv()
 {
-	if (length == ANY)
+//	if (length == ANY)
 		return "struct { int len; " + contents->c_equiv() + "* a;}";
-	else
-		return "struct { " + contents->c_equiv() + " a[" + to_string(length) + "];}";
+//	else
+//		return "struct { " + contents->c_equiv() + " a[" + to_string(length) + "];}";
 }
 
 bool ListType::abstract()
@@ -239,22 +239,22 @@ int TensorType::size()
 
 string TensorType::c_equiv()
 {
-	if (dims.size() == 0) //could maybe be void?
-		return "struct {int dim; int * len; " + contents->c_equiv() + "* a;};"; 
+//	if (dims.size() == 0) //could maybe be void?
+//		return "struct {int dim; int * len; " + contents->c_equiv() + "* a;};"; 
 	
-	if (count(dims.begin(), dims.end(), ANY))
-	{
+//	if (count(dims.begin(), dims.end(), ANY))
+//	{
 		string res = "struct {int len[" + to_string(dims.size())
 			+ "]; " + contents->c_equiv() + " ";
 		for (int i=0; i<dims.size(); ++i)
 			res += "*";
 		return res + "a;}";
-	}
+//	}
 	
-	string res = "struct {" + contents->c_equiv() + " a";
-	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
-		res += "[" + to_string(*it) + "]";
-	return res + ";}";
+//	string res = "struct {" + contents->c_equiv() + " a";
+//	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
+//		res += "[" + to_string(*it) + "]";
+//	return res + ";}";
 }
 
 string TensorType::mangle()
@@ -275,12 +275,12 @@ bool TensorType::abstract()
 
 	return false;
 }
-
+/*
 bool TensorType::nontriv()
 {
 	return dims.size() == 0 || find(dims.begin(), dims.end(), ANY) != dims.end();
 }
-
+*/
 void TensorType::mergep(Type *t)
 {
 	TensorType * tt = dynamic_cast<TensorType*>(t);
@@ -364,7 +364,7 @@ string TupleType::c_equiv()
 		ret += it->second->c_equiv() + " a" + to_string(n);
 		++n;
 		if (!it->second->simple()) //align non trivial types to 16b
-			ret += " __attribute__ ((aligned (16)))"; //TODO: windows?
+//			ret += " __attribute__ ((aligned (16)))"; //TODO: windows?
 		ret += "; ";
 	}
 	return ret + "}";

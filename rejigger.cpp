@@ -51,10 +51,10 @@ Type * DoRef(Expr *& e)
 		if (!IS(RefExpr,e) && !IS(DeRefExpr,e))
 			e = new DeRefExpr(e, e->loc);
 	}
-	else if ((IS(VarExpr,e) && !ret->simple()))
-	{
-		e = new DeRefExpr(e, e->loc);
-	}
+//	else if ((IS(VarExpr,e) && !ret->simple()))
+//	{
+//		e = new DeRefExpr(e, e->loc);
+//	}
 	return ret;
 }
 
@@ -76,6 +76,7 @@ VarDecl * TmpExpr::MakeDecl()
 	tmpdec->name = "__tmp" + to_string(num);
 	tmpdec->type = new TypeWrapper(t);
 	tmpdec->init = 0;
+	tmpdec->DoStmt();
 	return tmpdec;
 }
 
@@ -99,7 +100,7 @@ Type * SimpleExpr::DoExpr()
 	
 		if (lt)
 		{
-			if (!IS(RefType, rt) && rt->simple() && !IS(RefExpr, rhs))
+			if (!IS(RefType, rt) && !IS(RefExpr, rhs))
 				rhs = new RefExpr(rhs, loc);
 			if (!lt->compatible(rt) && !lt->to->compatible(rt))
 				yyerror("Reference assignment to incompatible type, "
@@ -125,7 +126,7 @@ Type * AssignExpr::DoExpr()
 	if (ret->nontriv())
 	{
 		simple = false;
-		before = "vsl_" + ret->api_name() + "_assign_" + rt->api_name() + "(("
+		before = "*vsl_" + ret->api_name() + "_assign_" + rt->api_name() + "(("
 			+ ret->api_name() + "*)&";
 		between = ", (" + rt->api_name() + "*)&";
 		after = ", ";
@@ -265,6 +266,15 @@ Type * CallExpr::DoExpr()
 	if (!func)
 		REJ_ERR("No compatible function declared: " + name + ":" + t->to_str(), ERR_STMT);
 	
+	//auto ref-ify args
+	for (int i = 0; i < exprs.size(); ++i)
+	{
+		if (IS(RefType, ((TypeWrapper*)func->argst->contents[i].second)->to) && !IS(RefType, t->contents[i].second))
+			exprs[i] = new RefExpr(exprs[i], loc);
+		else if (!IS(RefType, ((TypeWrapper*)func->argst->contents[i].second)->to) && IS(RefType, t->contents[i].second))
+			exprs[i] = new DeRefExpr(exprs[i], loc);
+	}
+
 	return func->rett->to;
 }
 
@@ -319,6 +329,18 @@ void WhileStmt::DoStmt()
 
 void VarDecl::DoStmt()
 {
+	
+	if (type->nontriv())
+	{
+		ListType * lt = dynamic_cast<ListType*>(type->to);
+		if (lt)
+		{
+			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
+				"((" + type->api_name() + "*)&" + name + ", " + to_string(lt->contents->size())
+				+ ", " + to_string(lt->length) + ")", type->to, loc), loc));
+		}
+	}
+
 	if (init)
 	{
 		Type * exprt = init->DoExpr();
@@ -377,17 +399,6 @@ void VarDecl::DoStmt()
 			init = 0;
 		}
 	}
-
-	if (type->nontriv())
-	{
-	//	ListType * lt = dynamic_cast<ListType*>(type->to);
-	//	if (lt && lt->length == ANY)
-	//	{
-			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
-			"((" + type->api_name() + "*)" + name + ", 0, 0)", type->to, loc), loc));
-	//		return;
-	//	}
-	}
 }
 
 void Block::DoStmt()
@@ -406,6 +417,7 @@ void Block::DoStmt()
 		}
 	}
 	
+	//insert initialization stmts from normal decls before DoStmt'ing all stmts
 	stmts.insert(stmts.begin(), init_stmts.begin(), init_stmts.end());
 	init_stmts.clear();
 
@@ -422,9 +434,14 @@ void Block::DoStmt()
 		}
 	}
 
+	//add temporary declarations for any stmt that needs it. MakeDecl calls DoStmt
 	for (vector<TmpUser*>::iterator it = tmps.begin(); it != tmps.end(); ++it)
 		(*it)->MakeDecl();
 	
+	//insert init statements for temp declarations
+	stmts.insert(stmts.begin(), init_stmts.begin(), init_stmts.end());
+	init_stmts.clear();
+
 	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
 	{
 		RefType * rt = dynamic_cast<RefType*>((*it)->type->to);

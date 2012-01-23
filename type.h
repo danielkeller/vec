@@ -107,7 +107,7 @@ struct ListType : public Type
 	string c_equiv();
 	string mangle() {return "L" + mang_dim(length) + contents->mangle();}
 	bool abstract();
-	bool nontriv() {return length < 0;}
+	bool nontriv() {return true;}
 	string api_name() {return length > 0 ? "LnX" : (length == ANY ? "LaX" : "LvX");}
 	void mergep(Type *t);
 	string to_str();
@@ -127,7 +127,7 @@ struct TensorType : public Type
 	string c_equiv();
 	string mangle();
 	bool abstract();
-	bool nontriv();
+	bool nontriv() {return true;}
 	void mergep(Type *t);
 	string to_str();
 	TensorType() : contents(0) {};

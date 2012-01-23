@@ -12,10 +12,10 @@ string TypeDec(Type * type)
 	RefType * rt = dynamic_cast<RefType*>(type);
 	if (rt)
 		return rt->to->mangle() + "*";
-	else if (type->simple())
+//	else if (type->simple())
 		return type->mangle();
-	else 
-		return type->mangle() + "*";
+//	else 
+//		return type->mangle() + "*";
 }
 
 string NullStmt::output()
@@ -30,7 +30,7 @@ string VarDecl::output()
 //	else
 		return TypeDec(type->to) + " " + name + ";";
 }
-
+/*
 string VarDecl::alloc(int n)
 {
 #ifdef WINDOWS
@@ -40,7 +40,15 @@ string VarDecl::alloc(int n)
 	return type->simple() ? "" : "posix_memalign((void**)&" + name + ", 16, sizeof(*" +
 		name + ")*" + to_string(n) + ");";
 #endif
-}
+}*/ /*
+string VarDecl::alloc(int)
+{
+	ListType * lt = dynamic_cast<ListType*>(type->to);
+	if (lt)
+		return "vsl_init_" + type->api_name() + "((" + type->api_name() + "*)&" + name + ", " +
+			lt->contents->size() + ", " + lt->length + ");";
+	return "";
+}*/
 
 string Func::output()
 {
@@ -70,18 +78,18 @@ string Block::output()
 	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
 		ret += (*it)->output();
 		
-	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
-		if (!(*it)->type->simple())
-			ret += (*it)->alloc(1);
+//	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
+//		if (!(*it)->type->simple())
+//			ret += (*it)->alloc(1);
 			
 	for (vector<Stmt*>::iterator it = stmts.begin(); it != stmts.end(); ++it)
 		ret += (*it)->output();
 		
 	ret += "epi_" + to_string(this) + ": 1;";
 	
-	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
-		if (!(*it)->type->simple())
-			ret += "free(" + (*it)->name + ");";
+//	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
+//		if (!(*it)->type->simple())
+//			ret += "free(" + (*it)->name + ");";
 	
 	if (parent)
 		ret += "if (__ret_flag) goto epi_" + to_string(parent) + ";";
@@ -172,25 +180,26 @@ string ListAccExpr::output()
 
 //NOTE: temp expr does not include deref, to allow & use on -ify exprs
 //remember to put it in expressions that need it.
+//i think this doesnt apply when everything isnt a pointer
 string TmpExpr::output()
 {
 	return "(__tmp" + to_string(num) + ")";
 };
 
 string TuplifyExpr::output()
-{
+{ //the * and & thing is a (stupid) hack to get the , operator to return an lval.
 	string ret = "*(";
 	for (int i = 0; i < exprs.size(); ++i)
-		ret += tmp->output() + "->a" + to_string(i) + " = " + exprs[i]->output() + ", ";
-	return ret + tmp->output() + ")";
+		ret += tmp->output() + ".a" + to_string(i) + " = " + exprs[i]->output() + ", ";
+	return ret + "&" + tmp->output() + ")";
 }
 
 string ListifyExpr::output()
 {
 	string ret = "*(";
 	for (int i = 0; i < exprs.size(); ++i)
-		ret += tmp->output() + "->a[" + to_string(i) + "] = " + exprs[i]->output() + ", ";
-	return ret + tmp->output() + ")";
+		ret += tmp->output() + ".a[" + to_string(i) + "] = " + exprs[i]->output() + ", ";
+	return ret + "&" + tmp->output() + ")";
 }
 
 string ConcatExpr::output()
