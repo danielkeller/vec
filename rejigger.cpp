@@ -133,7 +133,7 @@ Type * AssignExpr::DoExpr()
 		if (IS(ListType, rt))
 		{
 			ListType * lrt = dynamic_cast<ListType*>(rt);
-			after += to_string(lrt->contents->size()) + ", " + to_string(lrt->length);
+			after += to_string(lrt->contents->size());
 		}
 		after += ")";
 	}
@@ -337,7 +337,7 @@ void VarDecl::DoStmt()
 		{
 			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
 				"((" + type->api_name() + "*)&" + name + ", " + to_string(lt->contents->size())
-				+ ", " + to_string(lt->length) + ")", type->to, loc), loc));
+				+ ", " + to_string(lt->length < 0 ? 0 : lt->length) + ")", type->to, loc), loc));
 		}
 	}
 

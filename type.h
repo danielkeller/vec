@@ -108,7 +108,7 @@ struct ListType : public Type
 	string mangle() {return "L" + mang_dim(length) + contents->mangle();}
 	bool abstract();
 	bool nontriv() {return true;}
-	string api_name() {return length > 0 ? "LnX" : (length == ANY ? "LaX" : "LvX");}
+	string api_name() {return length > 0 ? "LaX" : (length == ANY ? "LaX" : "LvX");}
 	void mergep(Type *t);
 	string to_str();
 	ListType(int l, Type *c) : length(l), contents(c) {}
