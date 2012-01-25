@@ -1,9 +1,25 @@
 *:(@{int}<*> in) printarr; 
 *:(@{int}<*>, int b, int e) qsort;
 
+type testt = (int x, int);
+
+:((int x, int) i) bar =
+{
+	i(x) = i(x) + 1;
+};
+
+:(testt i) bar =
+{
+	i(x) = i(x) + 1;
+};
+
 cexp:int:() main =
 {
 	{int}<*> foo = {3,7,2,8,1,6,2,3,8};
+	int in = 6;
+	testt t = (in, 0);
+	bar:(t);
+	bar:((in, 0));
 	printarr:(foo);
 	qsort:(foo, 0, foo(length) - 1);
 	printarr:(foo);

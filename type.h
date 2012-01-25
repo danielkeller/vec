@@ -13,7 +13,7 @@ struct Type
 	string name;
 	virtual int size() = 0;
 	virtual string c_equiv() = 0; //c version of this type
-	virtual string mangle() = 0; //"name mangled" short form version
+	virtual string mangle(bool n = false) = 0; //"name mangled" short form version
 	virtual bool abstract() = 0; //can an object of this type be instantiated?
 	virtual bool nontriv() = 0; //type is non-trivial, ie needs lib routine to use
 	virtual string api_name() {return "";}
@@ -35,7 +35,7 @@ struct TypeWrapper : public Type
 	Type * to;
 	int size() {return to->size();}
 	string c_equiv() {return to->c_equiv();}
-	string mangle() {return to->mangle();}
+	string mangle(bool n = false) {return to->mangle(n);}
 	bool abstract() {return to->abstract();}
 	bool nontriv() {return to->nontriv();}
 	string api_name() {return to->api_name();}
@@ -54,7 +54,7 @@ struct PrimitiveType : public Type
 	enum SizeP { sA = ANY, s8 = 1, s16 = 2, s32 = 4, s64 = 8, sV = VAR } psize;
 	int size();
 	string c_equiv();
-	string mangle() {return (prim == Int ? "I" : "F") + mang_dim(psize);}
+	string mangle(bool n = false) {return n && name != "" ? name : ((prim == Int ? "I" : "F") + mang_dim(psize));}
 	bool abstract();
 	bool nontriv() {return psize == sV;}
 	string to_str();
@@ -71,7 +71,7 @@ struct RefType : public Type
 	Type * to;
 	int size() {return sizeof(void*);}
 	string c_equiv();
-	string mangle() {return "R" + to->mangle();}
+	string mangle(bool n = false) {return n && name != "" ? name : ("R" + to->mangle(n));}
 	void mergep(Type *t);
 	bool abstract() {return false;}
 	bool nontriv() {return false;}
@@ -88,7 +88,7 @@ struct AnyType : public Type
 {
 	int size() {return 1;}
 	string c_equiv() {return "void";}
-	string mangle() {return "X";}
+	string mangle(bool n = false) {return "X";}
 	bool abstract() {return true;}
 	bool nontriv() {return false;}
 	void mergep(Type *t);
@@ -105,7 +105,7 @@ struct ListType : public Type
 	Type * contents;
 	int size() {return length==VAR ? sizeof(void*) : length * contents->size();}
 	string c_equiv();
-	string mangle() {return "L" + mang_dim(length) + contents->mangle();}
+	string mangle(bool n = false) {return n && name != "" ? name : ("L" + mang_dim(length) + contents->mangle(n));}
 	bool abstract();
 	bool nontriv() {return true;}
 	string api_name() {return length > 0 ? "LaX" : (length == ANY ? "LaX" : "LvX");}
@@ -125,7 +125,7 @@ struct TensorType : public Type
 	Type * contents;
 	int size();
 	string c_equiv();
-	string mangle();
+	string mangle(bool n = false);
 	bool abstract();
 	bool nontriv() {return true;}
 	void mergep(Type *t);
@@ -146,7 +146,7 @@ struct TupleType : public Type
 	TupleMap contents;
 	int size();
 	string c_equiv();
-	string mangle();
+	string mangle(bool n = false);
 	void mergep(Type *t);
 	string to_str();
 	bool abstract();

@@ -17,6 +17,11 @@ CPPFLAGS	= -g -rdynamic
 
 OBJ	= gram.o scan.o main.o   type.o   stmt.o   tables.o   rejigger.o
 
+test : vec test.vc vsl.c
+	./v $@.vc > $@.c
+	./v vvsl.vc > vvsl.c
+	gcc -g $@.c vsl.c vvsl.c -o $@
+
 vec :	$(OBJ)
 	$(LINK) $(CFLAGS) $(OBJ) -o vec
 
@@ -29,8 +34,3 @@ rem : clean vec
 
 #vsl.o :
 #	gcc -c vsl.c
-
-test : vec test.vc vsl.c
-	./v $@.vc > $@.c
-	./v vvsl.vc > vvsl.c
-	gcc -g $@.c vsl.c vvsl.c -o $@

@@ -257,12 +257,15 @@ string TensorType::c_equiv()
 //	return res + ";}";
 }
 
-string TensorType::mangle()
+string TensorType::mangle(bool n)
 {
+	if (n && name != "")
+		return name;
+
 	string ret = "V";
 	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
 		ret += to_string(*it) + "d";
-	return ret;
+	return ret + contents->mangle(n);
 }
 
 bool TensorType::abstract()
@@ -361,7 +364,7 @@ string TupleType::c_equiv()
 	int n = 0;
 	for (TupleMap::iterator it = contents.begin(); it != contents.end(); ++it)
 	{
-		ret += it->second->c_equiv() + " a" + to_string(n);
+		ret += it->second->c_equiv() + " a" + to_string(n) + ";";
 		++n;
 		if (!it->second->simple()) //align non trivial types to 16b
 //			ret += " __attribute__ ((aligned (16)))"; //TODO: windows?
@@ -370,11 +373,14 @@ string TupleType::c_equiv()
 	return ret + "}";
 }
 
-string TupleType::mangle()
+string TupleType::mangle(bool n)
 {
+	if (n && name != "")
+		return name;
+
 	string ret = "T";
 	for (TupleMap::iterator it = contents.begin(); it != contents.end(); ++it)
-		ret += it->second->mangle();
+		ret += it->second->mangle(n);
 	return ret + "t";
 }
 
@@ -421,6 +427,7 @@ bool TupleType::compatible(Type*t)
 	return true;
 }
 
+//check if args are compatible with function
 bool TupleType::ref_compatible(TupleType*tt)
 {
 	if (contents.size() != tt->contents.size())
@@ -435,9 +442,11 @@ bool TupleType::ref_compatible(TupleType*tt)
 		rt = dynamic_cast<RefType*>(tt->contents[i].second);
 		tr = rt ? rt->to : tt->contents[i].second;
 
-		if (!tl->compatible(tr))
+	//	if (!tl->compatible(tr))
+		if (tl->mangle() != tr->mangle())
 			return false;
 	}
+	//then check if compatible
 	
 	return true;
 }

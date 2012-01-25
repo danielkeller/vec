@@ -394,8 +394,12 @@ void VarDecl::DoStmt()
 		
 		if (init) //recheck for init
 		{
-			init_stmts.push_back(new ExprStmt(new AssignExpr(
-				new VarExpr(name, type, loc), init, loc), loc));
+			if (IS(RefType, type->to))
+				init_stmts.push_back(new ExprStmt(new SimpleExpr(Ops::ref_assign,
+					new VarExpr(name, type, loc), init, loc), loc));
+			else
+				init_stmts.push_back(new ExprStmt(new AssignExpr(
+					new VarExpr(name, type, loc), init, loc), loc));
 			init = 0;
 		}
 	}
