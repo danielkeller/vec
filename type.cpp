@@ -428,7 +428,7 @@ bool TupleType::compatible(Type*t)
 }
 
 //check if args are compatible with function
-bool TupleType::ref_compatible(TupleType*tt)
+bool TupleType::ref_compatible(TupleType*tt, bool strong)
 {
 	if (contents.size() != tt->contents.size())
 		return false;
@@ -443,7 +443,7 @@ bool TupleType::ref_compatible(TupleType*tt)
 		tr = rt ? rt->to : tt->contents[i].second;
 
 	//	if (!tl->compatible(tr))
-		if (tl->mangle() != tr->mangle())
+		if (tl->mangle(strong) != tr->mangle(strong))
 			return false;
 	}
 	//then check if compatible

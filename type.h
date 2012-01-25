@@ -153,7 +153,7 @@ struct TupleType : public Type
 	bool nontriv() {return false;}
 	bool simple() {return false;}
 	bool compatible(Type*);
-	bool ref_compatible(TupleType*); //for function args
+	bool ref_compatible(TupleType*, bool); //for function args
 	void align();
 	Type * clone();
 	~TupleType();

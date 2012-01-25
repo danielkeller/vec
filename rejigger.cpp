@@ -257,9 +257,9 @@ Type * CallExpr::DoExpr()
 	for(uint i = 0; i < exprs.size(); ++i)
 		t->contents.push_back(make_pair("", exprs[i]->DoExpr()));
 
-//	string mname = name + "$" + t->mangle();
+//	string mname = name + "$" + t->mangle(true);
 	for (vector<Func*>::iterator it = file_cur.contents.begin(); it != file_cur.contents.end(); ++it)
-		if ((*it)->name == name && (*it)->argst->ref_compatible(t))
+		if ((*it)->name == name && (*it)->argst->ref_compatible(t, true))
 //		if ((*it)->mname == mname) 
 			func = *it;
 	
@@ -473,7 +473,7 @@ void Func::DoStmt()
 //	if (cexp)
 //		mname = name;
 //	else
-		mname = name + "$" + argst->mangle();
+		mname = name + "$" + argst->mangle(true);
 
 	if (!conts)
 	{
