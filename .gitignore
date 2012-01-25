@@ -1,0 +1,13 @@
+# vim temps
+*.swp
+# objects
+*.o
+# backups
+*.old
+# temp asm files for testing
+*.s
+# output files
+vec
+test.c
+test
+y.output
