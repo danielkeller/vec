@@ -189,7 +189,7 @@ string TmpExpr::output()
 string TuplifyExpr::output()
 { //the * and & thing is a (stupid) hack to get the , operator to return an lval.
 	string ret = "*(";
-	for (int i = 0; i < exprs.size(); ++i)
+	for (uint i = 0; i < exprs.size(); ++i)
 		ret += tmp->output() + ".a" + to_string(i) + " = " + exprs[i]->output() + ", ";
 	return ret + "&" + tmp->output() + ")";
 }
@@ -197,7 +197,7 @@ string TuplifyExpr::output()
 string ListifyExpr::output()
 {
 	string ret = "*(";
-	for (int i = 0; i < exprs.size(); ++i)
+	for (uint i = 0; i < exprs.size(); ++i)
 		ret += tmp->output() + ".a[" + to_string(i) + "] = " + exprs[i]->output() + ", ";
 	return ret + "&" + tmp->output() + ")";
 }
@@ -223,7 +223,7 @@ string CallExpr::output()
 	if (exprs.size())
 	{
 		ret += exprs[0]->output();
-		for (int i=1; i<exprs.size(); ++i)
+		for (uint i=1; i<exprs.size(); ++i)
 			ret += ", " + exprs[i]->output();
 	}
 	return ret + ")";

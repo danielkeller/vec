@@ -13,7 +13,7 @@ LEX=	flex
 YFLAGS	= -dv
 LFLAGS	=
 CFLAGS	= -g -rdynamic
-CPPFLAGS	= -g -rdynamic
+CPPFLAGS	= -g -rdynamic -Wall
 
 OBJ	= gram.o scan.o main.o   type.o   stmt.o   tables.o   rejigger.o
 

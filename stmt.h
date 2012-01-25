@@ -39,8 +39,8 @@ struct Func : public Stmt
 	string output();
 	void DoStmt();
 	string CName() {return cexp ? name : mname;}
-	Func() : argst(0), rett(0), conts(0), cexp(false) {}
-	Func(TupleType *a, TypeWrapper *r, string n, YYLTYPE l) : argst(a), rett(r), name(n), conts(0), cexp(false) {loc = l;}
+	Func() : conts(0), argst(0), rett(0), cexp(false) {}
+	Func(TupleType *a, TypeWrapper *r, string n, YYLTYPE l) : conts(0), argst(a), rett(r), name(n), cexp(false) {loc = l;}
 };
 
 struct Block : public Stmt
@@ -146,7 +146,7 @@ struct SimpleExpr : public Expr
 	string output();
 	Type * DoExpr();
 	bool lval() {return false;}
-	SimpleExpr(Ops::Sop o, Expr * l, Expr * r, YYLTYPE lo) : op(o), lhs(l), rhs(r) {loc = lo;}
+	SimpleExpr(Ops::Sop o, Expr * l, Expr * r, YYLTYPE lo) : lhs(l), rhs(r), op(o) {loc = lo;}
 };
 
 struct AssignExpr : public Expr
@@ -160,7 +160,7 @@ struct AssignExpr : public Expr
 	string output();
 	Type * DoExpr();
 	bool lval() {return true;}
-	AssignExpr(Expr * l, Expr * r, YYLTYPE lo) : simple(true), lhs(l), rhs(r) {loc = lo;}
+	AssignExpr(Expr * l, Expr * r, YYLTYPE lo) : lhs(l), rhs(r), simple(true) {loc = lo;}
 };
 
 struct TupleAccExpr : public Expr

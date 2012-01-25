@@ -246,7 +246,7 @@ string TensorType::c_equiv()
 //	{
 		string res = "struct {int len[" + to_string(dims.size())
 			+ "]; " + contents->c_equiv() + " ";
-		for (int i=0; i<dims.size(); ++i)
+		for (uint i=0; i<dims.size(); ++i)
 			res += "*";
 		return res + "a;}";
 //	}
@@ -311,7 +311,7 @@ bool TensorType::compatible(Type*t)
 		return true;
 	if (dims.size() != tt->dims.size())
 		return false;
-	for (int i=0; i<dims.size(); ++i)
+	for (uint i=0; i<dims.size(); ++i)
 		if (dims[i] != ANY && dims[i] != tt->dims[i])
 			return false;
 	return true;
@@ -396,7 +396,7 @@ void TupleType::mergep(Type *t)
 {
 	TupleType * tt = dynamic_cast<TupleType*>(t);
 	
-	for (int i=0; i < contents.size() && i < tt->contents.size(); ++i)
+	for (uint i=0; i < contents.size() && i < tt->contents.size(); ++i)
 		merge(contents[i].second, tt->contents[i].second);
 }
 
@@ -420,7 +420,7 @@ bool TupleType::compatible(Type*t)
 	if (contents.size() != tt->contents.size())
 		return false; //this stricter type of compatibility may be changed later
 	
-	for (int i=0; i < contents.size() && i < tt->contents.size(); ++i)
+	for (uint i=0; i < contents.size() && i < tt->contents.size(); ++i)
 		if (!contents[i].second->compatible(tt->contents[i].second))
 			return false;
 	
@@ -433,7 +433,7 @@ bool TupleType::ref_compatible(TupleType*tt)
 	if (contents.size() != tt->contents.size())
 		return false;
 		
-	for (int i=0; i < contents.size() && i < tt->contents.size(); ++i)
+	for (uint i=0; i < contents.size() && i < tt->contents.size(); ++i)
 	{
 		RefType * rt;
 		Type * tl, * tr;

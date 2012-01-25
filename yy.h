@@ -67,6 +67,7 @@ class Stmt;
 #include "y.tab.h"
 
 #define IS(T,x) ((bool)dynamic_cast<T*>(x))
+typedef unsigned int uint;
 
 template <class T>
 inline string to_string (const T& t)
@@ -82,7 +83,7 @@ extern map<string,Type*> typedefs;
 extern vector<string> funcdefs;
 class File;
 extern File file_cur;
-extern int blocks;
+extern uint blocks;
 
 extern int yyparse();
 int yylex ();

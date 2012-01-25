@@ -158,7 +158,7 @@ Type * TupleAccExpr::DoExpr()
 	else if (!tt)
 		REJ_ERR("Operand not of tuple type", ERR_STMT);
 
-	int i=0;
+	uint i=0;
 	for (; i < tt->contents.size(); ++i)
 		if (tt->contents[i].first == rhs)
 			break;
@@ -209,7 +209,7 @@ Type * ListAccExpr::DoExpr()
 Type * TuplifyExpr::DoExpr()
 {
 	TupleType * t = new TupleType();
-	for(int i = 0; i < exprs.size(); ++i)
+	for(uint i = 0; i < exprs.size(); ++i)
 		t->contents.push_back(make_pair("a" + to_string(i), DoRef(exprs[i])));
 
 	if (tmp) //don't make extra temps on further DoExpr passes
@@ -223,7 +223,7 @@ Type * TuplifyExpr::DoExpr()
 Type * ListifyExpr::DoExpr()
 {
 	ListType * t = new ListType(exprs.size(), DoRef(exprs[0]));
-	for(int i = 1; i < exprs.size(); ++i)
+	for(uint i = 1; i < exprs.size(); ++i)
 		if (!t->contents->compatible(DoRef(exprs[i])))
 			yyerror("Types in listify are not compatible: "
 				+ t->contents->to_str() + " != " + DoRef(exprs[i])->to_str(), loc);
@@ -254,7 +254,7 @@ Type * DeRefExpr::DoExpr()
 Type * CallExpr::DoExpr()
 {
 	TupleType * t = new TupleType();
-	for(int i = 0; i < exprs.size(); ++i)
+	for(uint i = 0; i < exprs.size(); ++i)
 		t->contents.push_back(make_pair("", exprs[i]->DoExpr()));
 
 //	string mname = name + "$" + t->mangle();
@@ -267,7 +267,7 @@ Type * CallExpr::DoExpr()
 		REJ_ERR("No compatible function declared: " + name + ":" + t->to_str(), ERR_STMT);
 	
 	//auto ref-ify args
-	for (int i = 0; i < exprs.size(); ++i)
+	for (uint i = 0; i < exprs.size(); ++i)
 	{
 		if (IS(RefType, ((TypeWrapper*)func->argst->contents[i].second)->to) && !IS(RefType, t->contents[i].second))
 			exprs[i] = new RefExpr(exprs[i], loc);

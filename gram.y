@@ -5,13 +5,13 @@
 #include "tables.h"
 #include "rejigger.h"
 
-int yyerrno = 0;
+uint yyerrno = 0;
 map<string,Type*> typedefs;
 vector<string> funcdefs;
 File file_cur;
 Func * func_cur = 0;
 vector<Block*> blocks_cur;
-int blocks = 0;
+uint blocks = 0;
 
 struct TypeWrapper;
 TypeWrapper * resolve(string name);
