@@ -213,12 +213,12 @@ bool ListType::compatible(Type * t)
 	ListType * lt = dynamic_cast<ListType*>(t);
 	return lt && (length < 0 || length == lt->length) && contents->compatible(lt->contents);
 }
-
+/*
 void ListType::align()
 {
 	if (length >= 0 && contents->size() * length % 16 != 0) //round up to 16b
 		length += 16/contents->size() - length % (16/contents->size());
-}
+}*/
 
 Type * ListType::clone()
 {
@@ -316,12 +316,12 @@ bool TensorType::compatible(Type*t)
 			return false;
 	return true;
 }
-
+/*
 void TensorType::align()
 {
 	if (dims.size() && !count(dims.begin(), dims.end(), ANY) && contents->size() * dims.back() % 16 != 0)
 		dims.back() += 16/contents->size() - dims.back() % (16/contents->size());
-}
+}*/
 
 Type * TensorType::clone()
 {
@@ -338,19 +338,19 @@ int TupleType::size()
 	int largest = 0;
 	for (TupleMap::iterator it = contents.begin(); it != contents.end(); ++it)
 	{
-		if (it->second->simple()) //align trivial types to size
-		{
+//		if (it->second->simple()) //align trivial types to size
+//		{
 			if (it->second->size() > largest)
 				largest = it->second->size();
 			if (posn % it->second->size() != 0)
 				posn += it->second->size() - posn%it->second->size();
-		}
-		else 
-		{
+//		}
+//		else 
+//		{
 			largest = 16;
 			if (posn % 16 != 0) //align non trivial types to 16b
 				posn += 16 - posn%16;
-		}
+//		}
 		posn += it->second->size();
 	}
 	if (posn && posn % largest != 0) //make size multiple of biggest aligment
@@ -366,7 +366,7 @@ string TupleType::c_equiv()
 	{
 		ret += it->second->c_equiv() + " a" + to_string(n) + ";";
 		++n;
-		if (!it->second->simple()) //align non trivial types to 16b
+//		if (!it->second->simple()) //align non trivial types to 16b
 //			ret += " __attribute__ ((aligned (16)))"; //TODO: windows?
 		ret += "; ";
 	}
@@ -450,12 +450,12 @@ bool TupleType::ref_compatible(TupleType*tt, bool strong)
 	
 	return true;
 }
-
+/*
 void TupleType::align()
 {
 	for (TupleMap::iterator it = contents.begin(); it != contents.end(); ++it)
 		it->second->align();
-}
+}*/
 
 Type * TupleType::clone()
 {

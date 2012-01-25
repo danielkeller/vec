@@ -32,7 +32,7 @@ int tmpnum = 1;
 void AddType(Type*type)
 {
 	type = type->clone();
-	type->align();
+//	type->align();
 	bool included = false;
 	for(vector<Type*>::iterator it = file_cur.types.begin(); it != file_cur.types.end(); ++it)
 		if ((*it)->mangle() == type->mangle())
@@ -359,7 +359,7 @@ void VarDecl::DoStmt()
 					yyerror("Cannot referece a non-lval expression", loc);
 					init = 0;
 				}
-				else if (rt->to->simple() && !IS(RefExpr, init))
+				else if (!IS(RefExpr, init))
 					init = new RefExpr(init, loc);
 				else //initializer must be added after ref'd object is allocated
 				{

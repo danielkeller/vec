@@ -21,9 +21,9 @@ struct Type
 //	virtual bool templ() = 0;
 	virtual void mergep(Type *t) = 0; //replace unknowns in this type with pointers to parts of t
 	virtual string to_str() = 0; //vc string representing this type
-	virtual bool simple() = 0; //trivial (ie scalar) type?
+//	virtual bool simple() = 0; //trivial (ie scalar) type?
 	virtual bool compatible(Type*) = 0; //can an object of type t be assigned one of this type?
-	virtual void align() = 0; //make the size of this type a multiple of 16 bytes
+//	virtual void align() = 0; //make the size of this type a multiple of 16 bytes
 	virtual Type * clone() = 0; //deep copy of this type
 	virtual ~Type() {};
 };
@@ -41,9 +41,9 @@ struct TypeWrapper : public Type
 	string api_name() {return to->api_name();}
 	string to_str() {return to->to_str();}
 	void mergep(Type *t);
-	bool simple() {return to->simple();}
+//	bool simple() {return to->simple();}
 	bool compatible(Type* t);
-	void align() {to->align();}
+//	void align() {to->align();}
 	Type * clone() {return new TypeWrapper(to->clone());}
 	TypeWrapper(Type *t) : to(t) {};
 };
@@ -60,9 +60,9 @@ struct PrimitiveType : public Type
 	string to_str();
 	void mergep(Type *t);
 	PrimitiveType(PrimT, SizeP);
-	bool simple() {return true;}
+//	bool simple() {return true;}
 	bool compatible(Type*);
-	void align() {}
+//	void align() {}
 	Type * clone() {return new PrimitiveType(*this);}
 };
 
@@ -77,9 +77,9 @@ struct RefType : public Type
 	bool nontriv() {return false;}
 	string to_str() {return "@" + to->to_str();}
 	RefType(Type*t) : to(t) {};
-	bool simple() {return true;}
+//	bool simple() {return true;}
 	bool compatible(Type*);
-	void align() {to->align();}
+//	void align() {to->align();}
 	Type * clone();
 	~RefType() {delete to;}
 };
@@ -93,9 +93,9 @@ struct AnyType : public Type
 	bool nontriv() {return false;}
 	void mergep(Type *t);
 	string to_str() {return "*";}
-	bool simple() {return true;}
+//	bool simple() {return true;}
 	bool compatible(Type*) {return true;}
-	void align() {}
+//	void align() {}
 	Type * clone();
 };
 
@@ -112,9 +112,9 @@ struct ListType : public Type
 	void mergep(Type *t);
 	string to_str();
 	ListType(int l, Type *c) : length(l), contents(c) {}
-	bool simple() {return false;}
+//	bool simple() {return false;}
 	bool compatible(Type*);
-	void align();
+//	void align();
 	Type * clone();
 	~ListType() {delete contents;}
 };
@@ -132,9 +132,9 @@ struct TensorType : public Type
 	string to_str();
 	TensorType() : contents(0) {};
 	TensorType(vector<int> d, Type* c) : dims(d), contents(c) {};
-	bool simple() {return false;}
+//	bool simple() {return false;}
 	bool compatible(Type*);
-	void align();
+//	void align();
 	Type * clone();
 	~TensorType() {delete contents;}
 };
@@ -151,7 +151,7 @@ struct TupleType : public Type
 	string to_str();
 	bool abstract();
 	bool nontriv() {return false;}
-	bool simple() {return false;}
+//	bool simple() {return false;}
 	bool compatible(Type*);
 	bool ref_compatible(TupleType*, bool); //for function args
 	void align();

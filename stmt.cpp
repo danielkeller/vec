@@ -8,7 +8,7 @@ string TypeDec(Type * type)
 	if (IS(TypeWrapper, type))
 		type = dynamic_cast<TypeWrapper*>(type)->to;
 
-	type->align();
+//	type->align();
 	RefType * rt = dynamic_cast<RefType*>(type);
 	if (rt)
 		return rt->to->mangle() + "*";
