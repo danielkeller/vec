@@ -202,21 +202,7 @@ Type * ListAccExpr::DoExpr()
 	else
 		REJ_ERR("Operand not of list type", ERR_STMT);
 }
-/*
-Type * ListAccExpr::DoExpr()
-{
-	PrimitiveType * rt = dynamic_cast<PrimitiveType*>(rhs->DoExpr());
-	if (!rt || rt->prim != PrimitiveType::Int)
-		yyerror("List index must be of integral type", loc);
 
-	ListType * ret = dynamic_cast<ListType*>(DoRef(lhs));
-
-	if (ret)
-		return ret->contents;
-	else
-		REJ_ERR("Operand not of list type", ERR_STMT);
-}
-*/
 Type * TuplifyExpr::DoExpr()
 {
 	TupleType * t = new TupleType();
@@ -338,19 +324,6 @@ void WhileStmt::DoStmt()
 
 void VarDecl::DoStmt()
 {
-	
-	if (type->nontriv())
-	{
-		ListType * lt = dynamic_cast<ListType*>(type->to);
-		if (lt)
-		{
-//			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
-//				"((" + type->api_name() + "*)&" + name + ", " + to_string(lt->contents->size())
-//				+ ", " + to_string(lt->length < 0 ? 0 : lt->length) + ")", type->to, loc), loc));
-			init_stmts.push_back(new ExprStmt(new ConstExpr(lt->init_stmt(name), type->to, loc), loc));
-		}
-	}
-
 	if (init)
 	{
 		Type * exprt = init->DoExpr();

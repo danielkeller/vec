@@ -76,20 +76,16 @@ string Block::output()
 		ret += "int __ret_flag = 0;";
 	
 	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
+	{
 		ret += (*it)->output();
+		if ((*it)->type->nontriv())
+			ret += (*it)->type->init_stmt((*it)->name);
+	}
 		
-//	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
-//		if (!(*it)->type->simple())
-//			ret += (*it)->alloc(1);
-			
 	for (vector<Stmt*>::iterator it = stmts.begin(); it != stmts.end(); ++it)
 		ret += (*it)->output();
 		
 	ret += "epi_" + to_string(this) + ": 1;";
-	
-//	for (vector<VarDecl*>::iterator it = decls.begin(); it != decls.end(); ++it)
-//		if (!(*it)->type->simple())
-//			ret += "free(" + (*it)->name + ");";
 	
 	if (parent)
 		ret += "if (__ret_flag) goto epi_" + to_string(parent) + ";";

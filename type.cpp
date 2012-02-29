@@ -271,7 +271,7 @@ string ListType::init_stmt(string name)
 	+ ", " + to_string(dims.size());
 	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
 		ret += ", " + to_string(*it < 0 ? 0 : *it);
-	return ret + ")";
+	return ret + ");";
 }
 
 bool ListType::compatible(Type*t)
