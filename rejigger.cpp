@@ -144,19 +144,30 @@ Type * TupleAccExpr::DoExpr()
 {
 	Type * t = DoRef(lhs);
 	TupleType * tt = dynamic_cast<TupleType*>(t);
-	if (!tt && rhs == "length") //tuple access special case
+	if (!tt)
 	{
-		idx = -1;
-		if (IS(ListType, t))
-			return new PrimitiveType(PrimitiveType::Int, PrimitiveType::s32);
-		TensorType * te = dynamic_cast<TensorType*>(t);
-		if (te)
-			return new ListType(te->dims.size(), new PrimitiveType(PrimitiveType::Int, PrimitiveType::s32));
+		if (rhs == "dims") //tuple access special case
+		{
+			idx = -1;
+			ListType * te = dynamic_cast<ListType*>(t);
+			if (te)
+				return new ListType(te->dims.size(), new PrimitiveType(PrimitiveType::Int, PrimitiveType::s32));
 
-		REJ_ERR("Cannot retrieve length of non- list or tensor type.", ERR_STMT);
+			REJ_ERR("Cannot retrieve dims of non-list type.", ERR_STMT);
+		}
+		else if (rhs == "length") //first dimension
+		{
+			idx = -2;
+
+			ListType * te = dynamic_cast<ListType*>(t);
+			if (te)
+				return new PrimitiveType(PrimitiveType::Int, PrimitiveType::s32);
+
+			REJ_ERR("Cannot retrieve dims of non-list type.", ERR_STMT);
+		}
+		else
+			REJ_ERR("Operand not of tuple type", ERR_STMT);
 	}
-	else if (!tt)
-		REJ_ERR("Operand not of tuple type", ERR_STMT);
 
 	uint i=0;
 	for (; i < tt->contents.size(); ++i)
@@ -170,28 +181,28 @@ Type * TupleAccExpr::DoExpr()
 	return tt->contents[i].second;
 }
 
-Type * TensorAccExpr::DoExpr()
+Type * ListAccExpr::DoExpr()
 {
 	for (vector<Expr*>::iterator it = rhs.begin(); it != rhs.end(); ++it)
 	{
 		PrimitiveType * rt = dynamic_cast<PrimitiveType*>((*it)->DoExpr());
 		if (!rt || rt->prim != PrimitiveType::Int)
-			yyerror("Tensor index must be of integral type", loc);
+			yyerror("List index must be of integral type", loc);
 	}
 
-	TensorType * ret = dynamic_cast<TensorType*>(DoRef(lhs));
+	ListType * ret = dynamic_cast<ListType*>(DoRef(lhs));
 
 	if(ret)
 	{
 		if (rhs.size() != ret->dims.size())
-			yyerror("Incorrect number of dimensions for tensor access, expected " 
+			yyerror("Incorrect number of dimensions for list access, expected " 
 				+ to_string(ret->dims.size()) + ", got " + to_string(rhs.size()), loc);
 		return ret->contents;
 	}
 	else
-		REJ_ERR("Operand not of tensor type", ERR_STMT);
+		REJ_ERR("Operand not of list type", ERR_STMT);
 }
-
+/*
 Type * ListAccExpr::DoExpr()
 {
 	PrimitiveType * rt = dynamic_cast<PrimitiveType*>(rhs->DoExpr());
@@ -205,7 +216,7 @@ Type * ListAccExpr::DoExpr()
 	else
 		REJ_ERR("Operand not of list type", ERR_STMT);
 }
-
+*/
 Type * TuplifyExpr::DoExpr()
 {
 	TupleType * t = new TupleType();
@@ -257,10 +268,8 @@ Type * CallExpr::DoExpr()
 	for(uint i = 0; i < exprs.size(); ++i)
 		t->contents.push_back(make_pair("", exprs[i]->DoExpr()));
 
-//	string mname = name + "$" + t->mangle(true);
 	for (vector<Func*>::iterator it = file_cur.contents.begin(); it != file_cur.contents.end(); ++it)
 		if ((*it)->name == name && (*it)->argst->ref_compatible(t, true))
-//		if ((*it)->mname == mname) 
 			func = *it;
 	
 	if (!func)
@@ -335,9 +344,10 @@ void VarDecl::DoStmt()
 		ListType * lt = dynamic_cast<ListType*>(type->to);
 		if (lt)
 		{
-			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
-				"((" + type->api_name() + "*)&" + name + ", " + to_string(lt->contents->size())
-				+ ", " + to_string(lt->length < 0 ? 0 : lt->length) + ")", type->to, loc), loc));
+//			init_stmts.push_back(new ExprStmt(new ConstExpr("vsl_init_" + type->api_name() +
+//				"((" + type->api_name() + "*)&" + name + ", " + to_string(lt->contents->size())
+//				+ ", " + to_string(lt->length < 0 ? 0 : lt->length) + ")", type->to, loc), loc));
+			init_stmts.push_back(new ExprStmt(new ConstExpr(lt->init_stmt(name), type->to, loc), loc));
 		}
 	}
 

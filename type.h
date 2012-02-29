@@ -101,42 +101,26 @@ struct AnyType : public Type
 
 struct ListType : public Type
 {
-	int length;
+	vector<int> dims;
 	Type * contents;
-	int size() {return length==VAR ? sizeof(void*) : length * contents->size();}
+	int size();
+	int length();
 	string c_equiv();
-	string mangle(bool n = false) {return n && name != "" ? name : ("L" + mang_dim(length) + contents->mangle(n));}
+	string mangle(bool n = false);
 	bool abstract();
 	bool nontriv() {return true;}
-	string api_name() {return length > 0 ? "LaX" : (length == ANY ? "LaX" : "LvX");}
+	string api_name() {return (dims.size() && dims[0] == VAR) ? "Lv" : "Ln";}
 	void mergep(Type *t);
 	string to_str();
-	ListType(int l, Type *c) : length(l), contents(c) {}
+	string init_stmt(string);
+	ListType() : contents(0) {};
+	ListType(vector<int> d, Type* c) : dims(d), contents(c) {};
+	ListType(int l, Type* c) : contents(c) {dims.push_back(l);}
 //	bool simple() {return false;}
 	bool compatible(Type*);
 //	void align();
 	Type * clone();
 	~ListType() {delete contents;}
-};
-
-struct TensorType : public Type
-{
-	vector<int> dims;
-	Type * contents;
-	int size();
-	string c_equiv();
-	string mangle(bool n = false);
-	bool abstract();
-	bool nontriv() {return true;}
-	void mergep(Type *t);
-	string to_str();
-	TensorType() : contents(0) {};
-	TensorType(vector<int> d, Type* c) : dims(d), contents(c) {};
-//	bool simple() {return false;}
-	bool compatible(Type*);
-//	void align();
-	Type * clone();
-	~TensorType() {delete contents;}
 };
 
 typedef vector<pair<string,Type*> > TupleMap;

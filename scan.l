@@ -14,7 +14,7 @@
 #include "yy.h"
 void count(void);
 int check_type(void);
-#define YY_USER_ACTION yylloc.first_line = yylineno; if(fname) {yylloc.filename = fname;}
+#define YY_USER_ACTION yylloc.first_line = yylineno; yylloc.filename = fname;
 char * fname = 0;
 %}
 

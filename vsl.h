@@ -1,8 +1,8 @@
 typedef struct {
-	int len;
+	int dim;
+	int * len;
 	void * a;
-} LaX;
+} Ln;
 
-void vsl_init_LaX(LaX * La, size_t sz, int num);
-void vsl_init_LnX(LaX * La, size_t sz, int num);
-LaX * vsl_LaX_assign_LaX(LaX * La, LaX * Ln, size_t sz);
+void vsl_init_Ln(Ln * La, size_t sz, int dim, ...);
+Ln * vsl_Ln_assign_Ln(Ln * La, Ln * Ln, size_t sz);

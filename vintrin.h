@@ -1,1 +1,1 @@
-int:(int) dummy2;
+int:[int] dummy2;

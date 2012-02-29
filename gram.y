@@ -33,7 +33,6 @@ TypeWrapper * resolve(string name);
 	PrimitiveType * prim_v;
 	ListType * list_v;
 	TupleType * tup_v;
-	TensorType * tens_v;
 };
 
 %token <txt_v> IDENTIFIER "identifier" TYPE_NAME "type name" FUNC_NAME "function name" STRING_LITERAL "string literal"
@@ -55,11 +54,10 @@ TypeWrapper * resolve(string name);
 %type<txt_v> function_name
 %type<type_v> type func_ret
 %type<prim_v> primitive primitive_type
-%type<list_v> list_type
+%type<list_v> list_type dim_list
 %type<tup_v> tuple_list tuple_type
-%type<tens_v> dim_list tensor_type
 %type<expr_v> primary_expression postfix_expression unary_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression concat_expression logical_and_expression logical_or_expression conditional_expression expression
-%type<elst_v> expression_list shift_expression_list
+%type<elst_v> expression_list 
 %type<stmt_v> statement expression_statement jump_statement selection_statement iteration_statement
 %type<block_v> compound_statement
 
@@ -119,7 +117,7 @@ primary_expression
 	{
 
 	}
-	| '(' expression_list ')'
+	| '[' expression_list ']'
 	{
 		if ($2->exprs.size() == 1)
 			$$ = $2->exprs[0];
@@ -128,37 +126,21 @@ primary_expression
 
 		delete $2;
 	}
-	| '[' expression_list ']'
 	| '{' expression_list '}'
 	{
 		$$ = new ListifyExpr(*$2, @1);
 		delete $2;
 	}
-	| '[' ']' '<' shift_expression_list '>' //it's stupid to have to do it this way. i should
-	| '{' '}' '<' shift_expression '>' // find a better syntax for this
-	| FUNC_NAME ':'  '(' ')'
+	| FUNC_NAME ':'  '[' ']'
 	{
 		$$ = new CallExpr(*$1, @1);
 		delete $1;
 	}
-	| FUNC_NAME  ':' '(' expression_list ')'
+	| FUNC_NAME  ':' '[' expression_list ']'
 	{
 		$$ = new CallExpr(*$1, *$4, @1);
 		delete $1;
 		delete $4;
-	}
-	;
-
-shift_expression_list
-	: shift_expression
-	{
-		$$ = new EList();
-		$$->exprs.push_back($1);
-	}
-	| shift_expression_list ',' shift_expression
-	{
-		$$ = $1;
-		$$->exprs.push_back($3);
 	}
 	;
 
@@ -177,21 +159,17 @@ expression_list
 
 postfix_expression
 	: primary_expression
-	| postfix_expression '[' expression_list ']'
+	| postfix_expression '{' expression_list '}'
 	{
-		TensorAccExpr * e = new TensorAccExpr($1,@2);
+		ListAccExpr * e = new ListAccExpr($1,@2);
 		e->rhs = $3->exprs;
 		$$ = e;
 		delete $3;
 	}
-	| postfix_expression '(' IDENTIFIER ')'
+	| postfix_expression '[' IDENTIFIER ']'
 	{
 		$$ = new TupleAccExpr($1, *$3, @2);
 		delete $3;
-	}
-	| postfix_expression '{' expression '}'
-	{
-		$$ = new ListAccExpr($1, $3, @2);
 	}
 	| postfix_expression INC_OP
 	{
@@ -419,70 +397,43 @@ primitive_type
 		$1->psize = PrimitiveType::sV;
 		$$ = $1;
 	}
-	| primitive '<' '*' '>'
-	{
-		$1->psize = PrimitiveType::sA;
-		$$ = $1;
-	}
 	;
 
 list_type
-	: '{' type '}' '<' CONSTANT_INT '>'
+	: '{' type '}' '<' dim_list '>'
 	{
-		$$ = new ListType($5, $2);
+		$$ = $5;
+		$5->contents = $2;
 	}
 	| '{' type '}' '<' '?' '>'
 	{
 		$$ = new ListType(VAR, $2);
 	}
-	| '{' type '}' '<' '*' '>'
+	| '{' type '}'
 	{
 		$$ = new ListType(ANY, $2);
-	}
-	;
-
-tensor_type
-	: '[' type ']' '<' dim_list '>'
-	{
-		$$ = $5;
-		$$->contents = $2;
-	}
-	| '[' type ']' '<' '>'
-	{
-		$$ = new TensorType();
-		$$->contents = $2;
 	}
 	;
 
 dim_list
 	: CONSTANT_INT
 	{
-		$$ = new TensorType();
+		$$ = new ListType();
 		$$->dims.push_back($1);
-	}
-	| '*'
-	{
-		$$ = new TensorType();
-		$$->dims.push_back(ANY);
 	}
 	| dim_list ',' CONSTANT_INT
 	{
 		$$ = $1;
 		$$->dims.push_back($3);
 	}
-	| dim_list ',' '*'
-	{
-		$$ = $1;
-		$$->dims.push_back(ANY);
-	}
 	;
 
 tuple_type
-	: '(' tuple_list ')'
+	: '[' tuple_list ']'
 	{
 		$$ = $2;
 	}
-	| '(' ')'
+	| '[' ']'
 	{
 		$$ = new TupleType();
 	}
@@ -517,16 +468,15 @@ tuple_list
 type
 	: primitive_type {$$ = $1;}
 	| list_type {$$ = $1;}
-	| tensor_type {$$ = $1;}
 	| tuple_type {$$ = $1;}
 	| '@' type
 	{
-		if (IS(RefType,$2))
-		{
-			yyerror("Cannot reference a reference");
-			$$ = $2;
-		}
-		else
+	//	if (IS(RefType,$2))
+	//	{
+	//		yyerror("Cannot reference a reference");
+	//		$$ = $2;
+	//	}
+	//	else
 			$$ = new RefType($2);
 	}
 	| TYPE_NAME
@@ -535,7 +485,7 @@ type
 		$$->name = *$1;
 		delete $1;
 	}
-	| '*'
+	| '?'
 	{
 		$$ = new AnyType();
 	}
@@ -553,6 +503,9 @@ declaration
 		}
 		if (IS(RefType, $1))
 			yyerror("References must be initialized");
+
+		while (blocks > blocks_cur.size()) //we are the first one in the block
+			blocks_cur.push_back(new Block(@1));
 		
 		for (vector<VarDecl*>::iterator it = blocks_cur.back()->decls.begin();
 			it != blocks_cur.back()->decls.end(); ++it)
@@ -662,13 +615,13 @@ function_header
 function_declaration
 	: function_header ';'
 	{
-		if (!func_cur->argst->abstract())
-		{
+	//	if (!func_cur->argst->abstract())
+	//	{
 			if (Rejigger::DoFunction(func_cur)) //ignore function if error occurs
 				file_cur.contents.push_back(func_cur);
-		}
-		else
-			yyerror("Template functions haven't been implemented yet");
+	//	}
+	//	else
+	//		yyerror("Template functions haven't been implemented yet");
 		func_cur = 0;
 	}
 	;
@@ -677,13 +630,13 @@ function_definition
 	: function_header '=' compound_statement ';'
 	{
 		func_cur->conts = $3;
-		if (!func_cur->argst->abstract())
-		{
+	//	if (!func_cur->argst->abstract())
+	//	{
 			file_cur.contents.push_back(func_cur);
 			Rejigger::DoFunction(func_cur);
-		}
-		else
-			yyerror("Template functions haven't been implemented yet");
+	//	}
+	//	else
+	//		yyerror("Template functions haven't been implemented yet");
 		func_cur = 0;
 	}
 	;
@@ -707,6 +660,9 @@ statement
 //	| IDENTIFIER ':' statement
 	| error 
 	{
+		//this is needed in case block begins with erroneous declaration
+		while (blocks > blocks_cur.size()) //we are the first one in the block
+			blocks_cur.push_back(new Block(@1));
 		$$ = new NullStmt(@1);
 	}
 	;

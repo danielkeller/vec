@@ -182,54 +182,9 @@ void AnyType::mergep(Type *t)
 	cerr << "Shouldn't be merging anytype" << endl;
 }
 
-/******************************************************** List Type */
+/******************************************************** List */
 
-string ListType::c_equiv()
-{
-//	if (length == ANY)
-		return "struct { int len; " + contents->c_equiv() + "* a;}";
-//	else
-//		return "struct { " + contents->c_equiv() + " a[" + to_string(length) + "];}";
-}
-
-bool ListType::abstract()
-{
-	return contents->abstract();
-}
-
-void ListType::mergep(Type *t)
-{
-	ListType * lt = dynamic_cast<ListType*>(t);
-	merge(contents, lt->contents);
-}
-
-string ListType::to_str()
-{
-	return "{ " + contents->to_str() + " }<" + dim_str(length) + ">";
-}
-
-bool ListType::compatible(Type * t)
-{
-	ListType * lt = dynamic_cast<ListType*>(t);
-	return lt && (length < 0 || length == lt->length) && contents->compatible(lt->contents);
-}
-/*
-void ListType::align()
-{
-	if (length >= 0 && contents->size() * length % 16 != 0) //round up to 16b
-		length += 16/contents->size() - length % (16/contents->size());
-}*/
-
-Type * ListType::clone()
-{
- 	ListType *rt = new ListType(length, contents->clone());
- 	rt->name = name;
-	return rt;
-}
-
-/******************************************************** Tensor */
-
-int TensorType::size()
+int ListType::size()
 {
 	int res = contents->size();
 	for (vector<int>::iterator it = dims.begin(); it != dims.end(); it++)
@@ -237,18 +192,26 @@ int TensorType::size()
 	return res;
 }
 
-string TensorType::c_equiv()
+int ListType::length()
+{
+	int res = 1;
+	for (vector<int>::iterator it = dims.begin(); it != dims.end(); it++)
+		res = res * (*it);
+	return res;
+}
+
+string ListType::c_equiv()
 {
 //	if (dims.size() == 0) //could maybe be void?
-//		return "struct {int dim; int * len; " + contents->c_equiv() + "* a;};"; 
+		return "struct {int dim; int * len; " + contents->c_equiv() + "* a;}"; 
 	
 //	if (count(dims.begin(), dims.end(), ANY))
 //	{
-		string res = "struct {int len[" + to_string(dims.size())
-			+ "]; " + contents->c_equiv() + " ";
-		for (uint i=0; i<dims.size(); ++i)
-			res += "*";
-		return res + "a;}";
+//		string res = "struct {int len[" + to_string(dims.size())
+//			+ "]; " + contents->c_equiv() + " ";
+//		for (uint i=0; i<dims.size(); ++i)
+//			res += "*";
+//		return res + "a;}";
 //	}
 	
 //	string res = "struct {" + contents->c_equiv() + " a";
@@ -257,18 +220,18 @@ string TensorType::c_equiv()
 //	return res + ";}";
 }
 
-string TensorType::mangle(bool n)
+string ListType::mangle(bool n)
 {
 	if (n && name != "")
 		return name;
 
-	string ret = "V";
+	string ret = "L";
 	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
-		ret += to_string(*it) + "d";
+		ret += mang_dim(*it) + "d";
 	return ret + contents->mangle(n);
 }
 
-bool TensorType::abstract()
+bool ListType::abstract()
 {
 	if (contents->abstract()) // || dims.size() == 0)
 		return true;
@@ -279,20 +242,20 @@ bool TensorType::abstract()
 	return false;
 }
 /*
-bool TensorType::nontriv()
+bool ListType::nontriv()
 {
 	return dims.size() == 0 || find(dims.begin(), dims.end(), ANY) != dims.end();
 }
 */
-void TensorType::mergep(Type *t)
+void ListType::mergep(Type *t)
 {
-	TensorType * tt = dynamic_cast<TensorType*>(t);
+	ListType * tt = dynamic_cast<ListType*>(t);
 	merge(contents, tt->contents);
 }
 
-string TensorType::to_str()
+string ListType::to_str()
 {
-	string ret = "[ " + contents->to_str() + " ]<";
+	string ret = "{ " + contents->to_str() + " }<";
 	if (dims.size() > 0)
 	{
 		ret += dim_str(*dims.begin());
@@ -302,9 +265,18 @@ string TensorType::to_str()
 	return ret + ">";
 }
 
-bool TensorType::compatible(Type*t)
+string ListType::init_stmt(string name)
 {
-	TensorType * tt = dynamic_cast<TensorType*>(t);
+	string ret = "vsl_init_Ln((Ln*)&" + name + ", " + to_string(contents->size()) +
+	+ ", " + to_string(dims.size());
+	for (vector<int>::iterator it = dims.begin(); it != dims.end(); ++it)
+		ret += ", " + to_string(*it < 0 ? 0 : *it);
+	return ret + ")";
+}
+
+bool ListType::compatible(Type*t)
+{
+	ListType * tt = dynamic_cast<ListType*>(t);
 	if (!tt || !contents->compatible(tt->contents))
 		return false;
 	if (!dims.size())
@@ -317,15 +289,15 @@ bool TensorType::compatible(Type*t)
 	return true;
 }
 /*
-void TensorType::align()
+void ListType::align()
 {
 	if (dims.size() && !count(dims.begin(), dims.end(), ANY) && contents->size() * dims.back() % 16 != 0)
 		dims.back() += 16/contents->size() - dims.back() % (16/contents->size());
 }*/
 
-Type * TensorType::clone()
+Type * ListType::clone()
 {
-	TensorType * rt = new TensorType(dims, contents->clone());
+	ListType * rt = new ListType(dims, contents->clone());
 	rt->name = name;
 	return rt;
 }
@@ -403,11 +375,11 @@ void TupleType::mergep(Type *t)
 string TupleType::to_str()
 {
 	if (!contents.size())
-		return "()";
-	string ret = "( " + contents.begin()->second->to_str() + " " + contents.begin()->first;
+		return "[]";
+	string ret = "[ " + contents.begin()->second->to_str() + " " + contents.begin()->first;
 	for (TupleMap::iterator it = ++contents.begin(); it != contents.end(); ++it)
 		ret += ", " + it->second->to_str() + " " + it->first;
-	return ret + " )";
+	return ret + " ]";
 }
 
 bool TupleType::compatible(Type*t)

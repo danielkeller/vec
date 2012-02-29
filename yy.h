@@ -28,7 +28,6 @@ class EList;
 class PrimitiveType;
 class TupleType;
 class ListType;
-class TensorType;
 class Stmt;
 
  # define YYLLOC_DEFAULT(Current, Rhs, N)                                \

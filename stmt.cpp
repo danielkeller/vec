@@ -159,23 +159,20 @@ string AssignExpr::output()
 
 string TupleAccExpr::output()
 {
-	if (idx == -1)
-		return "(" + lhs->output() + ".len)";
+	if (idx == -2)
+		return "(" + lhs->output() + ".len[0])";
+	else if (idx == -1)
+		return "something to get dims";
 	else
 		return "(" + lhs->output() + ".a" + to_string(idx) + ")";
 }
 
-string TensorAccExpr::output()
+string ListAccExpr::output()
 {
 	string ret = "(" + lhs->output() + ".a";
 	for (vector<Expr*>::iterator it = rhs.begin(); it != rhs.end(); ++it)
 		ret += "[" + (*it)->output() + "]";
 	return ret + ")";
-}
-
-string ListAccExpr::output()
-{
-	return "(" + lhs->output() + ".a[" + rhs->output() + "])";
 }
 
 //NOTE: temp expr does not include deref, to allow & use on -ify exprs

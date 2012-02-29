@@ -155,12 +155,11 @@ typedef union YYSTYPE
 	PrimitiveType * prim_v;
 	ListType * list_v;
 	TupleType * tup_v;
-	TensorType * tens_v;
 
 
 
 /* Line 1676 of yacc.c  */
-#line 164 "y.tab.h"
+#line 163 "y.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

@@ -1,45 +1,45 @@
-*:(@{int}<*> in) printarr; 
-*:(@{int}<*>, int b, int e) qsort;
+:[@{int} in] printarr; 
+:[@{int}, int b, int e] qsort;
 
-type testt = (int x, int);
+type testt = [int x, int];
 
-:((int x, int) i) bar =
+:[[int x, int] i] bar =
 {
-	i(x) = i(x) + 1;
+	i[x] = i[x] + 1;
 };
 
-:(testt i) bar =
+:[testt i] bar =
 {
-	i(x) = i(x) + 1;
+	i[x] = i[x] + 1;
 };
 
-cexp:int:() main =
+cexp:int:[] main =
 {
-	{int}<*> foo = {3,7,2,8,1,6,2,3,8};
+	{int} foo = {3,7,2,8,1,6,2,3,8};
 	int in = 6;
-	testt t = (in, 0);
-	bar:(t);
-	bar:((in, 0));
-	printarr:(foo);
-	qsort:(foo, 0, foo(length) - 1);
-	printarr:(foo);
+	testt t = [in, 0];
+	bar:[t];
+	bar:[[in, 0]];
+	printarr:[foo];
+	qsort:[foo, 0, foo[length] - 1];
+	printarr:[foo];
 	return 0;
 };
 
-cexp:int:(int) putchar;
-*:(@{int}<*> in) printarr = 
+cexp:int:[int] putchar;
+:[@{int} in] printarr = 
 {
 	int i = 0;
-	while (i < in(length))
+	while (i < in[length])
 	{
-		putchar:(in{i} + 48);
-		putchar:(32);
+		putchar:[in{i} + 48];
+		putchar:[32];
 		i = i + 1;
 	}
-	putchar:(10);
+	putchar:[10];
 };
 
-int:(@{int}<*> l, int b, int e, int p) partition =
+int:[@{int} l, int b, int e, int p] partition =
 {
 	int pv = l{p};
 	int tmp = l{e};
@@ -64,13 +64,13 @@ int:(@{int}<*> l, int b, int e, int p) partition =
 	return st;
 };
 
-*:(@{int}<*> l, int b, int e) qsort = 
+:[@{int} l, int b, int e] qsort = 
 {
 	if (b >= e)
 		return;
-	printarr:(l);
-	int pv = (b+e)/2;
-	pv = partition:(l, b, e, pv);
-	qsort:(l, b, pv-1);
-	qsort:(l, pv+1, e);
+	printarr:[l];
+	int pv = [b+e]/2;
+	pv = partition:[l, b, e, pv];
+	qsort:[l, b, pv-1];
+	qsort:[l, pv+1, e];
 };

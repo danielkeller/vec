@@ -174,24 +174,14 @@ struct TupleAccExpr : public Expr
 	TupleAccExpr(Expr * l, string r, YYLTYPE lo) : lhs(l), rhs(r) {loc = lo;}
 };
 
-struct TensorAccExpr : public Expr
+struct ListAccExpr : public Expr
 {
 	Expr * lhs;
 	vector<Expr*> rhs;
 	string output();
 	Type * DoExpr();
 	bool lval() {return lhs->lval();}
-	TensorAccExpr(Expr * l, YYLTYPE lo) : lhs(l) {loc = lo;}
-};
-
-struct ListAccExpr : public Expr
-{
-	Expr * lhs;
-	Expr * rhs;
-	string output();
-	Type * DoExpr();
-	bool lval() {return lhs->lval();}
-	ListAccExpr(Expr * l, Expr * r, YYLTYPE lo) : lhs(l), rhs(r) {loc = lo;}
+	ListAccExpr(Expr * l, YYLTYPE lo) : lhs(l) {loc = lo;}
 };
 
 struct TmpExpr : public Expr
