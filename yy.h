@@ -79,7 +79,7 @@ inline string to_string (const T& t)
 extern int yydebug;
 extern char * yytext;
 extern map<string,Type*> typedefs;
-extern vector<string> funcdefs;
+//extern vector<string> funcdefs;
 class File;
 extern File file_cur;
 extern uint blocks;

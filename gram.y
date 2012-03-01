@@ -7,7 +7,7 @@
 
 uint yyerrno = 0;
 map<string,Type*> typedefs;
-vector<string> funcdefs;
+//vector<string> funcdefs;
 File file_cur;
 Func * func_cur = 0;
 vector<Block*> blocks_cur;
@@ -35,7 +35,7 @@ TypeWrapper * resolve(string name);
 	TupleType * tup_v;
 };
 
-%token <txt_v> IDENTIFIER "identifier" TYPE_NAME "type name" FUNC_NAME "function name" STRING_LITERAL "string literal"
+%token <txt_v> IDENTIFIER "identifier" TYPE_NAME "type name" STRING_LITERAL "string literal"
 %token <long_v> CONSTANT_INT "constant int"
 %token <txt_v> CONSTANT_FLOAT "constant float"
 %token INC_OP "++" DEC_OP "--" LEFT_OP "<<" RIGHT_OP ">>" LE_OP "<=" GE_OP ">=" EQ_OP "==" NE_OP "!="
@@ -51,12 +51,11 @@ TypeWrapper * resolve(string name);
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
 
-%type<txt_v> function_name
 %type<type_v> type func_ret
 %type<prim_v> primitive primitive_type
 %type<list_v> list_type dim_list
 %type<tup_v> tuple_list tuple_type
-%type<expr_v> primary_expression postfix_expression unary_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression concat_expression logical_and_expression logical_or_expression conditional_expression expression
+%type<expr_v> primary_expression call_expression postfix_expression unary_expression multiplicative_expression additive_expression shift_expression relational_expression equality_expression and_expression exclusive_or_expression inclusive_or_expression concat_expression logical_and_expression logical_or_expression conditional_expression expression
 %type<elst_v> expression_list 
 %type<stmt_v> statement expression_statement jump_statement selection_statement iteration_statement
 %type<block_v> compound_statement
@@ -131,17 +130,6 @@ primary_expression
 		$$ = new ListifyExpr(*$2, @1);
 		delete $2;
 	}
-	| FUNC_NAME ':'  '[' ']'
-	{
-		$$ = new CallExpr(*$1, @1);
-		delete $1;
-	}
-	| FUNC_NAME  ':' '[' expression_list ']'
-	{
-		$$ = new CallExpr(*$1, *$4, @1);
-		delete $1;
-		delete $4;
-	}
 	;
 
 expression_list
@@ -157,8 +145,34 @@ expression_list
 	}
 	;
 
+call_expression
+	: primary_expression 
+	| call_expression ':' '[' ']'
+	{
+		VarExpr* fname = dynamic_cast<VarExpr*>($1);
+		if (!fname)
+		{
+			yyerror("Function pointers not implemented yet");
+			YYERROR;
+		}
+		$$ = new CallExpr(fname->value, @1);
+		delete $1;
+	}
+	| call_expression ':' '[' expression_list ']'
+	{
+		VarExpr* fname = dynamic_cast<VarExpr*>($1);
+		if (!fname)
+		{
+			yyerror("Function pointers not implemented yet");
+			YYERROR;
+		}
+		$$ = new CallExpr(fname->value, *$4, @1);
+		delete $1;
+		delete $4;
+	}
+
 postfix_expression
-	: primary_expression
+	: call_expression 
 	| postfix_expression '{' expression_list '}'
 	{
 		ListAccExpr * e = new ListAccExpr($1,@2);
@@ -197,6 +211,7 @@ unary_expression
 	}
 	| '~' postfix_expression
 	| '!' postfix_expression
+	| '`' postfix_expression
 	;
 
 multiplicative_expression
@@ -314,7 +329,7 @@ logical_or_expression
 
 conditional_expression
 	: logical_or_expression
-	| logical_or_expression '?' expression ':' conditional_expression
+	| logical_or_expression '?' expression '~' conditional_expression
 	;
 
 expression
@@ -577,11 +592,6 @@ type_declaration
 	}
 	;
 
-function_name
-	: FUNC_NAME
-	| IDENTIFIER
-	;
-
 func_ret
 	: ':'
 	{
@@ -591,23 +601,23 @@ func_ret
 	;
 
 function_header
-	: func_ret tuple_type function_name
+	: func_ret tuple_type IDENTIFIER
 	{
 		for (TupleMap::iterator it = $2->contents.begin(); it != $2->contents.end(); ++it)
 			it->second = new TypeWrapper(it->second); //wrap em up
 		func_cur = new Func($2, new TypeWrapper($1), *$3, @3);
-		funcdefs.push_back(*$3);
+//		funcdefs.push_back(*$3);
 		delete $3;
 	}
-	| INLINE ':' func_ret  tuple_type function_name
-	| CIMP ':' func_ret tuple_type function_name
-	| CEXP ':' func_ret tuple_type function_name
+	| INLINE ':' func_ret  tuple_type IDENTIFIER
+	| CIMP ':' func_ret tuple_type IDENTIFIER
+	| CEXP ':' func_ret tuple_type IDENTIFIER
 	{
 		for (TupleMap::iterator it = $4->contents.begin(); it != $4->contents.end(); ++it)
 			it->second = new TypeWrapper(it->second); //wrap em up
 		func_cur = new Func($4, new TypeWrapper($3), *$5, @5);
 		func_cur->cexp = true;
-		funcdefs.push_back(*$5);
+//		funcdefs.push_back(*$5);
 		delete $5;
 	}
 	;
@@ -762,7 +772,7 @@ for_header /*create block so decl doesnt end up in outer block*/
 	| FOR '(' declaration expression_statement expression ')'
 	{
 	}
-	| FOR '(' IDENTIFIER ':' expression ')'
+	| FOR '(' IDENTIFIER '`' expression ')'
 	;
 
 jump_statement
@@ -826,6 +836,10 @@ global_declarations
 
 TypeWrapper * resolve(string name)
 {
+	for (vector<Func*>::iterator it = file_cur.contents.begin(); it != file_cur.contents.end(); ++it)
+		if ((*it)->name == name)
+			return (*it)->rett;
+
 	for (vector<Block*>::reverse_iterator it = blocks_cur.rbegin(); it != blocks_cur.rend(); ++it)
 		for (vector<VarDecl*>::iterator it2 = (*it)->decls.begin(); it2 != (*it)->decls.end(); ++it2)
 			if ((*it2)->name == name)

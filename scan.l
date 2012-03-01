@@ -129,8 +129,8 @@ int check_type(void)
 {
 	if (typedefs.count(yytext))
 		return TYPE_NAME;
-	if (find(funcdefs.begin(), funcdefs.end(), yytext) != funcdefs.end())
-		return FUNC_NAME;
+//	if (find(funcdefs.begin(), funcdefs.end(), yytext) != funcdefs.end())
+//		return FUNC_NAME;
 
 	return IDENTIFIER;
 }
