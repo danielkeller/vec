@@ -23,15 +23,29 @@ void vsl_init_Ln(Ln * La, size_t sz, int dim, ...)
 	posix_memalign(&(La->a), 16, sz * num);
 }
 
-Ln * vsl_Ln_assign_Ln(Ln * La, Ln * Ln, size_t sz)
+Ln * vsl_Ln_assign_Ln(Ln * La, Ln * Lb, size_t sz)
 {
-	int num = _vsl_Ln_size(Ln);
+	int num = _vsl_Ln_size(Lb);
 	free(La->a);
 	posix_memalign(&(La->a), 16, sz * num);
-	memcpy(La->a, Ln->a, sz * num);
-	La->len = Ln->len;
+	memcpy(La->a, Lb->a, sz * num);
+	La->len = Lb->len;
 	return La;
 }
+
+Ln * vsl_Ln_concat_Ln(Ln * La, Ln * Lb, size_t sz)
+{
+	//these lists will be 1 dimensional
+	void * newmem;
+	posix_memalign(&newmem, 16, sz * (La->len[0] + Lb->len[0]));
+	memcpy(newmem, La->a, sz * La->len[0]);
+	memcpy(newmem + sz * La->len[0], Lb->a, sz * Lb->len[0]);
+	free(La->a);
+	La->a = newmem;
+	La->len[0] += Lb->len[0];
+	return La;
+}
+
 /*
 LaX * vsl_LaX_concat_LaX(LaX * Ll, LaX * Lr, size_t sz)
 {

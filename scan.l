@@ -113,6 +113,7 @@ L?\"(\\.|[^\\"\n])*\"	{ yytext[strlen(yytext)-1] = 0; yylval.txt_v = new string(
 "^"			{ return('^'); }
 "|"			{ return('|'); }
 "?"			{ return('?'); }
+"$"			{ return('$'); }
 
 [ \t\v\n\f]		{ }
 .			{ yyerror("Invalid character"); }

@@ -60,6 +60,9 @@ Type * DoRef(Expr *& e)
 
 void TmpUser::MakeTemp(int & num, Type * t, YYLTYPE l)
 {
+	if (tmp) //don't make extra temps on further DoExpr passes
+		return;
+
 	tmp = new TmpExpr(num++, t, l);
 	tmps.push_back(this);
 }
@@ -209,9 +212,6 @@ Type * TuplifyExpr::DoExpr()
 	for(uint i = 0; i < exprs.size(); ++i)
 		t->contents.push_back(make_pair("a" + to_string(i), DoRef(exprs[i])));
 
-	if (tmp) //don't make extra temps on further DoExpr passes
-		return t;
-	
 	MakeTemp(tmpnum, t, loc);
 
 	return t;
@@ -225,9 +225,6 @@ Type * ListifyExpr::DoExpr()
 			yyerror("Types in listify are not compatible: "
 				+ t->contents->to_str() + " != " + DoRef(exprs[i])->to_str(), loc);
 
-	if (tmp) //don't make extra temps on further DoExpr passes
-		return t;
-	
 	MakeTemp(tmpnum, t, loc);
 	
 	return t;
@@ -235,7 +232,33 @@ Type * ListifyExpr::DoExpr()
 
 Type * ConcatExpr::DoExpr()
 {
-	return 0;
+	ListType * llt = dynamic_cast<ListType*>(DoRef(lhs));
+	ListType * lrt = dynamic_cast<ListType*>(DoRef(rhs));
+	if (!llt || !lrt)
+		REJ_ERR("Can only concatenate lists", ERR_STMT);
+
+	if (llt->dims.size() > 1 || lrt->dims.size() > 1)
+	{
+		yyerror("Cannot concatenate multi-dimensional lists", loc);
+		return llt;
+	}
+
+	if (!llt->contents->compatible(lrt->contents))
+	{
+		yyerror("List contents are not compatible");
+		return llt;
+	}
+
+	ListType * t = new ListType(llt->dims[0] + lrt->dims[0], llt->contents);
+
+	cerr << to_string(tmpnum) << ' ' << loc <<  endl;
+	MakeTemp(tmpnum, t, loc);
+	cerr << to_string(tmpnum) << ' ' << loc <<  endl << endl;
+
+	sz = t->contents->size();
+	fname = t->api_name(); 
+
+	return t;
 }
 
 Type * RefExpr::DoExpr()
@@ -297,8 +320,8 @@ void ReturnValStmt::DoStmt()
 	{
 		VarDecl * d = new VarDecl(loc);
 		d->type = func_cur->rett;
-		d->name = "__ret";//V uses FRONT, not BACK
-		d->DoStmt();
+		d->name = "__ret";
+		d->DoStmt(); //V uses FRONT, not BACK
 		blocks_cur.front()->decls.push_back(d);
 	}
 

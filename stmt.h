@@ -229,6 +229,8 @@ struct ListifyExpr : public Expr, public EList , public TmpUser
 struct ConcatExpr : public Expr, public TmpUser
 {
 	Expr *lhs, *rhs;
+	string fname;
+	int sz;
 	string output();
 	Type * DoExpr();
 	bool lval() {return false;}

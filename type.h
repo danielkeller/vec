@@ -19,7 +19,6 @@ struct Type
 	virtual string api_name() {return "";}
 	virtual string init_stmt(string) {return "";}
 //	virtual bool ref() = 0; //does this type contain reference(s) that need to be initialized?
-//	virtual bool templ() = 0;
 	virtual void mergep(Type *t) = 0; //replace unknowns in this type with pointers to parts of t
 	virtual string to_str() = 0; //vc string representing this type
 //	virtual bool simple() = 0; //trivial (ie scalar) type?

@@ -197,7 +197,10 @@ string ListifyExpr::output()
 
 string ConcatExpr::output()
 {
-	return "";
+	return "*vsl_" + fname + "_concat_" + fname + "(vsl_" + fname + "_assign_" + fname +
+		"((" + fname + "*)&" + tmp->output() + ", (" + fname + "*)&" + lhs->output() +
+		", " + to_string(sz) + "), (" + fname + "*)&" + rhs->output() + ", " +
+		to_string(sz) + ")";
 }
 
 string RefExpr::output()
