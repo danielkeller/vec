@@ -1,5 +1,6 @@
 #include "Lexer.h"
 
+#include <cstdio>
 #include <iostream>
 #include <time.h>
 
@@ -18,6 +19,7 @@ void openDlg(char *buf)
 #define MAX_PATH 256
 void openDlg(char * buf)
 {
+    std::cout << "> ";
     std::cin.getline(buf, MAX_PATH - 1);
     return;
 }
@@ -41,6 +43,5 @@ int main ()
         std::cout << std::endl;*/
     }
 
-    std::string wait;
-    std::cin >> wait;
+    getchar();
 }
