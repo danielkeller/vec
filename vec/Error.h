@@ -37,7 +37,7 @@ namespace err
         Error & operator<< (Special toPrint);
         
         Error & operator<< (tok::Location &l) //set new location
-            {loc = &l;}
+            {loc = &l; return *this;}
     };
 
     template<class T>

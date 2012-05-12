@@ -2,6 +2,9 @@
 #include "Error.h"
 
 #include <fstream>
+#include <cstring>
+#include <cstdlib>
+#include <cerrno>
 
 using namespace lex;
 
@@ -9,7 +12,7 @@ using namespace lex;
 Lexer::Lexer(std::string fname)
     : fileName(fname)
 {
-    std::ifstream t(fileName);
+    std::ifstream t(fileName.c_str());
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
     buffer.assign((size_t)size, ' ');
@@ -394,10 +397,10 @@ lexMore: //more elegant, in this case, than a while(true)
         //handle potential double characters, or x=, or xx=
 
     case '&':
-        lexBinAndDouble(tok::and, tok::andand);
+        lexBinAndDouble(tok::amp, tok::ampamp);
         return;
     case '|':
-        lexBinAndDouble(tok::or, tok::oror);
+        lexBinAndDouble(tok::bar, tok::barbar);
         return;
 
         //handle special cases

@@ -11,6 +11,6 @@ void weak_string::assign(const char * l)
 
 void weak_string::assign(std::string & str)
 {
-    s_begin = str.begin()._Ptr;
-    s_end = str.end()._Ptr;
+    s_begin = &*str.begin();
+    s_end = &*str.end();
 }

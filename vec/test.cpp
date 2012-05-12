@@ -1,9 +1,10 @@
 #include "Lexer.h"
 
-#include <Windows.h>
 #include <iostream>
 #include <time.h>
 
+#ifdef _WIN32
+#include <Windows.h>
 void openDlg(char *buf)
 {
     OPENFILENAME ofn = {0};
@@ -13,6 +14,14 @@ void openDlg(char *buf)
     ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
     GetOpenFileName(&ofn);
 }
+#else //posix
+#define MAX_PATH 256
+void openDlg(char * buf)
+{
+    std::cin.getline(buf, MAX_PATH - 1);
+    return;
+}
+#endif
 
 int main ()
 {

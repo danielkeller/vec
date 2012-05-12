@@ -37,9 +37,9 @@ std::string Token::Name()
             return "'%'";
         case caret:
             return "'^'";
-        case and:
+        case amp:
             return "'&'";
-        case andand:
+        case ampamp:
             return "'&&'";
         case star:
             return "'*'";
@@ -71,9 +71,9 @@ std::string Token::Name()
             return "'['";
         case rsquare:
             return "']'";
-        case or:
+        case bar:
             return "'|'";
-        case oror:
+        case barbar:
             return "'||'";
         case backslash:
             return "'\\'";
@@ -182,16 +182,16 @@ prec::precidence Token::Precidence()
         case equalsequals:
         case notequals:
             return prec::equality;
-        case and:
-            return prec::bitand;
+        case amp:
+            return prec::bitwand;
         case caret:
             return prec::bitxor;
-        case or:
-            return prec::bitor;
-        case andand:
-            return prec::and;
-        case oror:
-            return prec::or;
+        case bar:
+            return prec::bitwor;
+        case ampamp:
+            return prec::logand;
+        case barbar:
+            return prec::logor;
         case question:
         case tilde:
             return prec::ternary;
@@ -219,11 +219,11 @@ Associativity Token::Asso_ty()
         case dollar:
         case lshift:
         case rshift:
-        case and:
+        case amp:
         case caret:
-        case or:
-        case andand:
-        case oror:
+        case bar:
+        case ampamp:
+        case barbar:
             return LeftAssoc;
         case less:
         case notgreater:

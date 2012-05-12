@@ -5,3 +5,6 @@ Release
 vec/Debug
 vec/Release
 vec.sdf
+obj
+*.swp
+vc
