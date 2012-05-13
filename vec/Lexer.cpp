@@ -15,18 +15,18 @@ Lexer::Lexer(std::string fname)
     std::ifstream t(fileName.c_str());
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
-    buffer.assign((size_t)size, ' ');
+    buffer = new char[size];
     t.seekg(0);
-    t.read(&buffer[0], size);
+    t.read(buffer, size);
 
     fileName = fileName.substr(fileName.find_last_of('\\') + 1);
     fileName = fileName.substr(fileName.find_last_of('/') + 1); //portability!
 
-    curChr = &buffer[0] - 1; //will be incremented
+    curChr = buffer - 1; //will be incremented
     nextTok.loc.firstCol = nextTok.loc.lastCol = -1; //will be incremented
     nextTok.loc.line = 1; //lines are 1 based
 
-    nextTok.loc.lineStr.assign(buffer.c_str());
+    nextTok.loc.lineStr.assign(buffer);
     nextTok.loc.fileName = fileName.c_str();
 
     Advance();
@@ -212,64 +212,86 @@ inline void Lexer::lexNumber()
     curChr = end - 1;
 }
 
+inline char Lexer::consumeChar()
+{
+    char ret = 0;
+    if (curChr[0] == '\\' && curChr[1] != '\0') // '\x'
+    {
+        switch (curChr[1])
+        {
+        case 'n':
+            ret = '\n';
+            break;
+        case 't':
+            ret = '\t';
+            break;
+        case 'v':
+            break;
+            ret = '\v';
+        case 'b':
+            ret = '\b';
+            break;
+        case 'r':
+            ret = '\r';
+            break;
+        case 'f':
+            ret = '\r';
+            break;
+        case 'a':
+            ret = '\a';
+            break;
+        case '0':
+            ret = '\0';
+            break;
+        case '\'':
+            ret = '\'';
+            break;
+        case '\"':
+            ret = '\"';
+            break;
+        case '\\':
+            ret = '\\';
+            break;
+        default:
+            tok::Location escLoc = nextTok.loc;
+            escLoc.firstCol = nextTok.loc.lastCol + 1;
+            err::Error(err::error, escLoc) << "invalid escape sequence '\\"
+                << curChr[1] << "' in character constant" << err::caret << err::endl;
+            ret = 0;
+            break;
+        }
+        curChr += 2;
+        nextTok.loc.lastCol += 2;
+        return ret;
+    }
+    else if (curChr[0] != '\0')
+    {
+        ret = curChr[0];
+        curChr++;
+        nextTok.loc.lastCol++;
+        return ret;
+    }
+
+    err::Error(err::error, nextTok.loc) << "eof in constant" << err::caret << err::endl;
+    return 0;
+}
+
 inline void Lexer::lexChar()
 {
     nextTok.type = tok::integer;
-    nextTok.value.int_v = 0;
 
-    //if it's '\EOF this falls thru to the else if which calls it a \
-    //then misses the ending ' and finds it's unterminated
-    if (curChr[1] == '\\' && curChr[2] != '\0') // '\x'
-    {
-        switch (curChr[2])
-        {
-        case 'n':
-            nextTok.value.int_v = '\n';
-            break;
-        case 't':
-            nextTok.value.int_v = '\t';
-            break;
-        case 'v':
-            nextTok.value.int_v = '\v';
-            break;
-        case 'b':
-            nextTok.value.int_v = '\b';
-            break;
-        case 'r':
-            nextTok.value.int_v = '\r';
-            break;
-        case 'f':
-            nextTok.value.int_v = '\f';
-            break;
-        case 'a':
-            nextTok.value.int_v = '\a';
-            break;
-        case '0':
-            nextTok.value.int_v = 0;
-        default:
-            err::Error(err::error, nextTok.loc) << "invalid escape sequence '\\"
-                << curChr[2] << "' in character constant" << err::caret 
-                << err::note << "special characters need not be escaped" << err::endl;
-            break;
-        }
-        curChr += 3;
-        nextTok.loc.setLength(4);
-        if (*curChr == '\'') //otherwise, unterminated
-            return;
-    }
-    else if (curChr[1] != '\0') // 'EOF  (to avoid out of bounds access to curChr[2])
-    {
-        nextTok.value.int_v = curChr[1];
-        curChr += 2;
-        nextTok.loc.setLength(3);
-        if (*curChr == '\'') //otherwise, unterminated
-            return;
-    }
+    curChr++; //skip over '
+    nextTok.loc.lastCol = nextTok.loc.firstCol + 1;
+    nextTok.value.int_v = consumeChar();
+
+    if (*curChr == '\'') //otherwise, unterminated
+        return;
     
     const char * end = curChr;
     while (*end != '\'' && *end != '\n' && *end != '\0') //look for ' on rest of line
         ++end;
 
+    nextTok.loc.setLength(nextTok.loc.getLength() + (end - curChr));
     if (*end == '\'') //found it
     {
         err::Error(err::error, nextTok.loc) << "character constant too long"
@@ -281,7 +303,6 @@ inline void Lexer::lexChar()
             << err::caret << err::endl;
     }
     //recover
-    nextTok.loc.setLength(nextTok.loc.getLength() + (end - curChr));
     curChr = (*end == '\0') ? end - 1 : end;
 }
 

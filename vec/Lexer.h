@@ -10,13 +10,14 @@ namespace lex
     {
     public:
         Lexer(std::string fname);
+        ~Lexer() {delete buffer;}
 
         tok::Token Next();
         tok::Token & Peek() {return nextTok;}
         void Advance();
 
     private:
-        std::string buffer;
+        char * buffer;
         std::string fileName;
 
         const char * curChr;
@@ -37,6 +38,8 @@ namespace lex
         
         inline void lexNumber();
         inline void lexChar();
+        inline void lexString();
+        inline char consumeChar();
     };
 }
 
