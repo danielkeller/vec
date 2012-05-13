@@ -4,6 +4,11 @@
 
 using namespace err;
 
+#define COLOFF "\033[0m"
+#define MGNTA "\033[1;35m"
+#define RED "\033[1;31m"
+#define YEL "\033[1;33m"
+
 Error::Error(Level lvl, tok::Location &l)
     : posn(0), loc(&l)
 {
@@ -12,16 +17,16 @@ Error::Error(Level lvl, tok::Location &l)
     switch (lvl) //do error level filtering here
     {
     case fatal:
-        std::cerr << "fatal error: ";
+        std::cerr << MGNTA "fatal error: " COLOFF;
         break;
 
     case error:
-        std::cerr << "error: ";
+        std::cerr << RED "error: " COLOFF;
         break;
         
     case warning:
     case nitpick:
-        std::cerr << "warning: ";
+        std::cerr << YEL "warning: " COLOFF;
         break;
     }
 }
