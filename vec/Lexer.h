@@ -3,6 +3,8 @@
 #include "Token.h"
 #include "Util.h"
 
+#include <vector>
+
 namespace lex
 {
     //a class is used for reentrancy, in case this becomes threaded at some point
@@ -16,6 +18,8 @@ namespace lex
         tok::Token & Peek() {return nextTok;}
         void Advance();
 
+        std::string & getStr(int idx) {return stringTbl[idx]:}
+
     private:
         char * buffer;
         std::string fileName;
@@ -23,6 +27,8 @@ namespace lex
         const char * curChr;
 
         tok::Token nextTok;
+
+        std::vector<std::string> stringTbl;
 
         inline void lexChar(tok::TokenType type); //consume single character
         inline void lexBinOp(tok::TokenType type); //consume x or x=

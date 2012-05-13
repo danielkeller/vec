@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
+#include <algorithm>
 
 using namespace lex;
 
@@ -256,7 +257,7 @@ inline char Lexer::consumeChar()
             tok::Location escLoc = nextTok.loc;
             escLoc.firstCol = nextTok.loc.lastCol + 1;
             err::Error(err::error, escLoc) << "invalid escape sequence '\\"
-                << curChr[1] << "' in character constant" << err::caret << err::endl;
+                << curChr[1] << '\'' << err::caret << err::endl;
             ret = 0;
             break;
         }
@@ -272,7 +273,6 @@ inline char Lexer::consumeChar()
         return ret;
     }
 
-    err::Error(err::error, nextTok.loc) << "eof in constant" << err::caret << err::endl;
     return 0;
 }
 
@@ -304,6 +304,27 @@ inline void Lexer::lexChar()
     }
     //recover
     curChr = (*end == '\0') ? end - 1 : end;
+}
+
+inline void Lexer::lexString()
+{
+    nextTok.type = tok::stringlit;
+
+    curChr++; //skip over "
+    nextTok.loc.lastCol = nextTok.loc.firstCol + 1;
+
+    std::string strdata;
+    while (*curChr != '\"' && *curChr != '\0')
+        strdata += consumeChar();
+
+    if (*curChr == '\0')
+        err::Error(err::error, nextTok.loc) << "eof in string literal" << err::caret << err::endl;
+
+    //insert string as new entry only if it's not already there
+    std::vector<std::string>::iterator it = std::find(stringTbl.begin(), stringTbl.end(), strdata);
+    nextTok.value.int_v = it - stringTbl.begin();
+    if (it == stringTbl.end())
+        stringTbl.push_back(strdata);
 }
 
 // the meat of the lexer
@@ -470,26 +491,8 @@ lexMore: //more elegant, in this case, than a while(true)
         return;
 
     case '"':
-        {
-            curChr++;
-            const char * end = curChr;
-            while (*end != '"' && *end != '\0')
-                end++;
-
-            nextTok.loc.setLength(end - curChr + 2);
-
-            if (*end == '\0')
-            {
-                err::Error(err::error, nextTok.loc) << "EOF in string constant"
-                    << err::caret << err::endl;
-                --end; //so as not to pass the end of the file
-            }
-
-            nextTok.text.assign(curChr, end);
-            nextTok.type = tok::stringlit;
-            curChr = end;
-            return;
-        }
+        lexString();
+        return;
 
     case '\'':
         lexChar();
