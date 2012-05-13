@@ -32,7 +32,7 @@ namespace err
         Error(Level lvl, tok::Location &loc);
 
         template<class T>
-        Error & operator<< (T &toPrint);
+        Error & operator<< (T toPrint);
         
         Error & operator<< (Special toPrint);
         
@@ -41,7 +41,7 @@ namespace err
     };
 
     template<class T>
-    Error & Error::operator<< (T &toPrint)
+    Error & Error::operator<< (T toPrint)
     {
         if (posn != 0) //just printed location info, print newline
         {
