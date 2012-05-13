@@ -18,7 +18,7 @@ namespace lex
         tok::Token & Peek() {return nextTok;}
         void Advance();
 
-        std::string & getStr(int idx) {return stringTbl[idx]:}
+        std::string & getStr(int idx) {return stringTbl[idx];}
 
     private:
         char * buffer;
