@@ -3,8 +3,18 @@
 #include <string>
 #include <ostream>
 
+#include <sstream>
+
 namespace utl
 {
+    template <class T>
+    inline std::string to_str (const T& t)
+    {
+        std::stringstream ss;
+        ss << t;
+        return ss.str();
+    }
+
     //constant string class with no managed storage
     class weak_string
     {

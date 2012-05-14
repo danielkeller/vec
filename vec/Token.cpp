@@ -127,6 +127,8 @@ std::string Token::Name()
             return "'do'";
         case k_else:
             return "'else'";
+        case k_float:
+            return "'float'";
         case k_for:
             return "'for'";
         case k_goto:

@@ -12,7 +12,18 @@ using namespace err;
 Error::Error(Level lvl, tok::Location &l)
     : posn(0), loc(&l)
 {
-    std::cerr << l << ": ";
+    init(lvl);
+}
+
+Error::Error(tok::Location &l)
+    : posn(0), loc(&l)
+{
+    init(error);
+}
+
+void Error::init(Level lvl)
+{
+    std::cerr << *loc << ": ";
 
     switch (lvl) //do error level filtering here
     {
@@ -29,6 +40,16 @@ Error::Error(Level lvl, tok::Location &l)
         std::cerr << YEL "warning: " COLOFF;
         break;
     }
+}
+
+Error & Error::operator<< (tok::Location &l)
+{
+    if (l.line != loc->line) //if its not on the same line, we need to print the new line
+        posn = 0;
+
+    loc = &l;
+
+    return *this;
 }
 
 Error & Error::operator<< (Special toPrint)

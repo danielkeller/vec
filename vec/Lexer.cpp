@@ -33,11 +33,20 @@ Lexer::Lexer(std::string fname)
     Advance();
 }
 
-tok::Token Lexer::Next()
+tok::Token & Lexer::Next()
 {
-    tok::Token thisTok = nextTok;
+    curTok = nextTok;
     Advance();
-    return thisTok;
+    return curTok;
+}
+
+bool Lexer::Expect(tok::TokenType t)
+{
+    if (Peek() != t)
+        return false;
+    
+    Advance();
+    return true;
 }
 
 inline bool isWhitespace(char c)
@@ -172,7 +181,7 @@ inline void Lexer::lexNumber()
         //this is in here in case of 999999999999999999. for example
         if (errno == ERANGE) 
         {
-            err::Error(err::error, nextTok.loc) << "integer constant out of range"
+            err::Error(nextTok.loc) << "integer constant out of range"
                 << err::underline << err::endl;
             l = 0; //recover. fall thru to call it a long
         }
@@ -194,7 +203,7 @@ inline void Lexer::lexNumber()
         //this is in here in case of 9999999e999999e99999 for example
         if (errno == ERANGE)
         {
-            err::Error(err::error, nextTok.loc) << "floating point constant out of range"
+            err::Error(nextTok.loc) << "floating point constant out of range"
                 << err::underline << err::endl;
             d = 0.; //recover. fall thru to call it a double
         }
@@ -206,7 +215,7 @@ inline void Lexer::lexNumber()
     }
 
     //nope, just junk
-    err::Error(err::error, nextTok.loc) << "numeric constant not parseable"
+    err::Error(nextTok.loc) << "numeric constant not parseable"
         << err::underline << err::endl;
     nextTok.type = tok::integer; //recover
     nextTok.value.int_v = 0;
@@ -294,12 +303,12 @@ inline void Lexer::lexChar()
     nextTok.loc.setLength(nextTok.loc.getLength() + (end - curChr));
     if (*end == '\'') //found it
     {
-        err::Error(err::error, nextTok.loc) << "character constant too long"
+        err::Error(nextTok.loc) << "character constant too long"
             << err::underline << err::endl;
     }
     else //didn't find it
     {
-        err::Error(err::error, nextTok.loc) << "unterminated character constant"
+        err::Error(nextTok.loc) << "unterminated character constant"
             << err::caret << err::endl;
     }
     //recover
@@ -318,7 +327,7 @@ inline void Lexer::lexString()
         strdata += consumeChar();
 
     if (*curChr == '\0')
-        err::Error(err::error, nextTok.loc) << "eof in string literal" << err::caret << err::endl;
+        err::Error(nextTok.loc) << "eof in string literal" << err::caret << err::endl;
 
     //insert string as new entry only if it's not already there
     std::vector<std::string>::iterator it = std::find(stringTbl.begin(), stringTbl.end(), strdata);
@@ -520,6 +529,8 @@ lexMore: //more elegant, in this case, than a while(true)
         return;
     case 'f':
         if (lexKw("false", tok::k_false))
+            return;
+        if (lexKw("float", tok::k_float))
             return;
         lexKwOrIdent("for", tok::k_for);
         return;

@@ -96,6 +96,7 @@ namespace tok
         k_do,
         k_else,
         k_false,
+        k_float,
         k_for,
         k_goto,
         k_if,

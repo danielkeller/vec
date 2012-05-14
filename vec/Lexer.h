@@ -14,9 +14,12 @@ namespace lex
         Lexer(std::string fname);
         ~Lexer() {delete buffer;}
 
-        tok::Token Next();
+        tok::Token & Next();
         tok::Token & Peek() {return nextTok;}
         void Advance();
+
+        bool Expect(tok::TokenType t);
+        //if we don't see t, "insert" it and return false
 
         std::string & getStr(int idx) {return stringTbl[idx];}
 
@@ -27,6 +30,7 @@ namespace lex
         const char * curChr;
 
         tok::Token nextTok;
+        tok::Token curTok;
 
         std::vector<std::string> stringTbl;
 

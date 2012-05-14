@@ -1,4 +1,5 @@
 #include "Lexer.h"
+#include "Parser.h"
 
 #include <cstdio>
 #include <iostream>
@@ -32,16 +33,7 @@ int main ()
 
     lex::Lexer l(fileName);
 
-    while (l.Peek() != tok::end)
-    {
-        tok::Token t = l.Next();
-/*        std::cout << t.loc << t.Name() << std::endl
-            << t.loc.lineStr << std::endl;
-
-        l.Peek().loc.printUnderline(std::cout, t.loc.printCaret(std::cout));
-
-        std::cout << std::endl;*/
-    }
+    par::Parser p(&l);
 
     getchar();
 }

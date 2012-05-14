@@ -28,16 +28,18 @@ namespace err
         int posn;
         tok::Location * loc;
 
+        void init(Level lvl);
+
     public:
         Error(Level lvl, tok::Location &loc);
+        Error(tok::Location &loc);
 
         template<class T>
         Error & operator<< (T toPrint);
         
         Error & operator<< (Special toPrint);
         
-        Error & operator<< (tok::Location &l) //set new location
-            {loc = &l; return *this;}
+        Error & operator<< (tok::Location &l); //set new location
     };
 
     template<class T>
