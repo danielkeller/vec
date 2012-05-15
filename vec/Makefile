@@ -12,7 +12,7 @@ $(OBJECTS): | obj
 obj:
 	mkdir -p $@
 
-obj/%.o : %.cpp
+obj/%.o : %.cpp *.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean	: 
