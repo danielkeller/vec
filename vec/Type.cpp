@@ -11,6 +11,7 @@ namespace cod
 {
     static const char list = 'L';
     static const char tuple = 'T';
+    static const char tupname = 'V'; //name of variable for struct-style access
     static const char tupend = 't';
     static const char integer = 'I';
     static const char floating = 'F';
@@ -90,6 +91,11 @@ void Type::parseTypeList(lex::Lexer *l)
     while (true)
     {
         parseSingle(l);
+        if (l->Peek() == tok::identifier)
+        {
+            code += cod::tupname;
+            parseIdent(l);
+        }
         if (!l->Expect(tok::comma))
         {
             if (couldBeType(l->Peek()))
@@ -136,10 +142,8 @@ void Type::parseRef(lex::Lexer *l)
 
 void Type::parseNamed(lex::Lexer *l)
 {
-    tok::Token t = l->Next();
-    std::string str = t.text;
-    code += cod::named + utl::to_str(str.length());
-    code += str;
+    code += cod::named;
+    parseIdent(l);
 }
 
 void Type::parseParam(lex::Lexer *l)
@@ -147,12 +151,18 @@ void Type::parseParam(lex::Lexer *l)
     l->Advance();
     if (l->Peek() == tok::identifier)
     {
-        std::string str = l->Next().text;
-        code += cod::param + utl::to_str(str.length());
-        code += str;
+        code += cod::param;
+        parseIdent(l);
     }
     else
         code += cod::any;
+}
+
+void Type::parseIdent(lex::Lexer *l)
+{
+    std::string str = l->Next().text;
+    code += utl::to_str(str.length());
+    code += str;
 }
 
 bool Type::isFunc()

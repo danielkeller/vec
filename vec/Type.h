@@ -12,20 +12,6 @@ namespace utl
     class weak_string;
 }
 
-/*
-Type codes are
-    L - list
-    T - tuple
-    t - tuple end
-    I - int
-    F - float
-    R - reference
-    N - named N[length]name ie N3foo
-    A - any
-    P - param, "named any"
-    U - function
-*/
-
 namespace typ
 {
     //so we can easily change the syntax if needed
@@ -52,6 +38,7 @@ namespace typ
         void parseParam(lex::Lexer *l);
         void parseRef(lex::Lexer *l);
         void parseNamed(lex::Lexer *l);
+        void parseIdent(lex::Lexer *l);
     };
 
     bool couldBeType(tok::Token &t);
