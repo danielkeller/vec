@@ -10,3 +10,6 @@ For example, used in combination with $, the concatenation operator, partitionin
 (`list < piv_val ? less : more) $= `list;
 
 where list, less, and more are list types and piv_val is a numeric type.
+
+
+[the v2 branch is a total rewrite using custom parser and lexer, and better structure inspired by clang.]
