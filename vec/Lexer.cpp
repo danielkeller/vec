@@ -1,5 +1,6 @@
 #include "Lexer.h"
 #include "Error.h"
+#include "CompUnit.h"
 
 #include <fstream>
 #include <cstring>
@@ -10,15 +11,16 @@
 using namespace lex;
 
 
-Lexer::Lexer(std::string fname)
-    : fileName(fname)
+Lexer::Lexer(std::string fname, ast::CompUnit *cu)
+    : fileName(fname), compUnit(cu)
 {
     std::ifstream t(fileName.c_str());
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
-    buffer = new char[size];
+    buffer = new char[size + 1];
     t.seekg(0);
     t.read(buffer, size);
+    buffer[size] = '\0';
 
     fileName = fileName.substr(fileName.find_last_of('\\') + 1);
     fileName = fileName.substr(fileName.find_last_of('/') + 1); //portability!
@@ -66,7 +68,7 @@ inline void Lexer::lexBinOp(tok::TokenType type)
     {
         curChr++;
         nextTok.type = tok::opequals;
-        nextTok.op = type;
+        nextTok.value.op = type;
         nextTok.loc.setLength(2);
     }
     else
@@ -99,7 +101,7 @@ inline void Lexer::lexBinAndDouble(tok::TokenType bintype, tok::TokenType double
         {
             curChr += 2;
             nextTok.type = tok::opequals;
-            nextTok.op = doubletype;
+            nextTok.value.op = doubletype;
             nextTok.loc.setLength(3);
         }
         else //xx
@@ -144,8 +146,9 @@ inline void Lexer::lexIdent()
 {
     const char * end = getEndOfWord(curChr);
     nextTok.type = tok::identifier;
-    nextTok.text.assign(curChr, end);
-    nextTok.loc.setLength(nextTok.text.length());
+    std::string idname(curChr, end);
+    nextTok.value.int_v = compUnit->addIdent(idname);
+    nextTok.loc.setLength(end - curChr);
     curChr = end - 1;
 }
 
@@ -330,10 +333,7 @@ inline void Lexer::lexString()
         err::Error(nextTok.loc) << "eof in string literal" << err::caret << err::endl;
 
     //insert string as new entry only if it's not already there
-    std::vector<std::string>::iterator it = std::find(stringTbl.begin(), stringTbl.end(), strdata);
-    nextTok.value.int_v = it - stringTbl.begin();
-    if (it == stringTbl.end())
-        stringTbl.push_back(strdata);
+    nextTok.value.int_v = compUnit->addString(strdata);
 }
 
 // the meat of the lexer
@@ -484,16 +484,30 @@ lexMore: //more elegant, in this case, than a while(true)
     case '/':
         if (curChr[1] == '/') //c++ style comment
         {
-            while (*curChr != '\n' && *curChr != '\0')
+            while (curChr[1] != '\n' && curChr[1] != '\0')
                 curChr++;
             goto lexMore;
         }
         if (curChr[1] == '*') //c style comment
         {
             while (*curChr != '\0' && (*curChr != '*' || curChr[1] != '/'))
-                curChr++;
+            {
+                ++nextTok.loc.firstCol;
+                if (*curChr == '\n')
+                {
+                    ++nextTok.loc.line;
+                    nextTok.loc.firstCol = 0;
+                    nextTok.loc.lineStr = utl::weak_string(curChr + 1);
+                }
+                else if (*curChr == '\t')
+                    nextTok.loc.firstCol += TAB_SIZE;
+                ++curChr;
+            }
             if (*curChr == '*')
-                curChr++;
+            {
+                ++nextTok.loc.firstCol;
+                ++curChr;
+            }
             goto lexMore;
         }
         lexChar(tok::slash);

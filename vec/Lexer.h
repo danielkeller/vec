@@ -5,13 +5,18 @@
 
 #include <vector>
 
+namespace ast
+{
+    class CompUnit;
+}
+
 namespace lex
 {
     //a class is used for reentrancy, in case this becomes threaded at some point
     class Lexer
     {
     public:
-        Lexer(std::string fname);
+        Lexer(std::string fname, ast::CompUnit *cu);
         ~Lexer() {delete buffer;}
 
         tok::Token & Next();
@@ -21,7 +26,7 @@ namespace lex
         bool Expect(tok::TokenType t);
         //if we don't see t, "insert" it and return false
 
-        std::string & getStr(int idx) {return stringTbl[idx];}
+        ast::CompUnit *getCompUnit() {return compUnit;}
 
     private:
         char * buffer;
@@ -32,7 +37,7 @@ namespace lex
         tok::Token nextTok;
         tok::Token curTok;
 
-        std::vector<std::string> stringTbl;
+        ast::CompUnit *compUnit;
 
         inline void lexChar(tok::TokenType type); //consume single character
         inline void lexBinOp(tok::TokenType type); //consume x or x=

@@ -62,7 +62,7 @@ std::string Token::Name()
         case notequals:
             return "'!='";
         case opequals:
-            return "'" + Token(op).Name() + "='";
+            return "'" + Token(value.op).Name() + "='";
         case lbrace:
             return "'{'";
         case rbrace:

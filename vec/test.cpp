@@ -1,5 +1,6 @@
 #include "Lexer.h"
 #include "Parser.h"
+#include "CompUnit.h"
 
 #include <cstdio>
 #include <iostream>
@@ -31,7 +32,9 @@ int main ()
     char fileName[MAX_PATH] = "";
     openDlg(fileName);
 
-    lex::Lexer l(fileName);
+    ast::CompUnit cu;
+
+    lex::Lexer l(fileName, &cu);
 
     par::Parser p(&l);
 

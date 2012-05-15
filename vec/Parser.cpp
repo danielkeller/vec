@@ -6,7 +6,7 @@
 using namespace par;
 
 Parser::Parser(lex::Lexer *l)
-    : lexer(l)
+    : lexer(l), cu(l->getCompUnit())
 {
     while (lexer->Peek() != tok::end)
         parseGlobalDecl();

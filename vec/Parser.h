@@ -1,5 +1,10 @@
 #ifndef PARSER_H
 
+namespace ast
+{
+    class CompUnit;
+}
+
 namespace lex
 {
     class Lexer;
@@ -15,7 +20,7 @@ namespace par
     private:
         lex::Lexer *lexer;
 
-
+        ast::CompUnit *cu;
 
         void parseGlobalDecl();
         void parseTypeDecl();

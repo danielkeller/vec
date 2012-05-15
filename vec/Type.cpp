@@ -2,6 +2,7 @@
 #include "Lexer.h"
 #include "Util.h"
 #include "Error.h"
+#include "CompUnit.h"
 
 #include <stack>
 
@@ -80,7 +81,7 @@ void Type::parseSingle(lex::Lexer *l)
         break;
 
     default:
-        err::Error(t.loc) << "unexpected " << t.Name() << ", expected type"
+        err::Error(t.loc) << "unexpected " << t.Name() << ", expecting type"
             << err::caret << err::endl;
         l->Advance();
     }
@@ -160,7 +161,7 @@ void Type::parseParam(lex::Lexer *l)
 
 void Type::parseIdent(lex::Lexer *l)
 {
-    std::string str = l->Next().text;
+    std::string str = l->getCompUnit()->getIdent(l->Next().value.int_v);
     code += utl::to_str(str.length());
     code += str;
 }
