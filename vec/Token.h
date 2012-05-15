@@ -1,4 +1,5 @@
 #ifndef TOKEN_H
+#define TOKEN_H
 
 #include "Location.h"
 
@@ -145,5 +146,4 @@ namespace tok
     inline bool operator!=(Token &lhs, Token &rhs) {return ! (lhs == rhs);}
 }
 
-#define TOKEN_H
 #endif

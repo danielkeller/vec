@@ -1,7 +1,7 @@
 {[int foo]}
 [int bar, {?T} sdf, ?, T uudfn]
 
-[int, @int]:[{float}]
+type foo?[bar,baz] = [int, @int]:[{float}];
 
-//TODO: add "compilation unit" class with string & ident table etc
+
 //add another string member of type to keep track of "expanded" type

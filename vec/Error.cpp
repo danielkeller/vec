@@ -9,21 +9,21 @@ using namespace err;
 #define RED "\033[1;31m"
 #define YEL "\033[1;33m"
 
-Error::Error(Level lvl, tok::Location &l)
-    : posn(0), loc(&l)
+Error::Error(Level lvl, tok::Location l)
+    : posn(0), loc(l)
 {
     init(lvl);
 }
 
-Error::Error(tok::Location &l)
-    : posn(0), loc(&l)
+Error::Error(tok::Location l)
+    : posn(0), loc(l)
 {
     init(error);
 }
 
 void Error::init(Level lvl)
 {
-    std::cerr << *loc << ": ";
+    std::cerr << loc << ": ";
 
     switch (lvl) //do error level filtering here
     {
@@ -42,12 +42,12 @@ void Error::init(Level lvl)
     }
 }
 
-Error & Error::operator<< (tok::Location &l)
+Error & Error::operator<< (tok::Location l)
 {
-    if (l.line != loc->line) //if its not on the same line, we need to print the new line
+    if (l.line != loc.line) //if its not on the same line, we need to print the new line
         posn = 0;
 
-    loc = &l;
+    loc = l;
 
     return *this;
 }
@@ -62,25 +62,28 @@ Error & Error::operator<< (Special toPrint)
 
     if (toPrint == note)
     {
-        std::cerr << std::endl << *loc << ": note: ";
+        std::cerr << std::endl << loc << ": note: ";
         posn = 0;
         return *this;
     }
 
     if (posn == 0) //if we're just starting, print the line
     {
-        std::cerr << std::endl << loc->lineStr << std::endl;
+        std::cerr << std::endl << loc.lineStr << std::endl;
     }
 
     switch (toPrint)
     {
     case caret:
-        posn = loc->printCaret(std::cerr, posn);
+        posn = loc.printCaret(posn);
         break;
 
     case underline:
-        posn = loc->printUnderline(std::cerr, posn);
+        posn = loc.printUnderline(posn);
         break;
+
+    case postcaret:
+        posn = loc.printPostCaret(posn);
 
     default:
         break;

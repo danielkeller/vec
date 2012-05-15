@@ -1,4 +1,5 @@
 #ifndef LEXER_H
+#define LEXER_H
 
 #include "Token.h"
 #include "Util.h"
@@ -21,10 +22,14 @@ namespace lex
 
         tok::Token & Next();
         tok::Token & Peek() {return nextTok;}
+        tok::Token & Last() {return curTok;}
         void Advance();
 
         bool Expect(tok::TokenType t);
         //if we don't see t, "insert" it and return false
+
+        void ErrUntil(tok::TokenType t);
+        //throw away token until we pass t (ie a ';')
 
         ast::CompUnit *getCompUnit() {return compUnit;}
 
@@ -58,5 +63,4 @@ namespace lex
     };
 }
 
-#define LEXER_H
 #endif

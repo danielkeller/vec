@@ -1,6 +1,8 @@
 #ifndef TYPE_H
+#define TYPE_H
 
 #include <string>
+#include <vector>
 #include "Token.h"
 
 namespace lex
@@ -22,6 +24,7 @@ namespace typ
     {
     public:
         Type(lex::Lexer *l); //extract next type from lexer
+        Type();
         utl::weak_string w_str();
         bool isFunc();
         bool isTempl();
@@ -39,10 +42,11 @@ namespace typ
         void parseRef(lex::Lexer *l);
         void parseNamed(lex::Lexer *l);
         void parseIdent(lex::Lexer *l);
+
+        friend class TypeListParser;
     };
 
     bool couldBeType(tok::Token &t);
 }
 
-#define TYPE_H
 #endif

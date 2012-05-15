@@ -1,4 +1,5 @@
 #ifndef UTIL_H
+#define UTIL_H
 
 #include <string>
 #include <ostream>
@@ -58,5 +59,4 @@ namespace utl
     }
 }
 
-#define UTIL_H
 #endif

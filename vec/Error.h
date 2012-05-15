@@ -1,4 +1,9 @@
+#ifndef ERROR_H
+#define ERROR_H
+
 #include <iostream>
+
+#include "Location.h"
 
 namespace tok
 {
@@ -18,6 +23,7 @@ namespace err
     enum Special
     {
         caret,
+        postcaret,
         underline,
         note,
         endl
@@ -26,20 +32,20 @@ namespace err
     class Error
     {
         int posn;
-        tok::Location * loc;
+        tok::Location loc;
 
         void init(Level lvl);
 
     public:
-        Error(Level lvl, tok::Location &loc);
-        Error(tok::Location &loc);
+        Error(Level lvl, tok::Location loc);
+        Error(tok::Location loc);
 
         template<class T>
         Error & operator<< (T toPrint);
         
         Error & operator<< (Special toPrint);
         
-        Error & operator<< (tok::Location &l); //set new location
+        Error & operator<< (tok::Location l); //set new location
     };
 
     template<class T>
@@ -55,3 +61,5 @@ namespace err
         return *this;
     }
 }
+
+#endif

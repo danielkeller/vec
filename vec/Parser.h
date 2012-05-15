@@ -1,4 +1,5 @@
 #ifndef PARSER_H
+#define PARSER_H
 
 namespace ast
 {
@@ -28,5 +29,4 @@ namespace par
     };
 }
 
-#define PARSER_H
 #endif

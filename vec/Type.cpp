@@ -40,6 +40,10 @@ bool typ::couldBeType(tok::Token &t)
     }
 }
 
+Type::Type()
+    : code("I")
+{}
+
 Type::Type(lex::Lexer *l)
 {
     parseSingle(l);

@@ -37,7 +37,6 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
 
 tok::Token & Lexer::Next()
 {
-    curTok = nextTok;
     Advance();
     return curTok;
 }
@@ -49,6 +48,12 @@ bool Lexer::Expect(tok::TokenType t)
     
     Advance();
     return true;
+}
+
+void Lexer::ErrUntil(tok::TokenType t)
+{
+    while (curTok != t && nextTok != tok::end)
+        Advance();
 }
 
 inline bool isWhitespace(char c)
@@ -342,6 +347,8 @@ void Lexer::Advance()
 {
     if (nextTok.type == tok::end) //can't advance
         return;
+
+    curTok = nextTok;
 
     nextTok.loc.firstCol = nextTok.loc.lastCol;
 
