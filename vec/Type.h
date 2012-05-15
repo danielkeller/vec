@@ -12,6 +12,20 @@ namespace utl
     class weak_string;
 }
 
+/*
+Type codes are
+    L - list
+    T - tuple
+    t - tuple end
+    I - int
+    F - float
+    R - reference
+    N - named N[length]name ie N3foo
+    A - any
+    P - param, "named any"
+    U - function
+*/
+
 namespace typ
 {
     //so we can easily change the syntax if needed
@@ -23,6 +37,8 @@ namespace typ
     public:
         Type(lex::Lexer *l); //extract next type from lexer
         utl::weak_string w_str();
+        bool isFunc();
+        bool isTempl();
 
     private:
         std::string code; //string representation of type
