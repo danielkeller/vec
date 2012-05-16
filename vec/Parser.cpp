@@ -87,10 +87,10 @@ void Parser::parseTypeDecl()
 
     if (lexer->Expect(tok::question)) //has parameters
     {
-        if (lexer->Expect(typ::tupleBegin)) //list
+        if (lexer->Expect(tok::lparen)) //list
         {
             TypeDeclParamParser tdp(&td);
-            par::parseListOf(lexer, isIdent, tdp, typ::tupleEnd, "identifiers");
+            par::parseListOf(lexer, isIdent, tdp, tok::rparen, "identifiers");
         }
         else if (lexer->Peek() == tok::identifier) //single
             td.params.push_back(lexer->Next().value.int_v);

@@ -44,7 +44,7 @@ namespace typ
         void parseRef(lex::Lexer *l);
         void parseNamed(lex::Lexer *l);
         void parseIdent(lex::Lexer *l);
-        void checkArgs(lex::Lexer *l);
+        size_t checkArgs(lex::Lexer *l);
 
         friend class TypeListParser;
     };

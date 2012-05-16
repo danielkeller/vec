@@ -4,18 +4,14 @@ type foo?T = {?T};
 
 type bar = [float x, foo y];
 
-type baf = [foo![int, bar], bar];
+type baf = [foo!int, bar];
+
+type lol = [foo!{?T}];
+
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];
 //or whatever
 
-
-//type parameters are owned by / unique to their type
-//so attach name of owning type to it?
-//what happens when expanded? / not expanded
-//4 cases - (not) expanded, (not) !specified
-//not exp, not spec - easy, just name
-//not exp, spec - tack it on ie N3 A I a or whatever
-//exp, not spec - 'any' unique to owning type - mangle with owner name ie owner << 16 | param or owner_param
-//exp, spec - sub in new type
+//add storage duration specifier agg
+//acts like static except initializer is run on first call to agg function
