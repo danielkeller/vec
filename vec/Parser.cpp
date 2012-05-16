@@ -112,10 +112,11 @@ void Parser::parseTypeDecl()
         err::Error(lexer->Last().loc) << "expected ; after type declaration" << err::postcaret << err::endl;
 
     cu->addTypeDef(td);
+    std::cerr << td.mapped.w_str() << " = " << td.mapped.ex_w_str() << std::endl;
 }
 
 void Parser::parseDecl()
 {
     typ::Type t(lexer);
-    std::cerr << t.w_str() << std::endl;
+    std::cerr << t.w_str() << " = " << t.ex_w_str() << std::endl;
 }

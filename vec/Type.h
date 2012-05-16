@@ -26,11 +26,13 @@ namespace typ
         Type(lex::Lexer *l); //extract next type from lexer
         Type();
         utl::weak_string w_str();
+        utl::weak_string ex_w_str();
         bool isFunc();
         bool isTempl();
 
     private:
         std::string code; //string representation of type
+        std::string expanded; //with all named types inserted
         Type(std::string &s) : code(s) {} //copy type from string
 
         void parseSingle(lex::Lexer *l);

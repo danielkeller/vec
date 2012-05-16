@@ -5,6 +5,7 @@
 #include "CompUnit.h"
 
 #include <stack>
+#include <cstdlib>
 
 using namespace typ;
 
@@ -40,17 +41,56 @@ bool typ::couldBeType(tok::Token &t)
     }
 }
 
+namespace
+{
+    int readNum(std::string::iterator &it)
+    {
+        char *end;
+        int ret = strtol(&*it, &end, 10);
+        it = std::string::iterator(end);
+        return ret;
+    }
+}
+
 Type::Type()
-    : code("I")
+    : code("I"), expanded("I")
 {}
 
 Type::Type(lex::Lexer *l)
 {
+    tok::Location typloc = l->Peek().loc;
     parseSingle(l);
     if (l->Expect(tok::colon)) //function?
     {
         code += cod::function;
         parseSingle(l);
+    }
+
+    typloc = typloc + l->Last().loc; //NOTE: is this needed?
+
+    //fill in expnaded type
+    expanded.clear();
+    std::string::iterator it = code.begin();
+
+    while (it != code.end())
+    {
+        if (*it == cod::named) //fill in named types
+        {
+            ++it;
+            ast::Ident id = readNum(it);
+            ast::TypeDef *td = l->getCompUnit()->getTypeDef(id);
+            expanded += td->mapped.expanded;
+        }
+        else if (*it == cod::tupname) //strip out tuple element names
+        {
+            ++it;
+            readNum(it);
+        }
+        else
+        {
+            expanded += *it;
+            ++it;
+        }
     }
 }
 
@@ -147,8 +187,19 @@ void Type::parseRef(lex::Lexer *l)
 
 void Type::parseNamed(lex::Lexer *l)
 {
-    code += cod::named;
-    parseIdent(l);
+    if (! l->getCompUnit()->getTypeDef(l->Peek().value.int_v))
+    {
+        err::Error(l->Peek().loc) << "undefined type '"
+            << l->getCompUnit()->getIdent(l->Peek().value.int_v) << '\''
+            << err::underline << err::endl;
+        code += cod::integer; //recover
+        l->Advance(); //don't parse it twice
+    }
+    else
+    {
+        code += cod::named;
+        parseIdent(l);
+    }
 }
 
 void Type::parseParam(lex::Lexer *l)
@@ -165,9 +216,10 @@ void Type::parseParam(lex::Lexer *l)
 
 void Type::parseIdent(lex::Lexer *l)
 {
-    std::string str = l->getCompUnit()->getIdent(l->Next().value.int_v);
-    code += utl::to_str(str.length());
-    code += str;
+//    std::string str = l->getCompUnit()->getIdent(l->Next().value.int_v);
+//    code += utl::to_str(str.length());
+//    code += str;
+    code += utl::to_str(l->Next().value.int_v);
 }
 
 bool Type::isFunc()
@@ -178,6 +230,11 @@ bool Type::isFunc()
 bool Type::isTempl()
 {
     return code.find(cod::any) != std::string::npos || code.find(cod::param) != std::string::npos;
+}
+
+utl::weak_string Type::ex_w_str()
+{
+    return utl::weak_string(&*expanded.begin(), &*expanded.end());
 }
 
 utl::weak_string Type::w_str()

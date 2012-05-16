@@ -1,7 +1,8 @@
 {[int foo]}
-[int bar, {?T} sdf, ?, T uudfn]
 
-type foo?[bar,baz] = [int, @int]:[{float}];
+type foo = {int};
 
+type bar = [float x, foo y];
 
-//add another string member of type to keep track of "expanded" type
+type baf = [foo, bar];
+
