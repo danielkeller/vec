@@ -31,8 +31,8 @@ namespace typ
         bool isTempl();
 
     private:
-        std::string code; //string representation of type
-        std::string expanded; //with all named types inserted
+        std::string code; //string representation of type - "nominative" type
+        std::string expanded; //with all named types inserted - "duck" type
         Type(std::string &s) : code(s) {} //copy type from string
 
         void parseSingle(lex::Lexer *l);
@@ -44,6 +44,7 @@ namespace typ
         void parseRef(lex::Lexer *l);
         void parseNamed(lex::Lexer *l);
         void parseIdent(lex::Lexer *l);
+        void checkArgs(lex::Lexer *l);
 
         friend class TypeListParser;
     };

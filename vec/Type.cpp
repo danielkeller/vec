@@ -3,6 +3,7 @@
 #include "Util.h"
 #include "Error.h"
 #include "CompUnit.h"
+#include "ParseUtils.h"
 
 #include <stack>
 #include <cstdlib>
@@ -13,8 +14,10 @@ namespace cod
 {
     static const char list = 'L';
     static const char tuple = 'T';
-    static const char tupname = 'V'; //name of variable for struct-style access
+    static const char tupname = 'v'; //name of variable for struct-style access
     static const char tupend = 't';
+    static const char argbegin = 'A';
+    static const char argend = 'a';
     static const char integer = 'I';
     static const char floating = 'F';
     static const char ref = 'R';
@@ -131,24 +134,29 @@ void Type::parseSingle(lex::Lexer *l)
     }
 }
 
+namespace typ
+{
+    class TypeListParser
+    {
+        Type *ty;
+    public:
+        TypeListParser(Type *t) : ty(t) {}
+        void operator()(lex::Lexer *l)
+        {
+            ty->parseSingle(l);
+            if (l->Peek() == tok::identifier)
+            {
+                ty->code += cod::tupname;
+                ty->parseIdent(l);
+            }
+        }
+    };
+}
+
 void Type::parseTypeList(lex::Lexer *l)
 {
-    while (true)
-    {
-        parseSingle(l);
-        if (l->Peek() == tok::identifier)
-        {
-            code += cod::tupname;
-            parseIdent(l);
-        }
-        if (!l->Expect(tok::comma))
-        {
-            if (couldBeType(l->Peek()))
-                err::Error(l->Peek().loc) << "missing comma in type list" << err::caret << err::endl;
-            else
-                break; //assume end of list
-        }
-    }
+    TypeListParser tlp(this);
+    par::parseListOf(l, couldBeType, tlp, tupleEnd, "types");
 }
 
 void Type::parseList(lex::Lexer *l)
@@ -165,8 +173,6 @@ void Type::parseTuple(lex::Lexer *l)
     code += cod::tuple;
     tok::Location errLoc = l->Next().loc;
     parseTypeList(l);
-    if (!l->Expect(tupleEnd))
-        err::Error(errLoc) << "unterminated tuple type" << err::caret << err::endl;
     code += cod::tupend;
 }
 
@@ -200,6 +206,7 @@ void Type::parseNamed(lex::Lexer *l)
         code += cod::named;
         parseIdent(l);
     }
+    checkArgs(l);
 }
 
 void Type::parseParam(lex::Lexer *l)
@@ -214,11 +221,26 @@ void Type::parseParam(lex::Lexer *l)
         code += cod::any;
 }
 
+void Type::checkArgs(lex::Lexer *l)
+{
+    if (l->Expect(tok::bang))
+    {
+        code += cod::argbegin;
+        if (l->Expect(typ::tupleBegin)) //list
+        {
+            parseTypeList(l);
+        }
+        else
+        {
+            parseSingle(l);
+        }
+        code += cod::argend;
+    }
+
+}
+
 void Type::parseIdent(lex::Lexer *l)
 {
-//    std::string str = l->getCompUnit()->getIdent(l->Next().value.int_v);
-//    code += utl::to_str(str.length());
-//    code += str;
     code += utl::to_str(l->Next().value.int_v);
 }
 
