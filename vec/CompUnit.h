@@ -2,6 +2,7 @@
 #define COMPUNIT_H
 
 #include "Type.h"
+#include "Scope.h"
 
 #include <map>
 #include <vector>
@@ -13,24 +14,19 @@ namespace ast
     typedef int Ident;
     typedef int Str;
 
-    struct TypeDef
-    {
-        Ident name;
-        std::vector<Ident> params;
-        typ::Type mapped;
-    };
-
     class CompUnit
     {
         TblType stringTbl;
         TblType identTbl;
-        std::map<Ident, TypeDef> typeDefs;
+        std::vector<Scope> scopes;
 
     public:
+        CompUnit();
+
         Str addString(std::string & str);
         Ident addIdent(std::string &str);
-        void addTypeDef(TypeDef & td);
-        TypeDef * getTypeDef(Ident name);
+
+        Scope * globalScope() {return &scopes[0];}
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}

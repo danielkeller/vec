@@ -22,13 +22,7 @@ Ident CompUnit::addIdent(std::string &str)
     return ret;
 }
 
-void CompUnit::addTypeDef(TypeDef &td)
+CompUnit::CompUnit()
 {
-    typeDefs[td.name] = td;
-}
-
-TypeDef * CompUnit::getTypeDef(Ident name)
-{
-    std::map<Ident, TypeDef>::iterator it = typeDefs.find(name);
-    return it == typeDefs.end() ? 0 : &it->second;
+    scopes.push_back(Scope()); //create global scope
 }

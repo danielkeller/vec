@@ -13,17 +13,22 @@ namespace utl
 {
     class weak_string;
 }
+namespace ast
+{
+    class Scope;
+}
+
+namespace par
+{
+    class TypeParser;
+    class TypeListParser;
+}
 
 namespace typ
 {
-    //so we can easily change the syntax if needed
-    static const tok::TokenType listBegin = tok::lbrace, listEnd = tok::rbrace;
-    static const tok::TokenType tupleBegin = tok::lsquare, tupleEnd = tok::rsquare;
-
     class Type
     {
     public:
-        Type(lex::Lexer *l); //extract next type from lexer
         Type();
         utl::weak_string w_str();
         utl::weak_string ex_w_str();
@@ -33,18 +38,37 @@ namespace typ
     private:
         std::string code; //string representation of type - "nominative" type
         std::string expanded; //with all named types inserted - "duck" type
-        Type(std::string &s) : code(s) {} //copy type from string
 
-        void parseSingle(lex::Lexer *l);
-        void parseTypeList(lex::Lexer *l);
-        void parseList(lex::Lexer *l);
-        void parseTuple(lex::Lexer *l);
-        void parsePrim(lex::Lexer *l);
-        void parseParam(lex::Lexer *l);
-        void parseRef(lex::Lexer *l);
-        void parseNamed(lex::Lexer *l);
-        void parseIdent(lex::Lexer *l);
-        size_t checkArgs(lex::Lexer *l);
+        friend class par::TypeListParser;
+        friend class par::TypeParser;
+    };
+}
+
+namespace par
+{
+    //so we can easily change the syntax if needed
+    static const tok::TokenType listBegin = tok::lbrace, listEnd = tok::rbrace;
+    static const tok::TokenType tupleBegin = tok::lsquare, tupleEnd = tok::rsquare;
+
+    class TypeParser
+    {
+        typ::Type t;
+        lex::Lexer *l;
+        ast::Scope *s;
+        
+    public:
+        typ::Type operator()(lex::Lexer *lex, ast::Scope *sc);
+
+        void parseSingle();
+        void parseTypeList();
+        void parseList();
+        void parseTuple();
+        void parsePrim();
+        void parseParam();
+        void parseRef();
+        void parseNamed();
+        void parseIdent();
+        size_t checkArgs();
 
         friend class TypeListParser;
     };

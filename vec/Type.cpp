@@ -8,6 +8,7 @@
 #include <stack>
 #include <cstdlib>
 
+using namespace par;
 using namespace typ;
 
 namespace cod
@@ -31,7 +32,7 @@ namespace cod
     }
 }
 
-bool typ::couldBeType(tok::Token &t)
+bool par::couldBeType(tok::Token &t)
 {
     switch (t.Type())
     {
@@ -88,33 +89,37 @@ namespace
 }
 
 Type::Type()
-    : code("I"), expanded("I")
+    : code(""), expanded("")
 {}
 
-Type::Type(lex::Lexer *l)
+Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
 {
-    parseSingle(l);
+    l = lex;
+    s = sco;
+    t = Type();
+
+    parseSingle();
     if (l->Expect(tok::colon)) //function?
     {
-        code += cod::function;
-        parseSingle(l);
+        t.code += cod::function;
+        parseSingle();
     }
 
-    //fill in expnaded type
-    expanded.clear();
-    std::string::iterator it = code.begin();
+    //fill in expnaded pare
+    t.expanded.clear();
+    std::string::iterator it = t.code.begin();
 
-    while (it != code.end())
+    while (it != t.code.end())
     {
-        if (*it == cod::named) //fill in named types
+        if (*it == cod::named) //fill in named pares
         {
             ++it;
             ast::Ident id = readNum(it);
             ++it; //remove 'n'
-            ast::TypeDef *td = l->getCompUnit()->getTypeDef(id);
+            ast::TypeDef *td = s->getTypeDef(id);
 
             std::map<ast::Ident, std::string> paramSubs;
-            if (*it == cod::arg) //type arguments are specified, sub them in
+            if (*it == cod::arg) //pare arguments are specified, sub them in
             {
                 ++it;
                 int i = 0;
@@ -122,8 +127,8 @@ Type::Type(lex::Lexer *l)
                     paramSubs[td->params[i]] = readType(it);
             }
 
-            //copy in type.
-            //alias type parameters which are not specified or aliased
+            //copy in pare.
+            //alias pare parameters which are not specified or aliased
             
             std::string::iterator it2 = td->mapped.expanded.begin();
             while (it2 != td->mapped.expanded.end())
@@ -132,19 +137,19 @@ Type::Type(lex::Lexer *l)
                 {
                     ++it2;
                     ast::Ident paramName = readNum(it2);
-                    if (paramSubs.count(paramName)) //type is specified
-                        expanded += paramSubs[paramName]; //replace it
+                    if (paramSubs.count(paramName)) //pare is specified
+                        t.expanded += paramSubs[paramName]; //replace it
                     else
                     {
-                        if (paramName >> 16 == 0) //type is not aliased
+                        if (paramName >> 16 == 0) //pare is not aliased
                             paramName |= (td->name+1) << 16; //alias it
-                        expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
+                        t.expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
                     }
                     ++it2; //skip over param end
                 }
                 else
                 {
-                    expanded += *it2;
+                    t.expanded += *it2;
                     ++it2;
                 }
             }
@@ -163,107 +168,109 @@ Type::Type(lex::Lexer *l)
         }
         else
         {
-            expanded += *it;
+            t.expanded += *it;
             ++it;
         }
     }
+
+    return t;
 }
 
-void Type::parseSingle(lex::Lexer *l)
+void TypeParser::parseSingle()
 {
-    tok::Token t = l->Peek();
-    switch (t.Type())
+    tok::Token to = l->Peek();
+    switch (to.Type())
     {
     case listBegin:
-        parseList(l);
+        parseList();
         break;
 
     case tupleBegin:
-        parseTuple(l);
+        parseTuple();
         break;
 
     case tok::k_int:
     case tok::k_float:
-        parsePrim(l);
+        parsePrim();
         break;
 
     case tok::question:
-        parseParam(l);
+        parseParam();
         break;
 
     case tok::at:
-        parseRef(l);
+        parseRef();
         break;
 
     case tok::identifier:
-        parseNamed(l);
+        parseNamed();
         break;
 
     default:
-        err::Error(t.loc) << "unexpected " << t.Name() << ", expecting type"
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting pare"
             << err::caret << err::endl;
         l->Advance();
     }
 }
 
-namespace typ
+namespace par
 {
     class TypeListParser
     {
-        Type *ty;
+        TypeParser *tp;
     public:
         int num;
-        TypeListParser(Type *t) : ty(t), num(0) {}
+        TypeListParser(TypeParser *t) : tp(t), num(0) {}
         void operator()(lex::Lexer *l)
         {
             ++num;
-            ty->parseSingle(l);
+            tp->parseSingle();
             if (l->Peek() == tok::identifier)
             {
-                ty->code += cod::tupname;
-                ty->parseIdent(l);
+                tp->t.code += cod::tupname;
+                tp->parseIdent();
             }
         }
     };
 }
 
-void Type::parseTypeList(lex::Lexer *l)
+void TypeParser::parseTypeList()
 {
     TypeListParser tlp(this);
-    par::parseListOf(l, couldBeType, tlp, tupleEnd, "types");
+    par::parseListOf(l, couldBeType, tlp, tupleEnd, "pares");
 }
 
-void Type::parseList(lex::Lexer *l)
+void TypeParser::parseList()
 {
-    code += cod::list;
+    t.code += cod::list;
     tok::Location errLoc = l->Next().loc;
-    parseSingle(l);
+    parseSingle();
 
     if (!l->Expect(listEnd))
-        err::Error(errLoc) << "unterminated list type" << err::caret << err::endl;
+        err::Error(errLoc) << "unterminated list pare" << err::caret << err::endl;
 
     if (l->Expect(tok::bang))
     {
-        tok::Token t = l->Next();
-        if (t == tok::integer)
+        tok::Token to = l->Next();
+        if (to == tok::integer)
         {
-            code += cod::dim + utl::to_str(t.value.int_v);
+            t.code += cod::dim + utl::to_str(to.value.int_v);
         }
         else
-            err::Error(t.loc) << "expected list length after '!'" << err::caret << err::endl;
+            err::Error(to.loc) << "expected list length after '!'" << err::caret << err::endl;
     }
-    code += cod::endOf(cod::list);
+    t.code += cod::endOf(cod::list);
 }
 
-void Type::parseTuple(lex::Lexer *l)
+void TypeParser::parseTuple()
 {
-    code += cod::tuple;
+    t.code += cod::tuple;
     l->Advance();
-    parseTypeList(l);
-    code += cod::endOf(cod::tuple);
+    parseTypeList();
+    t.code += cod::endOf(cod::tuple);
 }
 
-void Type::parsePrim(lex::Lexer *l)
+void TypeParser::parsePrim()
 {
     char c;
 
@@ -276,16 +283,16 @@ void Type::parsePrim(lex::Lexer *l)
 
     if (l->Expect(tok::bang))
     {
-        tok::Token t = l->Next();
-        if (t == tok::integer)
+        tok::Token to = l->Next();
+        if (to == tok::integer)
         {
-            width = t.value.int_v;
+            width = to.value.int_v;
 
             if (c == cod::integer)
             {
                 if (width != 8 && width != 16 && width != 32 && width != 64)
                 {
-                    err::Error(t.loc) << '\'' << width << "' is not a valid integer width"
+                    err::Error(to.loc) << '\'' << width << "' is not a valid integer width"
                         << err::caret << err::endl;
                     width = 32;
                 }
@@ -294,88 +301,88 @@ void Type::parsePrim(lex::Lexer *l)
             {
                 if (width != 16 && width != 32 && width != 64 && width != 80)
                 {
-                    err::Error(t.loc) << '\'' << width << "' is not a valid floating point width"
+                    err::Error(to.loc) << '\'' << width << "' is not a valid floating point width"
                         << err::caret << err::endl;
                     width = 32;
                 }
             }
         }
         else
-            err::Error(t.loc) << "expected type width after '!'" << err::caret << err::endl;
+            err::Error(to.loc) << "expected numeric width after '!'" << err::caret << err::endl;
     }
 
-    code += c + utl::to_str(width) + cod::endOf(c);
+    t.code += c + utl::to_str(width) + cod::endOf(c);
 }
 
-void Type::parseRef(lex::Lexer *l)
+void TypeParser::parseRef()
 {
-    code += cod::ref;
+    t.code += cod::ref;
     l->Advance();
-    parseSingle(l);
-    code += cod::endOf(cod::ref);
+    parseSingle();
+    t.code += cod::endOf(cod::ref);
 }
 
-void Type::parseNamed(lex::Lexer *l)
+void TypeParser::parseNamed()
 {
-    ast::TypeDef * td = l->getCompUnit()->getTypeDef(l->Peek().value.int_v);
+    ast::TypeDef * td = s->getTypeDef(l->Peek().value.int_v);
 
     if (!td)
     {
-        err::Error(l->Peek().loc) << "undefined type '"
+        err::Error(l->Peek().loc) << "undefined pare '"
             << l->getCompUnit()->getIdent(l->Peek().value.int_v) << '\''
             << err::underline << err::endl;
-        code += cod::integer + cod::endOf(cod::integer); //recover
+        t.code += cod::integer + cod::endOf(cod::integer); //recover
         l->Advance(); //don't parse it twice
     }
     else
     {
-        code += cod::named;
-        parseIdent(l);
+        t.code += cod::named;
+        parseIdent();
     }
     
     tok::Location argsLoc = l->Peek().loc;
 
-    size_t nargs = checkArgs(l);
+    size_t nargs = checkArgs();
 
     argsLoc = argsLoc + l->Last().loc;
 
     if (td && nargs && nargs != td->params.size())
-        err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
+        err::Error(argsLoc) << "incorrect number of pare arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline << err::endl;
 
-    code += cod::endOf(cod::named);
+    t.code += cod::endOf(cod::named);
 }
 
-void Type::parseParam(lex::Lexer *l)
+void TypeParser::parseParam()
 {
     l->Advance();
     if (l->Peek() == tok::identifier)
     {
-        code += cod::param;
-        parseIdent(l);
-        code += cod::endOf(cod::param);
+        t.code += cod::param;
+        parseIdent();
+        t.code += cod::endOf(cod::param);
     }
     else
-        code += cod::any + cod::endOf(cod::any);
+        t.code += cod::any + cod::endOf(cod::any);
 }
 
-size_t Type::checkArgs(lex::Lexer *l)
+size_t TypeParser::checkArgs()
 {
     if (l->Expect(tok::bang))
     {
-        code += cod::arg;
+        t.code += cod::arg;
         if (l->Expect(tok::lparen))
         {
             TypeListParser tlp(this);
-            par::parseListOf(l, couldBeType, tlp, tok::rparen, "types");
-            code += cod::endOf(cod::arg);
+            par::parseListOf(l, couldBeType, tlp, tok::rparen, "pares");
+            t.code += cod::endOf(cod::arg);
 
             return tlp.num;
         }
         else
         {
-            parseSingle(l);
-            code += cod::endOf(cod::arg);
+            parseSingle();
+            t.code += cod::endOf(cod::arg);
             
             return 1;
         }
@@ -383,9 +390,9 @@ size_t Type::checkArgs(lex::Lexer *l)
     return 0;
 }
 
-void Type::parseIdent(lex::Lexer *l)
+void TypeParser::parseIdent()
 {
-    code += utl::to_str(l->Next().value.int_v);
+    t.code += utl::to_str(l->Next().value.int_v);
 }
 
 bool Type::isFunc()

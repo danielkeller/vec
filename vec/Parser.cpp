@@ -10,6 +10,8 @@ using namespace par;
 Parser::Parser(lex::Lexer *l)
     : lexer(l), cu(l->getCompUnit())
 {
+    curScope = cu->globalScope();
+
     while (lexer->Peek() != tok::end)
         parseGlobalDecl();
 }
@@ -20,7 +22,7 @@ void Parser::parseGlobalDecl()
 
     if (t == tok::k_type)
         parseTypeDecl();
-    else if (typ::couldBeType(t))
+    else if (couldBeType(t))
         parseDecl();
     else
     {
@@ -77,7 +79,7 @@ void Parser::parseTypeDecl()
     
     td.name = t.value.int_v;
 
-    if (cu->getTypeDef(td.name))
+    if (curScope->getTypeDef(td.name))
     {
         err::Error(t.loc) << "redefinition of type '" << cu->getIdent(td.name) << '\''
             << err::underline << err::endl;
@@ -106,17 +108,17 @@ void Parser::parseTypeDecl()
     if (!lexer->Expect(tok::equals))
         err::Error(lexer->Peek().loc) << "expected = after type name" << err::caret << err::endl;
 
-    td.mapped = typ::Type(lexer); //create type
+    td.mapped = tp(lexer, curScope); //create type
 
     if (!lexer->Expect(tok::semicolon))
         err::Error(lexer->Last().loc) << "expected ; after type declaration" << err::postcaret << err::endl;
 
-    cu->addTypeDef(td);
+    curScope->addTypeDef(td);
     std::cerr << td.mapped.w_str() << " = " << td.mapped.ex_w_str() << std::endl;
 }
 
 void Parser::parseDecl()
 {
-    typ::Type t(lexer);
+    typ::Type t = tp(lexer, curScope);
     std::cerr << t.w_str() << " = " << t.ex_w_str() << std::endl;
 }
