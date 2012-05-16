@@ -15,6 +15,7 @@ namespace cod
     static const char list = 'L';
     static const char tuple = 'T';
     static const char tupname = 'v'; //name of variable for struct-style access
+    static const char dim = 'd'; //dimension of list
     static const char arg = 'A';
     static const char integer = 'I';
     static const char floating = 'F';
@@ -109,6 +110,7 @@ Type::Type(lex::Lexer *l)
         {
             ++it;
             ast::Ident id = readNum(it);
+            ++it; //remove 'n'
             ast::TypeDef *td = l->getCompUnit()->getTypeDef(id);
 
             std::map<ast::Ident, std::string> paramSubs;
@@ -147,7 +149,14 @@ Type::Type(lex::Lexer *l)
                 }
             }
         }
+
         else if (*it == cod::tupname) //strip out tuple element names
+        {
+            ++it;
+            readNum(it);
+        }
+
+        else if (*it == cod::dim) //strip out list dimensions
         {
             ++it;
             readNum(it);
@@ -229,8 +238,20 @@ void Type::parseList(lex::Lexer *l)
     code += cod::list;
     tok::Location errLoc = l->Next().loc;
     parseSingle(l);
+
     if (!l->Expect(listEnd))
         err::Error(errLoc) << "unterminated list type" << err::caret << err::endl;
+
+    if (l->Expect(tok::bang))
+    {
+        tok::Token t = l->Next();
+        if (t == tok::integer)
+        {
+            code += cod::dim + utl::to_str(t.value.int_v);
+        }
+        else
+            err::Error(t.loc) << "expected list length after '!'" << err::caret << err::endl;
+    }
     code += cod::endOf(cod::list);
 }
 
@@ -244,10 +265,46 @@ void Type::parseTuple(lex::Lexer *l)
 
 void Type::parsePrim(lex::Lexer *l)
 {
+    char c;
+
     if (l->Next() == tok::k_int)
-        (code += cod::integer) += cod::endOf(cod::integer);
+        c = cod::integer;
     else 
-        (code += cod::floating) += cod::endOf(cod::floating);
+        c = cod::floating;
+
+    int width = 32;
+
+    if (l->Expect(tok::bang))
+    {
+        tok::Token t = l->Next();
+        if (t == tok::integer)
+        {
+            width = t.value.int_v;
+
+            if (c == cod::integer)
+            {
+                if (width != 8 && width != 16 && width != 32 && width != 64)
+                {
+                    err::Error(t.loc) << '\'' << width << "' is not a valid integer width"
+                        << err::caret << err::endl;
+                    width = 32;
+                }
+            }
+            else
+            {
+                if (width != 16 && width != 32 && width != 64 && width != 80)
+                {
+                    err::Error(t.loc) << '\'' << width << "' is not a valid floating point width"
+                        << err::caret << err::endl;
+                    width = 32;
+                }
+            }
+        }
+        else
+            err::Error(t.loc) << "expected type width after '!'" << err::caret << err::endl;
+    }
+
+    code += c + utl::to_str(width) + cod::endOf(c);
 }
 
 void Type::parseRef(lex::Lexer *l)

@@ -1,12 +1,8 @@
-{[int foo]}
+type foo = {int}!6;
 
-type foo?T = {?T};
+type bar = {foo}!3;
 
-type bar = [float x, foo y];
-
-type baf = [foo!int, bar];
-
-type lol = [foo!{?T}];
+type baf = [int!8, int!666, float, float!80, float!60];
 
 
 //could do variadic templates:
