@@ -10,6 +10,11 @@ namespace tok
     struct Location;
 }
 
+namespace lex
+{
+    struct Lexer;
+}
+
 namespace err
 {
     enum Level
@@ -28,6 +33,8 @@ namespace err
         note,
         endl
     };
+
+    void ExpectedAfter(lex::Lexer *l, const char *expected, const char *after);
 
     class Error
     {

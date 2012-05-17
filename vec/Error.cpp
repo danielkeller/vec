@@ -1,8 +1,14 @@
 #include "Error.h"
 #include "Location.h"
+#include "Lexer.h"
 #include <iostream>
 
 using namespace err;
+
+void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
+{
+    Error(l->Last().loc) << "expected " << expected << " after " << after << err::postcaret << err::endl;
+}
 
 #define COLOFF "\033[0m"
 #define MGNTA "\033[1;35m"
