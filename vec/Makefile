@@ -1,4 +1,4 @@
-CXXFLAGS = -g -Wall
+CXXFLAGS = -g -Wall -pedantic -std=c++11
 CXX = clang++
 
 SRC = $(wildcard *.cpp)
