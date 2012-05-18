@@ -105,7 +105,7 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
         parseSingle();
     }
 
-    //fill in expnaded pare
+    //fill in expnaded type
     t.expanded.clear();
     std::string::iterator it = t.code.begin();
 
@@ -119,7 +119,7 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
             ast::TypeDef *td = s->getTypeDef(id);
 
             std::map<ast::Ident, std::string> paramSubs;
-            if (*it == cod::arg) //pare arguments are specified, sub them in
+            if (*it == cod::arg) //type arguments are specified, sub them in
             {
                 ++it;
                 int i = 0;
@@ -127,8 +127,8 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
                     paramSubs[td->params[i]] = readType(it);
             }
 
-            //copy in pare.
-            //alias pare parameters which are not specified or aliased
+            //copy in type.
+            //alias type parameters which are not specified or aliased
             
             std::string::iterator it2 = td->mapped.expanded.begin();
             while (it2 != td->mapped.expanded.end())
@@ -137,12 +137,12 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
                 {
                     ++it2;
                     ast::Ident paramName = readNum(it2);
-                    if (paramSubs.count(paramName)) //pare is specified
+                    if (paramSubs.count(paramName)) //param is specified
                         t.expanded += paramSubs[paramName]; //replace it
                     else
                     {
-                        if (paramName >> 16 == 0) //pare is not aliased
-                            paramName |= (td->name+1) << 16; //alias it
+                        if (paramName >> 16 == 0) //param is not aliased
+                            paramName |= (id + 1) << 16; //alias it
                         t.expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
                     }
                     ++it2; //skip over param end
@@ -207,7 +207,7 @@ void TypeParser::parseSingle()
         break;
 
     default:
-        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting pare"
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting type"
             << err::caret << err::endl;
         l->Advance();
     }
@@ -247,7 +247,7 @@ void TypeParser::parseList()
     parseSingle();
 
     if (!l->Expect(listEnd))
-        err::Error(errLoc) << "unterminated list pare" << err::caret << err::endl;
+        err::Error(errLoc) << "unterminated list type" << err::caret << err::endl;
 
     if (l->Expect(tok::bang))
     {
@@ -328,7 +328,7 @@ void TypeParser::parseNamed()
 
     if (!td)
     {
-        err::Error(l->Peek().loc) << "undefined pare '"
+        err::Error(l->Peek().loc) << "undefined type '"
             << l->getCompUnit()->getIdent(l->Peek().value.int_v) << '\''
             << err::underline << err::endl;
         t.code += cod::integer + cod::endOf(cod::integer); //recover
@@ -347,7 +347,7 @@ void TypeParser::parseNamed()
     argsLoc = argsLoc + l->Last().loc;
 
     if (td && nargs && nargs != td->params.size())
-        err::Error(argsLoc) << "incorrect number of pare arguments, expected 0 or " <<
+        err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline << err::endl;
 
     t.code += cod::endOf(cod::named);

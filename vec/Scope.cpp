@@ -2,9 +2,9 @@
 
 using namespace ast;
 
-void Scope::addTypeDef(TypeDef &td)
+void Scope::addTypeDef(Ident name, TypeDef &td)
 {
-    typeDefs[td.name] = td;
+    typeDefs[name] = td;
 }
 
 TypeDef * Scope::getTypeDef(Ident name)
@@ -14,6 +14,25 @@ TypeDef * Scope::getTypeDef(Ident name)
     {
         if (parent)
             return parent->getTypeDef(name);
+        else
+            return 0;
+    }
+    else
+        return &it->second;
+}
+
+void Scope::addVarDef(Ident name, VarDef &tr)
+{
+    varDefs[name] = tr;
+}
+
+VarDef * Scope::getVarDef(Ident name)
+{
+    std::map<Ident, VarDef>::iterator it = varDefs.find(name);
+    if (it == varDefs.end())
+    {
+        if (parent)
+            return parent->getVarDef(name);
         else
             return 0;
     }

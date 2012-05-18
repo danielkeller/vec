@@ -12,7 +12,7 @@ namespace tok
 
 namespace lex
 {
-    struct Lexer;
+    class Lexer;
 }
 
 namespace err

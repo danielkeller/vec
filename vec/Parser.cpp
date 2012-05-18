@@ -77,11 +77,11 @@ void Parser::parseTypeDecl()
         return;
     }
     
-    td.name = t.value.int_v;
+    ast::Ident name = t.value.int_v;
 
-    if (curScope->getTypeDef(td.name))
+    if (curScope->getTypeDef(name))
     {
-        err::Error(t.loc) << "redefinition of type '" << cu->getIdent(td.name) << '\''
+        err::Error(t.loc) << "redefinition of type '" << cu->getIdent(name) << '\''
             << err::underline << err::endl;
         lexer->ErrUntil(tok::semicolon);
         return;
@@ -106,19 +106,48 @@ void Parser::parseTypeDecl()
     }
 
     if (!lexer->Expect(tok::equals))
-        err::Error(lexer->Peek().loc) << "expected = after type name" << err::caret << err::endl;
+        err::ExpectedAfter(lexer, "=", "type name");
 
     td.mapped = tp(lexer, curScope); //create type
 
     if (!lexer->Expect(tok::semicolon))
-        err::Error(lexer->Last().loc) << "expected ; after type declaration" << err::postcaret << err::endl;
+        err::ExpectedAfter(lexer, ";", "type declaration");
 
-    curScope->addTypeDef(td);
-    std::cerr << td.mapped.w_str() << " = " << td.mapped.ex_w_str() << std::endl;
+    curScope->addTypeDef(name, td);
 }
 
 void Parser::parseDecl()
 {
     typ::Type t = tp(lexer, curScope);
-    std::cerr << t.w_str() << " = " << t.ex_w_str() << std::endl;
+
+    tok::Token to = lexer->Peek();
+
+    if (to != tok::identifier)
+    {
+        err::ExpectedAfter(lexer, "identifier", "type");
+        lexer->ErrUntil(tok::semicolon);
+        return;
+    }
+    lexer->Advance();
+
+    ast::Ident id = to.value.int_v;
+    
+    if (!t.isFunc()) //variable definition
+    {
+        //variables cannot be defined twice
+        if (curScope->getVarDef(id))
+        {
+            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
+                << '\'' << err::underline << err::endl;
+            lexer->ErrUntil(tok::semicolon);
+            return;
+        }
+
+        ast::VarDef vd;
+        vd.type = t;
+        curScope->addVarDef(id, vd);
+    }
+
+    if (!lexer->Expect(tok::semicolon))
+        err::ExpectedAfter(lexer, ";", "variable definition");
 }

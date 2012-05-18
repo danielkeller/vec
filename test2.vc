@@ -2,7 +2,11 @@ type foo = {int}!6;
 
 type bar = {foo}!3;
 
-type baf = [int!8, int!666, float, float!80, float!60];
+bar baf;
+
+int:int main = 
+(
+);
 
 
 //could do variadic templates:
