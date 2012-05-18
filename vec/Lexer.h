@@ -26,7 +26,9 @@ namespace lex
         void Advance();
 
         bool Expect(tok::TokenType t);
+        bool Expect(tok::TokenType t, tok::Token &to);
         //if we don't see t, "insert" it and return false
+        //if we do, eat it (1st case) or save it (2nd case)
 
         void ErrUntil(tok::TokenType t);
         //throw away token until we pass t (ie a ';')

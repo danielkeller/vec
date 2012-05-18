@@ -50,6 +50,15 @@ bool Lexer::Expect(tok::TokenType t)
     return true;
 }
 
+bool Lexer::Expect(tok::TokenType t, tok::Token &to)
+{
+    if (Peek() != t)
+        return false;
+    
+    to = Next();
+    return true;
+}
+
 void Lexer::ErrUntil(tok::TokenType t)
 {
     while (curTok != t && nextTok != tok::end)

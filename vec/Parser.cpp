@@ -68,11 +68,11 @@ void Parser::parseTypeDecl()
 {
     tok::Location typeloc = lexer->Next().loc;
     ast::TypeDef td;
-    tok::Token t = lexer->Next();
+    tok::Token t;
 
-    if (t != tok::identifier)
+    if (!lexer->Expect(tok::identifier, t))
     {
-        err::Error(typeloc) << "expected identifier after type" << err::postcaret << err::endl;
+        err::ExpectedAfter(lexer, "identifier", "'type'");
         lexer->ErrUntil(tok::semicolon);
         return;
     }
@@ -120,15 +120,14 @@ void Parser::parseDecl()
 {
     typ::Type t = tp(lexer, curScope);
 
-    tok::Token to = lexer->Peek();
+    tok::Token to;
 
-    if (to != tok::identifier)
+    if (!lexer->Expect(tok::identifier, to))
     {
         err::ExpectedAfter(lexer, "identifier", "type");
         lexer->ErrUntil(tok::semicolon);
         return;
     }
-    lexer->Advance();
 
     ast::Ident id = to.value.int_v;
     

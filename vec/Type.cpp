@@ -251,13 +251,13 @@ void TypeParser::parseList()
 
     if (l->Expect(tok::bang))
     {
-        tok::Token to = l->Next();
-        if (to == tok::integer)
+        tok::Token to;
+        if (l->Expect(tok::integer, to))
         {
             t.code += cod::dim + utl::to_str(to.value.int_v);
         }
         else
-            err::Error(to.loc) << "expected list length after '!'" << err::caret << err::endl;
+            err::ExpectedAfter(l, "list length", "'!'");
     }
     t.code += cod::endOf(cod::list);
 }
@@ -283,8 +283,8 @@ void TypeParser::parsePrim()
 
     if (l->Expect(tok::bang))
     {
-        tok::Token to = l->Next();
-        if (to == tok::integer)
+        tok::Token to;
+        if (l->Expect(tok::integer, to))
         {
             width = to.value.int_v;
 
@@ -308,7 +308,7 @@ void TypeParser::parsePrim()
             }
         }
         else
-            err::Error(to.loc) << "expected numeric width after '!'" << err::caret << err::endl;
+            err::ExpectedAfter(l, "numeric width", "'!'");
     }
 
     t.code += c + utl::to_str(width) + cod::endOf(c);
