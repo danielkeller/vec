@@ -17,19 +17,8 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 #define GRN "\033[1;32m"
 #define BOLD "\033[1m"
 
-Error::Error(Level lvl, tok::Location l)
+Error::Error(Level lvl, tok::Location &&l)
     : posn(0), loc(l)
-{
-    init(lvl);
-}
-
-Error::Error(tok::Location l)
-    : posn(0), loc(l)
-{
-    init(error);
-}
-
-void Error::init(Level lvl)
 {
     std::cerr << loc << ": ";
 
@@ -50,7 +39,7 @@ void Error::init(Level lvl)
     }
 }
 
-Error & Error::operator<< (tok::Location l)
+Error & Error::operator<< (tok::Location &&l)
 {
     if (l.line != loc.line) //if its not on the same line, we need to print the new line
         posn = 0;
