@@ -1,4 +1,5 @@
 CXXFLAGS = -g -Wall
+CXX = clang++
 
 SRC = $(wildcard *.cpp)
 OBJECTS	= $(patsubst %.cpp,obj/%.o,$(SRC)) 
