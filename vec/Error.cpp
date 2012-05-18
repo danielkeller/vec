@@ -14,6 +14,8 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 #define MGNTA "\033[1;35m"
 #define RED "\033[1;31m"
 #define YEL "\033[1;33m"
+#define GRN "\033[1;32m"
+#define BOLD "\033[1m"
 
 Error::Error(Level lvl, tok::Location l)
     : posn(0), loc(l)
@@ -34,11 +36,11 @@ void Error::init(Level lvl)
     switch (lvl) //do error level filtering here
     {
     case fatal:
-        std::cerr << MGNTA "fatal error: " COLOFF;
+        std::cerr << MGNTA "fatal error: " COLOFF BOLD;
         break;
 
     case error:
-        std::cerr << RED "error: " COLOFF;
+        std::cerr << RED "error: " COLOFF BOLD;
         break;
         
     case warning:
@@ -60,6 +62,7 @@ Error & Error::operator<< (tok::Location l)
 
 Error & Error::operator<< (Special toPrint)
 {
+    std::cerr << COLOFF;
     if (toPrint == endl)
     {
         std::cerr << std::endl << std::endl;
@@ -78,6 +81,8 @@ Error & Error::operator<< (Special toPrint)
         std::cerr << std::endl << loc.lineStr << std::endl;
     }
 
+    std::cerr << GRN;
+
     switch (toPrint)
     {
     case caret:
@@ -94,6 +99,8 @@ Error & Error::operator<< (Special toPrint)
     default:
         break;
     }
+
+    std::cerr << COLOFF;
 
     return *this;
 }
