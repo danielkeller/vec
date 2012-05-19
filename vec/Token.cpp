@@ -200,9 +200,10 @@ prec::precidence Token::Precidence()
         case equals:
         case opequals:
             return prec::assignment;
-        case semicolon: //give ; lowest prec to make parsing easier
         case comma:
             return prec::comma;
+        case semicolon: //give ; lowest prec to make parsing easier
+            return prec::semicolon;
         case dot: //does the do anything?
         default:
             return prec::none;
@@ -226,6 +227,7 @@ Associativity Token::Asso_ty()
         case bar:
         case ampamp:
         case barbar:
+        case colon:
             return LeftAssoc;
         case less:
         case notgreater:
@@ -238,11 +240,10 @@ Associativity Token::Asso_ty()
             return NonAssoc;
         case equals:
         case opequals:
-        case colon:
             return RightAssoc;
         case semicolon:
         case comma:
-            return LeftAssoc; //maybe
+            return RightAssoc;
         case dot: //does the do anything?
         default:
             return NonAssoc;

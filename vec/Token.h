@@ -28,7 +28,8 @@ namespace tok
             logor,
             ternary,
             assignment,
-            comma
+            comma,
+            semicolon
         };
     };
 
