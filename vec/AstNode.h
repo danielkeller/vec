@@ -3,18 +3,24 @@
 
 #include <tuple>
 #include <type_traits>
+#include <functional>
+
+namespace sa
+{
+    struct AstWalkerProxy;
+}
 
 namespace ast
 {
     template<std::size_t> struct int2type{};
 
     //generic AstNode with no children for generic node classes ie expr
-    //classes should inherit this virtually
     class AstNode0
     {
     public:
         AstNode0 *parent;
         virtual ~AstNode0() {}; 
+        virtual void eachChild(sa::AstWalkerProxy &p) {}
     };
 
     //ast node from which all others are derived
@@ -50,15 +56,15 @@ namespace ast
         {
         };
 
-        template<class A, size_t i = 0>
-        void callOnEach(A action, int2type<i> = int2type<i>())
+        template<size_t i = 0>
+        void callOnEach(sa::AstWalkerProxy &proxy, int2type<i> = int2type<i>())
         {
-            action(std::get<i>(chld));
-            callOnEach(action, int2type<i+1>());
+            proxy(std::get<i>(chld));
+            callOnEach(proxy, int2type<i+1>());
         };
         //terminate recursion
-        template<class A> //need default param for AstNode<>
-        void callOnEach(A action, int2type<conts_s> = int2type<conts_s>())
+        //need default param for AstNode<>
+        void callOnEach(sa::AstWalkerProxy &proxy, int2type<conts_s> = int2type<conts_s>())
         {
         };
 
@@ -73,10 +79,9 @@ namespace ast
             destroy();
         };
 
-        template<class A>
-        void eachChld(A action)
+        virtual void eachChild(sa::AstWalkerProxy &p)
         {
-            callOnEach(action);
+            callOnEach(p);
         }
 
         template<size_t n>
@@ -92,6 +97,48 @@ namespace ast
             std::get<n>(chld)->parent = 0;
             std::get<n>(chld) = newchld;
             newchld->parent = this;
+        }
+    };
+}
+
+namespace sa
+{
+    class AstWalker0
+    {
+        friend struct AstWalkerProxy;
+        virtual void actOn(ast::AstNode0* node) = 0;
+    };
+
+    //allows us to call a template functor from a virtual function
+    struct AstWalkerProxy
+    {
+        AstWalker0* owner;
+        AstWalkerProxy(AstWalker0 *o) : owner(o) {}
+        void operator()(ast::AstNode0* node)
+        {
+            owner->actOn(node);
+        }
+    };
+
+    template<class Base>
+    class AstWalker : public AstWalker0
+    {
+        ast::AstNode0 *root;
+        std::function<void(Base*)> action;
+        AstWalkerProxy proxy;
+        void actOn(ast::AstNode0* node)
+        {
+            node->eachChild(proxy);
+            Base * bNode = dynamic_cast<Base*>(node);
+            if (bNode)
+                action(bNode);
+        };
+
+    public:
+        template <class A>
+        AstWalker(A &&act, ast::AstNode0 *r) : root(r), action(act), proxy(this)
+        {
+            actOn(root);
         }
     };
 }
