@@ -8,6 +8,11 @@ int:int main =
 (
 );
 
+//TODO: don't expand types until sema phase.
+//then, recursively expand along with everything else
+
+//it might be nice to be able to output a compunit before
+//sema so as to skip parsing of standard libs every time
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

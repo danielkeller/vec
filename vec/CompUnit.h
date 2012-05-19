@@ -23,10 +23,15 @@ namespace ast
     public:
         CompUnit();
 
-        Str addString(std::string & str);
+        Str addString(std::string &str);
         Ident addIdent(std::string &str);
 
         Scope * globalScope() {return &scopes[0];}
+        Scope * makeScope()
+        {
+            scopes.emplace_back();
+            return &scopes.back();
+        }
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}

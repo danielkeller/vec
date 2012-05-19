@@ -2,17 +2,9 @@
 #define PARSER_H
 
 #include "Type.h"
-
-namespace ast
-{
-    class CompUnit;
-    class Scope;
-}
-
-namespace lex
-{
-    class Lexer;
-}
+#include "CompUnit.h"
+#include "Lexer.h"
+#include "Stmt.h"
 
 namespace par
 {
@@ -32,6 +24,10 @@ namespace par
         void parseGlobalDecl();
         void parseTypeDecl();
         void parseDecl();
+
+        ast::FuncBody* parseFuncBody();
+
+        ast::Block* parseBlock();
 
         friend class Type;
     };

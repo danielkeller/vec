@@ -66,9 +66,9 @@ namespace
 
 void Parser::parseTypeDecl()
 {
-    tok::Location typeloc = lexer->Next().loc;
     ast::TypeDef td;
     tok::Token t;
+    lexer->Advance(); //eat 'type'
 
     if (!lexer->Expect(tok::identifier, t))
     {
@@ -145,6 +145,12 @@ void Parser::parseDecl()
         ast::VarDef vd;
         vd.type = t;
         curScope->addVarDef(id, vd);
+    }
+    else //function definition
+    {
+        //functions can be declared, but not defined twice. check initializer here
+        if (lexer->Expect(tok::equals))
+            parseFuncBody();
     }
 
     if (!lexer->Expect(tok::semicolon))

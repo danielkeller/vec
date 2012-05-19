@@ -18,7 +18,6 @@ namespace ast
     struct VarDef
     {
         typ::Type type;
-        //Expression init;
     };
 
     class Scope
