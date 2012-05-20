@@ -1,22 +1,30 @@
 #ifndef STMT_H
 #define STMT_H
 
-#include "AstNode.h"
-#include "Scope.h"
+#include "Expr.h"
+
+#include <algorithm>
 
 namespace ast
 {
-   struct Block : public AstNode<> //AstNode<StmtExpr>
-   {
-       Scope * scope;
+    struct Block : public Expr, public AstNode<Expr>
+    {
+        using AstNode<Expr>::AstNode;
+    };
 
-       Block(Scope * s) : scope(s) {}
-   };
+    struct FuncBody : public AstNode<Expr>
+    {
+        std::vector<Scope> scopes;
 
-   struct FuncBody : public AstNode<Block>
-   {
-       FuncBody(Block *b) : AstNode<Block>(b) {}
-   };
+        BlockScope makeScope(Scope * parent)
+        {
+            scopes.emplace_back(parent);
+            return scopes.size() - 1;
+        }
+
+        //using AstNode<Expr>::AstNode; //WTF??
+        FuncBody(Expr *e) : AstNode<Expr>(e) {}
+    };
 }
 
 #endif

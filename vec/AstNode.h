@@ -18,6 +18,7 @@ namespace ast
     class AstNode0
     {
     public:
+    
         AstNode0 *parent;
         virtual ~AstNode0() {}; 
         virtual void eachChild(sa::AstWalker0*) {}

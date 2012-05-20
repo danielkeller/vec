@@ -1,3 +1,4 @@
+/*
 type foo = {int}!6;
 
 type bar = {foo}!3;
@@ -6,7 +7,11 @@ bar baf;
 
 int:int main = 
 (
-);
+);*/
+
+;
+;
+;
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else

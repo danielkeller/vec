@@ -15,14 +15,31 @@ FuncBody* Parser::parseFuncBody()
 
 Block* Parser::parseBlock()
 {
-    if (lexer->Expect(tok::lparen))
+    lexer->Advance();
+    
+    Expr* conts = parseExpression();
+    if(!lexer->Expect(tok::rparen))
+        err::ExpectedAfter(lexer, "')'", "block body");
+    return new Block(conts);
+}
+
+Expr* Parser::parseExpression()
+{
+    Expr* lhs = parseStmtExpr();
+
+    VarDef dummy;
+    curScope->addVarDef(0, dummy);
+
+    if (lexer->Expect(tok::semicolon))
     {
-        //parse list of control exprs
-        if(!lexer->Expect(tok::rparen))
-            err::ExpectedAfter(lexer, "')'", "block body");
+        Expr* rhs = parseExpression();
+        return new SemiExpr(lhs, rhs);
     }
     else
-        ;
-        //parseControlExpr()
-    return new Block(cu->makeScope());
+        return lhs;
+}
+
+Expr* Parser::parseStmtExpr()
+{
+    return new NullExpr();
 }

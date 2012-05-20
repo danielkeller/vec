@@ -2,7 +2,7 @@
 #define COMPUNIT_H
 
 #include "Type.h"
-#include "Scope.h"
+#include "Stmt.h"
 
 #include <map>
 #include <vector>
@@ -18,7 +18,6 @@ namespace ast
     {
         TblType stringTbl;
         TblType identTbl;
-        std::vector<Scope> scopes;
 
     public:
         CompUnit();
@@ -26,12 +25,8 @@ namespace ast
         Str addString(std::string &str);
         Ident addIdent(std::string &str);
 
-        Scope * globalScope() {return &scopes[0];}
-        Scope * makeScope()
-        {
-            scopes.emplace_back();
-            return &scopes.back();
-        }
+        FuncBody globalFunc;
+        Scope *getGlobalScope() {return &globalFunc.scopes[0];}
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}

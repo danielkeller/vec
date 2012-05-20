@@ -18,16 +18,22 @@ namespace par
 
         ast::CompUnit *cu;
         ast::Scope *curScope;
+        ast::BlockScope bs;
+        ast::FuncBody *curFunc;
 
         TypeParser tp;
 
-        void parseGlobalDecl();
-        void parseTypeDecl();
-        void parseDecl();
+        //ExprParser.cpp
+        ast::Expr* parseExpression();
 
+        //DeclParser.cpp
+        void parseTypeDecl();
+        ast::Expr* parseDecl();
         ast::FuncBody* parseFuncBody();
 
+        //StmtParser.cpp
         ast::Block* parseBlock();
+        ast::Expr* parseStmtExpr();
 
         friend class Type;
     };

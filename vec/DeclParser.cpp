@@ -6,47 +6,16 @@
 #include "ParseUtils.h"
 
 using namespace par;
+using namespace ast;
 
 Parser::Parser(lex::Lexer *l)
     : lexer(l), cu(l->getCompUnit())
 {
-    curScope = cu->globalScope();
+    curScope = cu->getGlobalScope();
+    bs = 0;
+    curFunc = &cu->globalFunc;
 
-    while (lexer->Peek() != tok::end)
-        parseGlobalDecl();
-}
-
-void Parser::parseGlobalDecl()
-{
-    tok::Token t = lexer->Peek();
-
-    if (t == tok::k_type)
-        parseTypeDecl();
-    else if (couldBeType(t))
-        parseDecl();
-    else
-    {
-        err::Error(t.loc) << "unexpected " << t.Name() <<
-        " at global level. did you forget a { ?" << err::caret << err::endl;
-
-        //recover:
-        //eat tokens until we find one more } than {
-        int braceLvl = 1;
-        while (braceLvl != 0 && lexer->Peek() != tok::end)
-        {
-            switch (lexer->Next().type)
-            {
-            case tok::lbrace:
-                braceLvl++;
-                break;
-            case tok::rbrace:
-                braceLvl--;
-                break;
-            default:
-                break;
-            }
-        }
-    }
+    parseExpression();
 }
 
 namespace
@@ -54,9 +23,9 @@ namespace
     bool isIdent(tok::Token &t) {return t == tok::identifier;}
     class TypeDeclParamParser
     {
-        ast::TypeDef *td;
+        TypeDef *td;
     public:
-        TypeDeclParamParser(ast::TypeDef *d) : td(d) {}
+        TypeDeclParamParser(TypeDef *d) : td(d) {}
         void operator()(lex::Lexer *l)
         {
             td->params.push_back(l->Next().value.int_v);
@@ -66,7 +35,7 @@ namespace
 
 void Parser::parseTypeDecl()
 {
-    ast::TypeDef td;
+    TypeDef td;
     tok::Token t;
     lexer->Advance(); //eat 'type'
 
@@ -77,7 +46,7 @@ void Parser::parseTypeDecl()
         return;
     }
     
-    ast::Ident name = t.value.int_v;
+    Ident name = t.value.int_v;
 
     if (curScope->getTypeDef(name))
     {
@@ -116,8 +85,10 @@ void Parser::parseTypeDecl()
     curScope->addTypeDef(name, td);
 }
 
-void Parser::parseDecl()
+Expr* Parser::parseDecl()
 {
+    tok::Location begin = lexer->Peek().loc;
+
     typ::Type t = tp(lexer, curScope);
 
     tok::Token to;
@@ -126,10 +97,10 @@ void Parser::parseDecl()
     {
         err::ExpectedAfter(lexer, "identifier", "type");
         lexer->ErrUntil(tok::semicolon);
-        return;
+        return new NullExpr();
     }
 
-    ast::Ident id = to.value.int_v;
+    Ident id = to.value.int_v;
     
     if (!t.isFunc()) //variable definition
     {
@@ -138,21 +109,14 @@ void Parser::parseDecl()
         {
             err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
                 << '\'' << err::underline << err::endl;
-            lexer->ErrUntil(tok::semicolon);
-            return;
         }
-
-        ast::VarDef vd;
-        vd.type = t;
-        curScope->addVarDef(id, vd);
-    }
-    else //function definition
-    {
-        //functions can be declared, but not defined twice. check initializer here
-        if (lexer->Expect(tok::equals))
-            parseFuncBody();
+        else
+        {
+            VarDef vd;
+            vd.type = t;
+            curScope->addVarDef(id, vd);
+        }
     }
 
-    if (!lexer->Expect(tok::semicolon))
-        err::ExpectedAfter(lexer, ";", "variable definition");
+    return new VarExpr(id, bs, begin + to.loc);
 }
