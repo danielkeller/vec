@@ -15,7 +15,7 @@ namespace ast
         typ::Type type;
         tok::Location loc;
         virtual bool isLval() {return false;};
-        Expr() {};
+        Expr() = default;
         Expr(tok::Location &&l) : loc(l) {};
     };
 
