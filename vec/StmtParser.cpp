@@ -7,12 +7,11 @@
 using namespace par;
 using namespace ast;
 
-FuncBody* Parser::parseFuncBody()
-{
-    FuncBody * fb = new FuncBody(parseBlock());
-    return fb;
-}
-
+/*
+primary-expr
+    : '(' expression ')'
+    ;
+*/
 Block* Parser::parseBlock()
 {
     lexer->Advance();
@@ -23,12 +22,17 @@ Block* Parser::parseBlock()
     return new Block(conts);
 }
 
+/*
+expression
+    : stmt-expr
+    | stmt-expr ';' expression
+    | stmt-expr ':' expression
+    | 'case' stmt-expr ':' expression
+    ;
+*/
 Expr* Parser::parseExpression()
 {
     Expr* lhs = parseStmtExpr();
-
-    VarDef dummy;
-    curScope->addVarDef(0, dummy);
 
     if (lexer->Expect(tok::semicolon))
     {
@@ -39,7 +43,36 @@ Expr* Parser::parseExpression()
         return lhs;
 }
 
+/*
+stmt-expr
+    : comma-expr
+    | loop-expr
+    | selection-expr
+    | jump-expr
+    | type-decl
+    ;
+*/
 Expr* Parser::parseStmtExpr()
 {
-    return new NullExpr();
+    switch (lexer->Peek().type)
+    {
+    case tok::k_type:
+        parseTypeDecl();
+        return new NullExpr();
+    case tok::k_for:
+    case tok::k_while:
+        //parse loop expr
+    case tok::k_if:
+    case tok::k_else:
+    case tok::k_switch:
+        //parse selection expr
+    case tok::k_break:
+    case tok::k_continue:
+    case tok::k_return:
+    case tok::k_goto:
+        //parse jump expr
+        return new NullExpr();
+    default:
+        return parseBinaryExpr();
+    }
 }

@@ -8,8 +8,6 @@
 
 namespace ast
 {
-    typedef int BlockScope;
-
     struct Expr : public virtual AstNode0
     {
         typ::Type type;
@@ -23,22 +21,45 @@ namespace ast
 
     struct LvalExpr : public Expr
     {
-        using Expr::Expr;
+        LvalExpr(tok::Location &&l) : Expr(std::move(l)) {};
         bool isLval() {return true;};
     };
 
     struct VarExpr : public LvalExpr
     {
         Ident var;
-        BlockScope owner;
 
-        VarExpr(Ident v, BlockScope b, tok::Location &&l) : LvalExpr(std::move(l)), var(b), owner(b) {};
+        VarExpr(Ident v, tok::Location &&l) : LvalExpr(std::move(l)), var(v) {};
     };
 
-    struct SemiExpr : public Expr, public AstNode<Expr, Expr>
+    //general binary expression
+    struct BinExpr : public Expr, public AstNode<Expr, Expr>
     {
-        using AstNode<Expr, Expr>::AstNode;
+        tok::TokenType op;
+        tok::Location opLoc;
+        BinExpr(Expr* lhs, Expr* rhs, tok::Token &o)
+            : Expr(lhs->loc + rhs->loc),
+            AstNode<Expr, Expr>(lhs, rhs), op(o.type), opLoc(o.loc)
+        {};
+        BinExpr(Expr* lhs, Expr* rhs, tok::TokenType o)
+            : Expr(lhs->loc + rhs->loc),
+            AstNode<Expr, Expr>(lhs, rhs), op(o)
+        {};
     };
+
+    struct AssignExpr : public BinExpr
+    {
+        tok::TokenType assignOp;
+        AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o), assignOp(o.value.op) {};
+    };
+
+    inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, tok::Token &op)
+    {
+        if (op == tok::equals)
+            return new AssignExpr(lhs, rhs, op);
+        else
+            return new BinExpr(lhs, rhs, op);
+    }
 }
 
 #endif

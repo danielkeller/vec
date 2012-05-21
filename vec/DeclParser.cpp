@@ -5,6 +5,8 @@
 #include "CompUnit.h"
 #include "ParseUtils.h"
 
+#include <cassert>
+
 using namespace par;
 using namespace ast;
 
@@ -12,10 +14,11 @@ Parser::Parser(lex::Lexer *l)
     : lexer(l), cu(l->getCompUnit())
 {
     curScope = cu->getGlobalScope();
-    bs = 0;
-    curFunc = &cu->globalFunc;
 
     parseExpression();
+
+    if (!lexer->Expect(tok::end))
+        err::Error(lexer->Peek().loc) << "more input exists" << err::caret << err::endl;
 }
 
 namespace
@@ -79,9 +82,6 @@ void Parser::parseTypeDecl()
 
     td.mapped = tp(lexer, curScope); //create type
 
-    if (!lexer->Expect(tok::semicolon))
-        err::ExpectedAfter(lexer, ";", "type declaration");
-
     curScope->addTypeDef(name, td);
 }
 
@@ -118,5 +118,5 @@ Expr* Parser::parseDecl()
         }
     }
 
-    return new VarExpr(id, bs, begin + to.loc);
+    return new VarExpr(id, begin + to.loc);
 }

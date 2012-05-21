@@ -18,20 +18,20 @@ namespace par
 
         ast::CompUnit *cu;
         ast::Scope *curScope;
-        ast::BlockScope bs;
-        ast::FuncBody *curFunc;
 
         TypeParser tp;
 
         //ExprParser.cpp
-        ast::Expr* parseExpression();
+        ast::Expr* parseBinaryExpr();
+        ast::Expr* parseBinaryExprRHS(ast::Expr* lhs, tok::prec::precidence minPrec);
+        ast::Expr* parseUnaryExpr();
 
         //DeclParser.cpp
         void parseTypeDecl();
         ast::Expr* parseDecl();
-        ast::FuncBody* parseFuncBody();
 
         //StmtParser.cpp
+        ast::Expr* parseExpression();
         ast::Block* parseBlock();
         ast::Expr* parseStmtExpr();
 

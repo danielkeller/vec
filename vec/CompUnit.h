@@ -25,8 +25,8 @@ namespace ast
         Str addString(std::string &str);
         Ident addIdent(std::string &str);
 
-        FuncBody globalFunc;
-        Scope *getGlobalScope() {return &globalFunc.scopes[0];}
+        Block global;
+        Scope *getGlobalScope() {return &global.scope;}
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}

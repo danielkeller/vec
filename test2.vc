@@ -1,20 +1,25 @@
-/*
 type foo = {int}!6;
 
 type bar = {foo}!3;
 
+/*
 bar baf;
 
 int:int main = 
 (
 );*/
 
-;
-;
-;
+a + b * c + d;
+x, y, c << f;
+a / b:c / d;
+(
+a && b
+type asf = foo;
+);
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else
+//add tail keyword for tail recursion
 
 //it might be nice to be able to output a compunit before
 //sema so as to skip parsing of standard libs every time

@@ -7,23 +7,16 @@
 
 namespace ast
 {
-    struct Block : public Expr, public AstNode<Expr>
+    struct SemiExpr : public BinExpr
     {
-        using AstNode<Expr>::AstNode;
+        SemiExpr(Expr *lhs, Expr *rhs) : BinExpr(lhs, rhs, tok::semicolon) {};
     };
 
-    struct FuncBody : public AstNode<Expr>
+    struct Block : public Expr, public AstNode<Expr>
     {
-        std::vector<Scope> scopes;
-
-        BlockScope makeScope(Scope * parent)
-        {
-            scopes.emplace_back(parent);
-            return scopes.size() - 1;
-        }
-
-        //using AstNode<Expr>::AstNode; //WTF??
-        FuncBody(Expr *e) : AstNode<Expr>(e) {}
+        Scope scope;
+        Block(Expr* conts) : AstNode<Expr>(conts) {};
+        Block(Expr* conts, tok::Location &&l) : Expr(std::move(l)), AstNode<Expr>(conts) {};
     };
 }
 

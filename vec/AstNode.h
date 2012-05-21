@@ -33,19 +33,18 @@ namespace ast
 
         conts_t chld;
 
-        //recurse on number of args
-        template<class T, class... Rest, int pos = 0>
-        inline void init(T first, Rest... r)
-        {
-            first->parent = this;
-            std::get<pos>(chld) = first;
-            init<pos+1>(r...);
-        };
-        //terminate recursion
-        template<int pos = 0> //need default param for AstNode<>
-        inline void init() {};
-
         //recurse on int2type type
+        template<size_t i = 0>
+        inline void init(int2type<i> = int2type<i>())
+        {
+            std::get<i>(chld)->parent = this;
+            destroy(int2type<i+1>());
+        };
+        //terminate template recursion
+        inline void init(int2type<conts_s> = int2type<conts_s>()) //need default param for AstNode<>
+        {
+        };
+
         template<size_t i = 0>
         inline void destroy(int2type<i> = int2type<i>())
         {
@@ -71,8 +70,9 @@ namespace ast
 
     public:
         AstNode(Children* ... c)
+            : chld(c...)
         {
-            init(c...);
+            init();
         };
 
         ~AstNode()
