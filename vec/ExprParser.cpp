@@ -19,7 +19,7 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
 {
     while(true)
     {
-        if (lexer->Peek().Precidence() < minPrec)
+        if (lexer->Peek().Precidence() < minPrec) //don't shift
             return lhs; //cave johnson, we're done here
 
         tok::Token op = lexer->Next(); //we know its a bin op because others are prec::none
@@ -27,13 +27,11 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
         Expr* rhs = parseUnaryExpr();
         tok::Token &tNext = lexer->Peek();
 
-        if (tNext.Precidence() > op.Precidence()
-            || (tNext.Precidence() == op.Precidence() && op.Asso_ty() == tok::RightAssoc)) //shift
-        {
-            rhs = parseBinaryExprRHS(rhs, tok::prec::precidence(op.Precidence()
-                + (op.Asso_ty() == tok::LeftAssoc ? 1 : 0)));
-            //precidence can be the same if it is right associative
-        }
+        //shift
+        rhs = parseBinaryExprRHS(rhs, tok::prec::precidence(op.Precidence()
+            + (op.Asso_ty() == tok::LeftAssoc ? 1 : 0)));
+        //precidence can be the same if it is right associative
+
         //reduce
         err::Error(lhs->loc) << "wheee expression" << err::underline << op.loc << err::caret
             << rhs->loc << err::underline << err::endl;
