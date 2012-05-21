@@ -88,6 +88,7 @@ namespace tok
         stringlit,
         identifier,
     
+        k_agg,
         k_break,
         k_case,
         k_continue,
@@ -104,8 +105,10 @@ namespace tok
         k_int,
         k_return,
         k_switch,
+        k_tail,
         k_type,
         k_true,
+        k_var,
         k_while,
 
         none,

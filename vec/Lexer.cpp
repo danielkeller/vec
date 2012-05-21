@@ -539,6 +539,8 @@ lexMore: //more elegant, in this case, than a while(true)
 
             //handle keywords
 
+    case 'a':
+        lexKwOrIdent("agg", tok::k_agg);
     case 'b':
         lexKwOrIdent("break", tok::k_break);
         return;
@@ -578,9 +580,14 @@ lexMore: //more elegant, in this case, than a while(true)
         lexKwOrIdent("switch", tok::k_switch);
         return;
     case 't':
+        if (lexKw("tail", tok::k_tail))
+            return;
         if (lexKw("type", tok::k_type))
             return;
         lexKwOrIdent("true", tok::k_true);
+        return;
+    case 'v':
+        lexKwOrIdent("var", tok::k_var);
         return;
     case 'w':
         lexKwOrIdent("while", tok::k_while);

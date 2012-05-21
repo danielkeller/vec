@@ -115,6 +115,8 @@ std::string Token::Name()
         case identifier:
             return "identifier";
     
+        case k_agg:
+            return "'agg'";
         case k_break:
             return "'break'";
         case k_case:
@@ -143,8 +145,12 @@ std::string Token::Name()
             return "'return'";
         case k_switch:
             return "'switch'";
+        case k_tail:
+            return "'tail'";
         case k_type:
             return "'type'";
+        case k_var:
+            return "'var'";
         case k_inline:
             return "'inline'";
         case k_c_call:
