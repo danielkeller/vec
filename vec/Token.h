@@ -18,16 +18,16 @@ namespace tok
             ternary,
             logor,
             logand,
+            equality,
+            compare,
+            call,
             bitwor,
             bitxor,
             bitwand,
-            equality,
-            compare,
             shift,
             concat,
             add,
             multiply,
-            call,
         };
     };
 
@@ -108,7 +108,6 @@ namespace tok
         k_tail,
         k_type,
         k_true,
-        k_var,
         k_while,
 
         none,

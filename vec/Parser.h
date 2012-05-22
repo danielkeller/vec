@@ -23,8 +23,11 @@ namespace par
 
         //ExprParser.cpp
         ast::Expr* parseBinaryExpr();
+        ast::Expr* parseBinaryExprInAgg();
         ast::Expr* parseBinaryExprRHS(ast::Expr* lhs, tok::prec::precidence minPrec);
         ast::Expr* parseUnaryExpr();
+        ast::Expr* parsePostfixExpr();
+        ast::Expr* parsePrimaryExpr();
 
         //DeclParser.cpp
         void parseTypeDecl();
@@ -32,7 +35,7 @@ namespace par
 
         //StmtParser.cpp
         ast::Expr* parseExpression();
-        ast::Block* parseBlock();
+        ast::Expr* parseBlock();
         ast::Expr* parseStmtExpr();
 
         friend class Type;

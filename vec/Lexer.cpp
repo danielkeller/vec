@@ -586,9 +586,6 @@ lexMore: //more elegant, in this case, than a while(true)
             return;
         lexKwOrIdent("true", tok::k_true);
         return;
-    case 'v':
-        lexKwOrIdent("var", tok::k_var);
-        return;
     case 'w':
         lexKwOrIdent("while", tok::k_while);
         return;

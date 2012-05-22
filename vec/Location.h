@@ -26,6 +26,7 @@ namespace tok
     };
 
     Location operator+ (Location & lhs, Location & rhs);
+    Location& operator+= (Location & lhs, Location & rhs);
 
     template <class CharT, class Traits>
     inline std::basic_ostream<CharT, Traits>& 

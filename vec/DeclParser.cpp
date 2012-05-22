@@ -11,14 +11,20 @@ using namespace par;
 using namespace ast;
 
 Parser::Parser(lex::Lexer *l)
-    : lexer(l), cu(l->getCompUnit())
+    : lexer(l),
+    cu(l->getCompUnit())
 {
-    curScope = cu->getGlobalScope();
+    curScope = &cu->global;
 
-    parseExpression();
+    while (true)
+    {
+        parseExpression();
 
-    if (!lexer->Expect(tok::end))
-        err::Error(lexer->Peek().loc) << "more input exists" << err::caret << err::endl;
+        if (!lexer->Expect(tok::end))
+            err::ExpectedAfter(lexer, "';'", "expression");
+        else
+            break;
+    }
 }
 
 namespace
@@ -36,6 +42,13 @@ namespace
     };
 }
 
+/*
+type-decl
+    : 'type' IDENT = type
+    | 'type' IDENT '?' IDENT = type
+    | 'type' IDENT '?' '(' ident-list ')' = type
+    ;
+*/
 void Parser::parseTypeDecl()
 {
     TypeDef td;
@@ -85,6 +98,11 @@ void Parser::parseTypeDecl()
     curScope->addTypeDef(name, td);
 }
 
+/*
+primary-expr
+    : type IDENT
+    ;
+*/
 Expr* Parser::parseDecl()
 {
     tok::Location begin = lexer->Peek().loc;
@@ -96,8 +114,7 @@ Expr* Parser::parseDecl()
     if (!lexer->Expect(tok::identifier, to))
     {
         err::ExpectedAfter(lexer, "identifier", "type");
-        lexer->ErrUntil(tok::semicolon);
-        return new NullExpr();
+        return new NullExpr(begin + lexer->Last().loc);
     }
 
     Ident id = to.value.int_v;

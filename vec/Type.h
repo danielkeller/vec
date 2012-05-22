@@ -35,6 +35,8 @@ namespace typ
         bool isFunc();
         bool isTempl();
 
+        void expand(ast::Scope *s);
+
     private:
         std::string code; //string representation of type - "nominative" type
         std::string expanded; //with all named types inserted - "duck" type

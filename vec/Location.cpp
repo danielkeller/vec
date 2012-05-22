@@ -15,6 +15,15 @@ Location tok::operator+ (Location & lhs, Location & rhs)
     return ret;
 }
 
+Location& tok::operator+= (Location & lhs, Location & rhs)
+{
+    if (lhs.line == rhs.line)
+        lhs.lastCol = rhs.lastCol;
+    else //extend to end of line
+        lhs.setLength(lhs.lineStr.length() - lhs.firstCol);
+    return lhs;
+}
+
 void Location::setLength(int nCols)
 {
     lastCol = firstCol + nCols - 1;

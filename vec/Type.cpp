@@ -92,24 +92,13 @@ Type::Type()
     : code(""), expanded("")
 {}
 
-Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
+void Type::expand(ast::Scope *s)
 {
-    l = lex;
-    s = sco;
-    t = Type();
-
-    parseSingle();
-    if (l->Expect(tok::colon)) //function?
-    {
-        t.code += cod::function;
-        parseSingle();
-    }
-
     //fill in expnaded type
-    t.expanded.clear();
-    std::string::iterator it = t.code.begin();
+    expanded.clear();
+    std::string::iterator it = code.begin();
 
-    while (it != t.code.end())
+    while (it != code.end())
     {
         if (*it == cod::named) //fill in named pares
         {
@@ -138,23 +127,22 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
                     ++it2;
                     ast::Ident paramName = readNum(it2);
                     if (paramSubs.count(paramName)) //param is specified
-                        t.expanded += paramSubs[paramName]; //replace it
+                        expanded += paramSubs[paramName]; //replace it
                     else
                     {
                         if (paramName >> 16 == 0) //param is not aliased
                             paramName |= (id + 1) << 16; //alias it
-                        t.expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
+                        expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
                     }
                     ++it2; //skip over param end
                 }
                 else
                 {
-                    t.expanded += *it2;
+                    expanded += *it2;
                     ++it2;
                 }
             }
         }
-
         else if (*it == cod::tupname) //strip out tuple element names
         {
             ++it;
@@ -168,9 +156,23 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
         }
         else
         {
-            t.expanded += *it;
+            expanded += *it;
             ++it;
         }
+    }
+}
+
+Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
+{
+    l = lex;
+    s = sco;
+    t = Type();
+
+    parseSingle();
+    if (l->Expect(tok::colon)) //function?
+    {
+        t.code += cod::function;
+        parseSingle();
     }
 
     return t;

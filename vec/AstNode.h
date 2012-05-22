@@ -86,7 +86,7 @@ namespace ast
         }
 
         template<size_t n>
-        class std::tuple_element<n, conts_t>::type
+        typename std::tuple_element<n, conts_t>::type
         getChild()
         {
             return std::get<n>(chld);

@@ -17,7 +17,7 @@ bool tok::operator==(Token &lhs, Token &rhs)
     return lhs.Type() == rhs.Type();
 }
 
-std::string Token::Name()
+const char* tok::Name(TokenType type)
 {
     switch (type)
     {
@@ -62,7 +62,8 @@ std::string Token::Name()
         case notequals:
             return "'!='";
         case opequals:
-            return "'" + Token(value.op).Name() + "='";
+            return "assignment";
+//            return "'" + Token(value.op).Name() + "='";
         case lbrace:
             return "'{'";
         case rbrace:
@@ -149,8 +150,6 @@ std::string Token::Name()
             return "'tail'";
         case k_type:
             return "'type'";
-        case k_var:
-            return "'var'";
         case k_inline:
             return "'inline'";
         case k_c_call:

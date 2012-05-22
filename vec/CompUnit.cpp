@@ -24,6 +24,5 @@ Ident CompUnit::addIdent(std::string &str)
 }
 
 CompUnit::CompUnit()
-    : global(new NullExpr())
 {
 }

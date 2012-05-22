@@ -35,6 +35,8 @@ namespace ast
 
         void addVarDef(Ident name, VarDef & vd);
         VarDef * getVarDef(ast::Ident name);
+
+        Scope* getParent() {return parent;};
     };
 }
 
