@@ -190,7 +190,7 @@ inline void Lexer::lexNumber()
 
     errno = 0;
     char * convEnd; //where did it end?
-    long l = strtol(curChr, (char**)&convEnd, 0);
+    long long l = strtoll(curChr, (char**)&convEnd, 0);
 
 
     if (end == convEnd) //parsed long
@@ -213,7 +213,7 @@ inline void Lexer::lexNumber()
 
     //nope, could be float
     errno = 0;
-    double d = strtod(curChr, (char**)&convEnd);
+    long double d = strtold(curChr, (char**)&convEnd);
 
     if (end == convEnd) //success, parsed double
     {

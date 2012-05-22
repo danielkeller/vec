@@ -115,19 +115,21 @@ namespace tok
         end
     };
 
+    const char* Name(TokenType type);
+
     struct Token
     {
         TokenType type;
 
         union {
             TokenType op; //for binop-equals
-            double dbl_v;
-            long int_v;
+            long double dbl_v;
+            long long int_v;
         } value;
 
         Location loc;
 
-        std::string Name();
+        const char* Name() {return tok::Name(type);};
         prec::precidence Precidence();
         Associativity Asso_ty();
         TokenType Type() {return type;}
