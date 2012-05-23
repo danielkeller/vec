@@ -35,8 +35,10 @@ namespace par
 
         //StmtParser.cpp
         ast::Expr* parseExpression();
+        ast::Expr* parseSingleExpr();
         ast::Expr* parseBlock();
         ast::Expr* parseStmtExpr();
+        ast::Expr* parseSelectExpr();
 
         friend class Type;
     };

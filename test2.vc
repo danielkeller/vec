@@ -3,6 +3,18 @@ type foo = {int}!6;
 
 type bar = {foo}!3;
 
+if (2 < 5)
+    ferwf + food;
+
+(
+if (x)
+    if (43)
+        asdfx
+    else
+        asdf
+else
+    dasfds
+) + fo;
 
 bar baf;
 int beer;

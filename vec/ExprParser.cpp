@@ -208,7 +208,7 @@ Expr* Parser::parsePrimaryExpr()
         if (couldBeType(to))
             return parseDecl();
 
-        err::Error(to.loc) << "unexpected stuff" << err::caret << err::endl;
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret << err::endl;
         lexer->Advance(); //eat it
         return new NullExpr(std::move(to.loc));
     }

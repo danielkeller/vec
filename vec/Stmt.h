@@ -21,6 +21,23 @@ namespace ast
             scope(std::move(s))
         {};
     };
+
+    struct IfExpr : public Expr, public AstNode<Expr, Expr>
+    {
+        IfExpr(Expr* pred, Expr* act, tok::Token &o)
+            : Expr(o.loc + act->loc),
+            AstNode<Expr, Expr>(pred, act)
+        {};
+    };
+
+    struct IfElseExpr : public Expr, public AstNode<Expr, Expr, Expr>
+    {
+        IfElseExpr(Expr* pred, Expr* act1, Expr* act2, tok::Token &o)
+            : Expr(o.loc + act2->loc),
+            AstNode<Expr, Expr, Expr>(pred, act1, act2)
+        {};
+    };
+
 }
 
 #endif
