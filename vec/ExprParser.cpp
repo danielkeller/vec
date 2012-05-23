@@ -113,7 +113,7 @@ Expr* Parser::parsePostfixExpr()
             if (!lexer->Expect(listEnd))
                 err::ExpectedAfter(lexer, tok::Name(listEnd), "expression");
             else
-                rhs->loc += lexer->Last().loc;
+                rhs->loc += lexer->Last().loc; //lump } in with length of arg. not great but good enough
             arg = new ListAccExpr(arg, rhs, op);
             break;
 
@@ -146,6 +146,8 @@ Expr* Parser::parsePrimaryExpr()
 {
     tok::Token to = lexer->Peek();
 
+    Expr* ret;
+
     switch (to.type)
     {
     case tok::identifier:
@@ -175,12 +177,39 @@ Expr* Parser::parsePrimaryExpr()
 
     case tok::lparen:
         return parseBlock();
-    
+
+    case tok::star:
+        lexer->Advance();
+        if (lexer->Expect(listBegin))
+        {
+            ret = new ListifyExpr(parseBinaryExpr(), to);
+            if (!lexer->Expect(listEnd, to))
+                err::ExpectedAfter(lexer, tok::Name(listEnd), "expression list");
+            else
+                ret->loc += to.loc; //add } to expr location
+            return ret;
+        }
+        else if (lexer->Expect(tupleBegin))
+        {
+            ret = new TuplifyExpr(parseBinaryExpr(), to);
+            if (!lexer->Expect(tupleEnd, to))
+                err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression list");
+            else
+                ret->loc += to.loc;
+            return ret;
+        }
+        else
+        {
+            err::ExpectedAfter(lexer, "'{' or '['", "'*'");
+            //not much we can do to recover here
+            return new NullExpr(std::move(to.loc));
+        }
     default:
         if (couldBeType(to))
             return parseDecl();
 
         err::Error(to.loc) << "unexpected stuff" << err::caret << err::endl;
+        lexer->Advance(); //eat it
         return new NullExpr(std::move(to.loc));
     }
 }

@@ -113,6 +113,20 @@ namespace ast
         {};
     };
 
+    struct ListifyExpr : public UnExpr
+    {
+        ListifyExpr(Expr* arg, tok::Token &o)
+            : UnExpr(arg, o)
+        {};
+    };
+
+    struct TuplifyExpr : public UnExpr
+    {
+        TuplifyExpr(Expr* arg, tok::Token &o)
+            : UnExpr(arg, o)
+        {};
+    };
+
     //postfix expressions
     //for ++ and --
     struct PostExpr : public Expr, public AstNode<Expr>

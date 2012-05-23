@@ -1,3 +1,4 @@
+sadf = *[a, b, c];
 type foo = {int}!6;
 
 type bar = {foo}!3;
