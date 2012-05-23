@@ -43,6 +43,7 @@ bool par::couldBeType(tok::Token &t)
     case tok::question:
     case tok::at:
     case tok::identifier:
+    case tok::colon:
         return true;
     default:
         return false;
@@ -100,7 +101,7 @@ void Type::expand(ast::Scope *s)
 
     while (it != code.end())
     {
-        if (*it == cod::named) //fill in named pares
+        if (*it == cod::named) //fill in named types
         {
             ++it;
             ast::Ident id = readNum(it);
@@ -168,7 +169,16 @@ Type TypeParser::operator()(lex::Lexer *lex, ast::Scope *sco)
     s = sco;
     t = Type();
 
+    if (l->Expect(tok::colon)) //void function?
+    {
+        t.code += cod::any;
+        t.code += cod::function;
+        parseSingle();
+        return t;
+    }
+
     parseSingle();
+
     if (l->Expect(tok::colon)) //function?
     {
         t.code += cod::function;
@@ -239,7 +249,7 @@ namespace par
 void TypeParser::parseTypeList()
 {
     TypeListParser tlp(this);
-    par::parseListOf(l, couldBeType, tlp, tupleEnd, "pares");
+    par::parseListOf(l, couldBeType, tlp, tupleEnd, "types");
 }
 
 void TypeParser::parseList()
@@ -376,7 +386,7 @@ size_t TypeParser::checkArgs()
         if (l->Expect(tok::lparen))
         {
             TypeListParser tlp(this);
-            par::parseListOf(l, couldBeType, tlp, tok::rparen, "pares");
+            par::parseListOf(l, couldBeType, tlp, tok::rparen, "types");
             t.code += cod::endOf(cod::arg);
 
             return tlp.num;

@@ -38,6 +38,28 @@ namespace ast
         {};
     };
 
+    struct SwitchExpr : public Expr, public AstNode<Expr, Expr>
+    {
+        SwitchExpr(Expr* pred, Expr* act, tok::Token &o)
+            : Expr(o.loc + act->loc),
+            AstNode<Expr, Expr>(pred, act)
+        {};
+    };
+
+    struct WhileExpr : public Expr, public AstNode<Expr, Expr>
+    {
+        WhileExpr(Expr* pred, Expr* act, tok::Token &o)
+            : Expr(o.loc + act->loc),
+            AstNode<Expr, Expr>(pred, act)
+        {};
+    };
+
+    struct ReturnExpr : public UnExpr
+    {
+        ReturnExpr(Expr* arg, tok::Token &o)
+            : UnExpr(arg, o)
+        {};
+    };
 }
 
 #endif

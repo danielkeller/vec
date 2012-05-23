@@ -136,9 +136,9 @@ Expr* Parser::parsePostfixExpr()
 /*
 primary-expr
     : IDENT | CONST | STRING_LITERAL
-    | '*' '{' '}' | '*' '{' comma-expr '}'
-    | '*' '[' ']' | '*' '[' comma-expr ']'
-    | type IDENT
+    | '{' '}' | '{' comma-expr '}'
+    | '[' ']' | '[' comma-expr ']'
+    | '*' type IDENT
     | '(' expression ')'
     ;
 */
@@ -151,17 +151,20 @@ Expr* Parser::parsePrimaryExpr()
     switch (to.type)
     {
     case tok::identifier:
+        /*
         if (curScope->getTypeDef(to.value.int_v)) //it's a type
             return parseDecl();
         //nope, it's an ID
+        */
         lexer->Advance();
-        
+        /*
         if (lexer->Peek() == tok::identifier) //but the user thinks its a type
         {
             err::Error(to.loc) << '\'' << cu->getIdent(to.value.int_v)
                 << "' is not a type" << err::underline << err::endl; //we'll show them!
             to = lexer->Next(); //pretend it's a decl
         }
+        */
 
         return new VarExpr(to.value.int_v, std::move(to.loc));
     case tok::integer:
@@ -178,35 +181,36 @@ Expr* Parser::parsePrimaryExpr()
     case tok::lparen:
         return parseBlock();
 
+    case listBegin:
+        lexer->Advance();
+        ret = new ListifyExpr(parseBinaryExpr(), to);
+        if (!lexer->Expect(listEnd, to))
+            err::ExpectedAfter(lexer, tok::Name(listEnd), "expression list");
+        else
+            ret->loc += to.loc; //add } to expr location
+        return ret;
+
+    case tupleBegin:
+        lexer->Advance();
+        ret = new TuplifyExpr(parseBinaryExpr(), to);
+        if (!lexer->Expect(tupleEnd, to))
+            err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression list");
+        else
+            ret->loc += to.loc;
+        return ret;
+
     case tok::star:
         lexer->Advance();
-        if (lexer->Expect(listBegin))
-        {
-            ret = new ListifyExpr(parseBinaryExpr(), to);
-            if (!lexer->Expect(listEnd, to))
-                err::ExpectedAfter(lexer, tok::Name(listEnd), "expression list");
-            else
-                ret->loc += to.loc; //add } to expr location
-            return ret;
-        }
-        else if (lexer->Expect(tupleBegin))
-        {
-            ret = new TuplifyExpr(parseBinaryExpr(), to);
-            if (!lexer->Expect(tupleEnd, to))
-                err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression list");
-            else
-                ret->loc += to.loc;
-            return ret;
-        }
+        if (couldBeType(lexer->Peek()))
+            return parseDecl();
         else
         {
-            err::ExpectedAfter(lexer, "'{' or '['", "'*'");
+            err::ExpectedAfter(lexer, "type", "'*'");
             //not much we can do to recover here
             return new NullExpr(std::move(to.loc));
         }
+
     default:
-        if (couldBeType(to))
-            return parseDecl();
 
         err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret << err::endl;
         lexer->Advance(); //eat it

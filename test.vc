@@ -1,64 +1,64 @@
-:[@{int} in] printarr; 
-:[@{int}, int b, int e] qsort;
+* :[@{int} in] printarr; 
+* :[@{int}, int b, int e] qsort;
 
 type testt = [int x, int];
 
-:[[int x, int] i] bar =
-{
+* :[[int x, int] i] bar =
+(
 	i[x] = i[x] + 1;
-};
+);
 
-:[testt i] bar =
-{
+* :[testt i] bar =
+(
 	i[x] = i[x] + 1;
-};
+);
 
-cexp:int:[] main =
-{
-	{int} foo = {3,7,2,8,1,6,2,3,8};
-	int in = 6;
-	testt t = [in, 0];
+* int:[] main =
+(
+	* {int} foo = {3,7,2,8,1,6,2,3,8};
+	* int in = 6;
+	* testt t = [in, 0];
 	bar:[t];
 	bar:[[in, 0]];
 	printarr:[foo];
 	qsort:[foo, 0, foo[length] - 1];
 	printarr:[foo];
 	return 0;
-};
+);
 
-cexp:int:[int] putchar;
-:[@{int} in] printarr = 
-{
-	int i = 0;
+* int:[int] putchar;
+* :[@{int} in] printarr = 
+(
+	* int i = 0;
 	while (i < in[length])
-	{
+	(
 		putchar:[in{i} + 48];
 		putchar:[32];
 		i = i + 1;
-	}
+	)
 	putchar:[10];
-};
+);
 
-[{int}, {int}]:[@{int} l] partition =
-{
-	[{int} l, {int} g] ret;
-	int idx = 1;
+* [{int}, {int}]:[@{int} l] partition =
+(
+	* [{int} l, {int} g] ret;
+	* int idx = 1;
 	while (idx < l[length])
-	{
+	(
 		if (l{idx} < l{0})
 			ret[l] = ret[l] $ {l{idx}};
 		else
 			ret[g] = ret[g] $ {l{idx}};
 		idx = idx + 1;
-	}
+	);
 	return ret;
-};
+);
 
-{int}:[{int} l] qsort = 
-{
+* {int}:[{int} l] qsort = 
+(
 	if (l[length] < 2)
 		return l;
 	
-	[{int} l, {int}g] lists = partition:[l];
-	return qsort:[lists[l]] $ {l{0}} $ qsort:[lists[g]];
-};
+	* [{int} l, {int}g] lists = partition:[l];
+	return (qsort:[lists[l]]) $ {l{0}} $ (qsort:[lists[g]]);
+);

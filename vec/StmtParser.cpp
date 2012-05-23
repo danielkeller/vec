@@ -71,16 +71,12 @@ Expr* Parser::parseExpression()
 /*
 stmt-expr
     : comma-expr
-    | loop-expr
-    | selection-expr
-    | jump-expr
-    | type-decl
-    ;
-
-selection-expr
-    : 'if' '(' expression ')' stmt-expr
+    | 'while' '(' expression ')' stmt-expr
+    | 'if' '(' expression ')' stmt-expr
     | 'if' '(' expression ')' stmt-expr 'else' stmt-expr
-    | 'switch' '(' expression ')' stmt-expr
+    | 'switch' '(' expression ')' block
+    | 'return' stmt-expr
+    | type-decl
     ;
 */
 Expr* Parser::parseStmtExpr()
@@ -95,6 +91,16 @@ Expr* Parser::parseStmtExpr()
 
     case tok::k_for:
     case tok::k_while:
+    {
+        lexer->Advance();
+        if (!lexer->Expect(tok::lparen))
+            err::ExpectedAfter(lexer, "'('", "'while'");
+        Expr* pred = parseExpression();
+        if (!lexer->Expect(tok::rparen))
+            err::ExpectedAfter(lexer, "')'", "expression");
+        Expr* act = parseStmtExpr();
+        return new WhileExpr(pred, act, to);
+    }
         //parse loop expr
 
     case tok::k_if:
@@ -113,13 +119,29 @@ Expr* Parser::parseStmtExpr()
     }
 
     case tok::k_switch:
+    {
+        lexer->Advance();
+        if (!lexer->Expect(tok::lparen))
+            err::ExpectedAfter(lexer, "'('", "'switch'");
+        Expr* pred = parseExpression();
+        if (!lexer->Expect(tok::rparen))
+            err::ExpectedAfter(lexer, "')'", "expression");
+        Expr* act = parseBlock();
+        return new SwitchExpr(pred, act, to);
+    }
 
     case tok::k_break:
     case tok::k_continue:
+        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
+        exit(-1);
     case tok::k_return:
+        lexer->Advance();
+        return new ReturnExpr(parseStmtExpr(), to);
+    case tok::k_tail:
     case tok::k_goto:
         //parse jump expr
-        return new NullExpr(to.loc + lexer->Last().loc);
+        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
+        exit(-1);
     default:
         return parseBinaryExpr();
     }
