@@ -9,7 +9,7 @@ using namespace ast;
 
 //big ole binary expression parser right here
 //uses token precidence and associativity to parse it all in one function
-Expr* Parser::parseBinaryExpr()
+Expr* Parser::parseExpression()
 {
     Expr* lhs = parseUnaryExpr();
     return parseBinaryExprRHS(lhs, tok::prec::comma); //minumun prec is comma so ';' and stuff makes it return
@@ -183,7 +183,7 @@ Expr* Parser::parsePrimaryExpr()
 
     case listBegin:
         lexer->Advance();
-        ret = new ListifyExpr(parseBinaryExpr(), to);
+        ret = new ListifyExpr(parseExpression(), to);
         if (!lexer->Expect(listEnd, to))
             err::ExpectedAfter(lexer, tok::Name(listEnd), "expression list");
         else
@@ -192,7 +192,7 @@ Expr* Parser::parsePrimaryExpr()
 
     case tupleBegin:
         lexer->Advance();
-        ret = new TuplifyExpr(parseBinaryExpr(), to);
+        ret = new TuplifyExpr(parseExpression(), to);
         if (!lexer->Expect(tupleEnd, to))
             err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression list");
         else

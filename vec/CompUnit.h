@@ -26,7 +26,7 @@ namespace ast
         Ident addIdent(std::string &str);
 
         Scope global;
-        Expr* treeHead;
+        Stmt* treeHead;
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}

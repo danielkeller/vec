@@ -1,4 +1,10 @@
-sadf = *[a, b, c];
+if (x)
+    asdf
+else
+    dasfds;
+ + fo + fpp;
+
+sadf = [a, b, c];
 type foo = {int}!6;
 
 type bar = {foo}!3;
@@ -6,20 +12,11 @@ type bar = {foo}!3;
 if (2 < 5)
     ferwf + food;
 
-(
-if (x)
-    if (43)
-        asdfx
-    else
-        asdf
-else
-    dasfds
-) + fo;
 
-bar baf;
-int beer;
+* bar baf;
+* int beer;
 
-int:int main = 
+* int:int main = 
 (
 );
 
@@ -31,6 +28,10 @@ a && b;
 `y : 8*9;
 type asf = foo;
 );
+
+//make it so blocks turn statements back into expressions
+//this expression crap is getting silly.
+//leave declarations as expressions though
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else

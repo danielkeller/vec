@@ -9,54 +9,53 @@ using namespace ast;
 
 /*
 primary-expr
-    : '(' expression ')'
+    : '(' stmt-list ')'
     | '(' ')'
     ;
 */
-Expr* Parser::parseBlock()
+Block* Parser::parseBlock()
 {
     tok::Location begin = lexer->Next().loc;
 
-    //check this before making a scope
+    Scope *blockScope = new Scope(curScope);
+    curScope = blockScope;
+
     if (lexer->Peek() == tok::rparen) //empty parens
-        return new NullExpr(begin + lexer->Next().loc);
-
-    Scope blockScope(curScope);
-    curScope = &blockScope;
+        return new Block(new NullStmt(begin + lexer->Next().loc),
+                         blockScope,
+                         begin + lexer->Next().loc);
     
-    Expr* conts;
+    Stmt* conts;
 
-    conts = parseExpression();
+    conts = parseStmtList();
 
     if(!lexer->Expect(tok::rparen))
         err::ExpectedAfter(lexer, "')'", "block");
 
-    curScope = blockScope.getParent();
-    return new Block(conts, std::move(blockScope), begin + lexer->Last().loc);
+    curScope = blockScope->getParent();
+    return new Block(conts, blockScope, begin + lexer->Last().loc);
 }
 
 /*
-expression
-    : stmt-expr
-    | stmt-expr ';' expression
-    | stmt-expr ';' [followed by end of block]
-    | stmt-expr ':' expression
-    | 'case' stmt-expr ':' expression
-    | 'default' ':' expression
+stmt-list
+    : stmt
+    | stmt stmt-list
+    | expression ':' stmt-list
+    | 'case' expression ':' stmt-list
+    | 'default' ':' stmt-list
     ;
 */
-Expr* Parser::parseExpression()
+Stmt* Parser::parseStmtList()
 {
-    Expr* lhs = parseStmtExpr();
+    Stmt* lhs = parseStmt();
 
     //if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
     //    err::ExpectedAfter(lexer, "';'", "expression");
 
-    if (lexer->Expect(tok::semicolon) && //eat the ; anyway even if we don't need it
-        !(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
+    if (!(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
     {
-        Expr* rhs = parseExpression();
-        return new SemiExpr(lhs, rhs);
+        Stmt* rhs = parseStmtList();
+        return new StmtPair(lhs, rhs);
     }
     else //if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
         return lhs;
@@ -64,17 +63,18 @@ Expr* Parser::parseExpression()
 }
 
 /*
-stmt-expr
-    : comma-expr
+stmt
+    : expression ';'
+    | expression [lower prec than with ';']
     | 'while' '(' expression ')' stmt-expr
     | 'if' '(' expression ')' stmt-expr
     | 'if' '(' expression ')' stmt-expr 'else' stmt-expr
     | 'switch' '(' expression ')' block
-    | 'return' stmt-expr
+    | 'return' expression ';'
     | type-decl
     ;
 */
-Expr* Parser::parseStmtExpr()
+Stmt* Parser::parseStmt()
 {
     tok::Token to = lexer->Peek();
 
@@ -82,7 +82,7 @@ Expr* Parser::parseStmtExpr()
     {
     case tok::k_type:
         parseTypeDecl();
-        return new NullExpr(to.loc + lexer->Last().loc);
+        return new NullStmt(to.loc + lexer->Last().loc);
 
     case tok::k_for:
     case tok::k_while:
@@ -93,10 +93,9 @@ Expr* Parser::parseStmtExpr()
         Expr* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Expr* act = parseStmtExpr();
-        return new WhileExpr(pred, act, to);
+        Stmt* act = parseStmt();
+        return new WhileStmt(pred, act, to);
     }
-        //parse loop expr
 
     case tok::k_if:
     {
@@ -106,11 +105,11 @@ Expr* Parser::parseStmtExpr()
         Expr* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Expr* act1 = parseStmtExpr();
+        Stmt* act1 = parseStmt();
         if (!lexer->Expect(tok::k_else))
-            return new IfExpr(pred, act1, to);
+            return new IfStmt(pred, act1, to);
         else
-            return new IfElseExpr(pred, act1, parseStmtExpr(), to);
+            return new IfElseStmt(pred, act1, parseStmt(), to);
     }
 
     case tok::k_switch:
@@ -121,8 +120,8 @@ Expr* Parser::parseStmtExpr()
         Expr* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Expr* act = parseBlock();
-        return new SwitchExpr(pred, act, to);
+        Stmt* act = parseBlock();
+        return new SwitchStmt(pred, act, to);
     }
 
     case tok::k_break:
@@ -130,14 +129,22 @@ Expr* Parser::parseStmtExpr()
         err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
         exit(-1);
     case tok::k_return:
+    {
         lexer->Advance();
-        return new ReturnExpr(parseStmtExpr(), to);
+        Stmt* ret = new ReturnStmt(parseExpression(), to);
+        lexer->Expect(tok::semicolon);
+        return ret;
+    }
     case tok::k_tail:
     case tok::k_goto:
         //parse jump expr
         err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
         exit(-1);
     default:
-        return parseBinaryExpr();
+    {
+        Stmt* ret = new ExprStmt(parseExpression());
+        lexer->Expect(tok::semicolon);
+        return ret;
+    }
     }
 }

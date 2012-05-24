@@ -16,7 +16,7 @@ Parser::Parser(lex::Lexer *l)
 {
     curScope = &cu->global;
 
-    cu->treeHead = parseExpression();
+    cu->treeHead = parseStmtList();
 }
 
 namespace
@@ -36,9 +36,9 @@ namespace
 
 /*
 type-decl
-    : 'type' IDENT = type
-    | 'type' IDENT '?' IDENT = type
-    | 'type' IDENT '?' '(' ident-list ')' = type
+    : 'type' IDENT = type ';'
+    | 'type' IDENT '?' IDENT = type ';'
+    | 'type' IDENT '?' '(' ident-list ')' = type ';'
     ;
 */
 void Parser::parseTypeDecl()
@@ -83,9 +83,12 @@ void Parser::parseTypeDecl()
     }
 
     if (!lexer->Expect(tok::equals))
-        err::ExpectedAfter(lexer, "=", "type name");
+        err::ExpectedAfter(lexer, "'='", "type name");
 
     td.mapped = tp(lexer, curScope); //create type
+
+    if (!lexer->Expect(tok::semicolon))
+        err::ExpectedAfter(lexer, "';'", "type definition");
 
     curScope->addTypeDef(name, td);
 }
