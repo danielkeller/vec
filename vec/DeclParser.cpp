@@ -16,15 +16,7 @@ Parser::Parser(lex::Lexer *l)
 {
     curScope = &cu->global;
 
-    while (true)
-    {
-        parseExpression();
-
-        if (!lexer->Expect(tok::end))
-            err::ExpectedAfter(lexer, "';'", "expression");
-        else
-            break;
-    }
+    cu->treeHead = parseExpression();
 }
 
 namespace

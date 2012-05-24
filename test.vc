@@ -35,7 +35,7 @@ type testt = [int x, int];
 		putchar:[in{i} + 48];
 		putchar:[32];
 		i = i + 1;
-	)
+	);
 	putchar:[10];
 );
 
@@ -46,7 +46,7 @@ type testt = [int x, int];
 	while (idx < l[length])
 	(
 		if (l{idx} < l{0})
-			ret[l] = ret[l] $ {l{idx}};
+			ret[l] = ret[l] $ {l{idx}}
 		else
 			ret[g] = ret[g] $ {l{idx}};
 		idx = idx + 1;

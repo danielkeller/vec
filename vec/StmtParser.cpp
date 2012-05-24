@@ -26,17 +26,10 @@ Expr* Parser::parseBlock()
     
     Expr* conts;
 
-    while (true)
-    {
-        conts = parseExpression();
+    conts = parseExpression();
 
-        //if parseExpression can't parse any more the user probably forgot a ;
-        //so will you kindly insert it for them?
-        if(!lexer->Expect(tok::rparen))
-            err::ExpectedAfter(lexer, "';'", "expression");
-        else
-            break;
-    }
+    if(!lexer->Expect(tok::rparen))
+        err::ExpectedAfter(lexer, "')'", "block");
 
     curScope = blockScope.getParent();
     return new Block(conts, std::move(blockScope), begin + lexer->Last().loc);
@@ -56,16 +49,18 @@ Expr* Parser::parseExpression()
 {
     Expr* lhs = parseStmtExpr();
 
-    if (lexer->Expect(tok::semicolon))
-    {
-        if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
-            return lhs;
+    //if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
+    //    err::ExpectedAfter(lexer, "';'", "expression");
 
+    if (lexer->Expect(tok::semicolon) && //eat the ; anyway even if we don't need it
+        !(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
+    {
         Expr* rhs = parseExpression();
         return new SemiExpr(lhs, rhs);
     }
-    else
+    else //if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
         return lhs;
+
 }
 
 /*
