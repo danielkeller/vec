@@ -15,9 +15,17 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
     : fileName(fname), compUnit(cu)
 {
     std::ifstream t(fileName.c_str());
+    if (!t.is_open())
+    {
+        //this doesnt work for some reason?
+        err::Error(tok::Location()) << "Could not open file '" << fileName << '\'' << err::endl;
+        exit(-1);
+    }
+
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
     buffer = new char[size + 1];
+
     t.seekg(0);
     t.read(buffer, size);
     buffer[size] = '\0';
