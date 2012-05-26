@@ -21,12 +21,12 @@ namespace ast
     };
 
     //leaf expression type
-    struct NullExpr : public Expr
+    struct NullExpr : public Expr, public AstNode<>
     {
         NullExpr(tok::Location &&l) : Expr(std::move(l)) {};
     };
 
-    struct VarExpr : public Expr
+    struct VarExpr : public Expr, public AstNode<>
     {
         Ident var;
 
@@ -34,7 +34,7 @@ namespace ast
         bool isLval() {return true;};
     };
 
-    struct ConstExpr : public Expr
+    struct ConstExpr : public Expr, public AstNode<>
     {
         ConstExpr(tok::Location &&l) : Expr(std::move(l)) {};
     };

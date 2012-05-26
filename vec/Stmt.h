@@ -16,7 +16,7 @@ namespace ast
         Stmt(tok::Location &&l) : loc(l) {};
     };
 
-    struct NullStmt : public Stmt
+    struct NullStmt : public Stmt, public AstNode<>
     {
         NullStmt(tok::Location &&l) : Stmt(std::move(l)) {};
     };

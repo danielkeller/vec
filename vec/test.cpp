@@ -38,5 +38,7 @@ int main ()
 
     par::Parser p(&l);
 
+    cu.treeHead->emitXml(std::cout);
+
     getchar();
 }

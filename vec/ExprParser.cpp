@@ -42,8 +42,6 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
         //precidence can be the same if it is right associative
 
         //reduce
-        err::Error(err::warning, lhs->loc) << "wheee expression" << err::underline << op.loc << err::caret
-            << rhs->loc << err::underline << err::endl;
         lhs = makeBinExpr(lhs, rhs, op);
         //fall through and "tail recurse"
     }

@@ -5,23 +5,35 @@
 #include <type_traits>
 #include <functional>
 
+#include <ostream>
+
+namespace ast
+{
+    class AstNode0;
+}
+
 namespace sa
 {
-    class AstWalker0;
+    //allows us to call a template functor from a virtual function
+    class AstWalker0
+    {
+    public:
+        virtual void call(ast::AstNode0* node) = 0;
+    };
 }
 
 namespace ast
 {
     template<std::size_t> struct int2type{};
 
-    //generic AstNode with no children for generic node classes ie expr
+    //virtual AstNode base class for generic node classes ie expr, stmt
     class AstNode0
     {
     public:
-    
         AstNode0 *parent;
         virtual ~AstNode0() {}; 
-        virtual void eachChild(sa::AstWalker0*) {}
+        virtual void eachChild(sa::AstWalker0*) = 0;
+        virtual void emitXml(std::ostream &os) = 0;
     };
 
     //ast node from which all others are derived
@@ -34,37 +46,47 @@ namespace ast
         conts_t chld;
 
         //recurse on int2type type
-        template<size_t i = 0>
-        inline void init(int2type<i> = int2type<i>())
+        template<size_t i>
+        inline void init(int2type<i>)
         {
             std::get<i>(chld)->parent = this;
-            destroy(int2type<i+1>());
+            init(int2type<i+1>());
         };
         //terminate template recursion
-        inline void init(int2type<conts_s> = int2type<conts_s>()) //need default param for AstNode<>
+        inline void init(int2type<conts_s>)
         {
         };
 
-        template<size_t i = 0>
-        inline void destroy(int2type<i> = int2type<i>())
+        template<size_t i>
+        inline void destroy(int2type<i>)
         {
             delete std::get<i>(chld);
             destroy(int2type<i+1>());
         };
         //terminate template recursion
-        inline void destroy(int2type<conts_s> = int2type<conts_s>()) //need default param for AstNode<>
+        inline void destroy(int2type<conts_s>) //need default param for AstNode<>
         {
         };
 
-        template<size_t i = 0>
-        inline void callOnEach(sa::AstWalker0 *walker, int2type<i> = int2type<i>())
+        template<size_t i>
+        inline void callOnEach(sa::AstWalker0 *walker, int2type<i>)
         {
-            walker(std::get<i>(chld));
+            walker->call(std::get<i>(chld));
             callOnEach(walker, int2type<i+1>());
         };
         //terminate recursion
-        //need default param for AstNode<>
-        void callOnEach(sa::AstWalker0*, int2type<conts_s> = int2type<conts_s>())
+        void callOnEach(sa::AstWalker0*, int2type<conts_s>)
+        {
+        };
+
+        template<size_t i>
+        inline void chldXml(std::ostream &os, int2type<i>)
+        {
+            std::get<i>(chld)->emitXml(os);
+            chldXml(os, int2type<i+1>());
+        };
+        //terminate template recursion
+        inline void chldXml(std::ostream &os, int2type<conts_s>)
         {
         };
 
@@ -72,17 +94,17 @@ namespace ast
         AstNode(Children* ... c)
             : chld(c...)
         {
-            init();
+            init(int2type<0>());
         };
 
         ~AstNode()
         {
-            destroy();
+            destroy(int2type<0>());
         };
 
-        virtual void eachChild(sa::AstWalker0 *w)
+        void eachChild(sa::AstWalker0 *w)
         {
-            callOnEach(w);
+            callOnEach(w, int2type<0>());
         }
 
         template<size_t n>
@@ -99,35 +121,36 @@ namespace ast
             std::get<n>(chld) = newchld;
             newchld->parent = this;
         }
+
+        void emitXml(std::ostream &os)
+        {
+            os << '<' << typeid(*this).name() << '>';
+            chldXml(os, int2type<0>());
+            os << "</" << typeid(*this).name() << '>';
+        }
+
     };
 }
 
 namespace sa
 {
-    //allows us to call a template functor from a virtual function
-    class AstWalker0
-    {
-        friend class AstNode0;
-        virtual void operator()(ast::AstNode0* node) = 0;
-    };
-
     template<class Base>
     class AstWalker : public AstWalker0
     {
         std::function<void(Base*)> action;
-        void operator()(ast::AstNode0* node)
+
+    public:
+        void call(ast::AstNode0* node)
         {
             node->eachChild(this);
             Base * bNode = dynamic_cast<Base*>(node);
             if (bNode)
                 action(bNode);
         };
-
-    public:
         template <class A>
         AstWalker(A &&act, ast::AstNode0 *r) : action(act)
         {
-            operator()(r);
+            call(r);
         }
     };
 }
