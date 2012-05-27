@@ -14,12 +14,14 @@ namespace ast
         virtual bool isLval() {return false;};
         Stmt() = default;
         Stmt(tok::Location &&l) : loc(l) {};
+        const char *myColor() {return "1";};
     };
 
     struct NullStmt : public Stmt, public AstNode<>
     {
         NullStmt(tok::Location &&l) : Stmt(std::move(l)) {};
         std::string myLbl() {return "Null";}
+        const char *myColor() {return "8";};
     };
 
     struct ExprStmt : public Stmt, public AstNode<Expr>
@@ -29,12 +31,14 @@ namespace ast
             AstNode<Expr>(conts)
         {};
         std::string myLbl() {return "Expr";}
+        const char *myColor() {return "2";};
     };
 
     struct StmtPair : public Stmt, public AstNode<Stmt, Stmt>
     {
         StmtPair(Stmt *lhs, Stmt *rhs) : AstNode<Stmt, Stmt>(lhs, rhs) {};
         std::string myLbl() {return ";";}
+        const char *myColor() {return "3";};
     };
 
     struct Block : public Expr, public Stmt, public AstNode<Stmt>
@@ -48,6 +52,7 @@ namespace ast
         {};
         ~Block() {delete scope;};
         std::string myLbl() {return "(...)";}
+        const char *myColor() {return "3";};
     };
 
     struct IfStmt : public Stmt, public AstNode<Expr, Stmt>

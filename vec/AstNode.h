@@ -38,6 +38,10 @@ namespace ast
         {
             return typeid(*this).name();
         };
+        virtual const char* myColor()
+        {
+            return "1";
+        };
     };
 
     //ast node from which all others are derived
@@ -131,7 +135,8 @@ namespace ast
         void emitDot(std::ostream &os)
         {
             chldDot(os, int2type<0>());
-            os << 'n' << static_cast<AstNode0*>(this) << " [label=\"" << myLbl() << "\"];\n";
+            os << 'n' << static_cast<AstNode0*>(this) << " [label=\"" << myLbl()
+                << "\",style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
 
     };

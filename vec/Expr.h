@@ -18,6 +18,7 @@ namespace ast
         virtual bool isLval() {return false;};
         //Expr() = default;
         Expr(tok::Location &&l) : loc(l) {};
+        const char *myColor() {return "4";};
     };
 
     //leaf expression type
@@ -25,6 +26,7 @@ namespace ast
     {
         NullExpr(tok::Location &&l) : Expr(std::move(l)) {};
         std::string myLbl() {return "Null";}
+        const char *myColor() {return "8";};
     };
 
     struct VarExpr : public Expr, public AstNode<>
@@ -34,11 +36,13 @@ namespace ast
         VarExpr(Ident v, tok::Location &&l) : Expr(std::move(l)), var(v) {};
         bool isLval() {return true;};
         std::string myLbl() {return "var: " + utl::to_str(var);}
+        const char *myColor() {return "5";};
     };
 
     struct ConstExpr : public Expr, public AstNode<>
     {
         ConstExpr(tok::Location &&l) : Expr(std::move(l)) {};
+        const char *myColor() {return "7";};
     };
 
     struct IntConstExpr : public ConstExpr
