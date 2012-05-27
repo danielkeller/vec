@@ -4,7 +4,7 @@
 
 #include <cstdio>
 #include <iostream>
-#include <time.h>
+#include <fstream>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -38,7 +38,9 @@ int main ()
 
     par::Parser p(&l);
 
-    cu.treeHead->emitXml(std::cout);
-
-    getchar();
+    std::ofstream dot(fileName + std::string(".dot"));
+    dot << "digraph G {\n";
+    cu.treeHead->emitDot(dot);
+    dot << '}';
+    dot.close();
 }

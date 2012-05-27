@@ -19,6 +19,7 @@ namespace ast
     struct NullStmt : public Stmt, public AstNode<>
     {
         NullStmt(tok::Location &&l) : Stmt(std::move(l)) {};
+        std::string myLbl() {return "Null";}
     };
 
     struct ExprStmt : public Stmt, public AstNode<Expr>
@@ -27,11 +28,13 @@ namespace ast
             : Stmt(std::move(conts->loc)),
             AstNode<Expr>(conts)
         {};
+        std::string myLbl() {return "Expr";}
     };
 
     struct StmtPair : public Stmt, public AstNode<Stmt, Stmt>
     {
         StmtPair(Stmt *lhs, Stmt *rhs) : AstNode<Stmt, Stmt>(lhs, rhs) {};
+        std::string myLbl() {return ";";}
     };
 
     struct Block : public Expr, public Stmt, public AstNode<Stmt>
@@ -44,6 +47,7 @@ namespace ast
             scope(s)
         {};
         ~Block() {delete scope;};
+        std::string myLbl() {return "(...)";}
     };
 
     struct IfStmt : public Stmt, public AstNode<Expr, Stmt>
@@ -52,6 +56,7 @@ namespace ast
             : Stmt(o.loc + act->loc),
             AstNode<Expr, Stmt>(pred, act)
         {};
+        std::string myLbl() {return "if";}
     };
 
     struct IfElseStmt : public Stmt, public AstNode<Expr, Stmt, Stmt>
@@ -60,6 +65,7 @@ namespace ast
             : Stmt(o.loc + act2->loc),
             AstNode<Expr, Stmt, Stmt>(pred, act1, act2)
         {};
+        std::string myLbl() {return "if-else";}
     };
 
     struct SwitchStmt : public Stmt, public AstNode<Expr, Stmt>
@@ -68,6 +74,7 @@ namespace ast
             : Stmt(o.loc + act->loc),
             AstNode<Expr, Stmt>(pred, act)
         {};
+        std::string myLbl() {return "switch";}
     };
 
     struct WhileStmt : public Stmt, public AstNode<Expr, Stmt>
@@ -76,6 +83,7 @@ namespace ast
             : Stmt(o.loc + act->loc),
             AstNode<Expr, Stmt>(pred, act)
         {};
+        std::string myLbl() {return "while";}
     };
 
     struct ReturnStmt : public Stmt, public AstNode<Expr>
@@ -84,6 +92,7 @@ namespace ast
             : Stmt(o.loc + arg->loc),
             AstNode<Expr>(arg)
         {};
+        std::string myLbl() {return "return";}
     };
 }
 

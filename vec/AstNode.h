@@ -33,7 +33,11 @@ namespace ast
         AstNode0 *parent;
         virtual ~AstNode0() {}; 
         virtual void eachChild(sa::AstWalker0*) = 0;
-        virtual void emitXml(std::ostream &os) = 0;
+        virtual void emitDot(std::ostream &os) = 0;
+        virtual std::string myLbl()
+        {
+            return typeid(*this).name();
+        };
     };
 
     //ast node from which all others are derived
@@ -80,13 +84,15 @@ namespace ast
         };
 
         template<size_t i>
-        inline void chldXml(std::ostream &os, int2type<i>)
+        inline void chldDot(std::ostream &os, int2type<i>)
         {
-            std::get<i>(chld)->emitXml(os);
-            chldXml(os, int2type<i+1>());
+            //static cast is needed to get pointers to the same thing to be the same
+            os << 'n' << static_cast<AstNode0*>(this) << " -> n" << static_cast<AstNode0*>(std::get<i>(chld)) << ";\n";
+            std::get<i>(chld)->emitDot(os);
+            chldDot(os, int2type<i+1>());
         };
         //terminate template recursion
-        inline void chldXml(std::ostream &os, int2type<conts_s>)
+        inline void chldDot(std::ostream &os, int2type<conts_s>)
         {
         };
 
@@ -122,11 +128,10 @@ namespace ast
             newchld->parent = this;
         }
 
-        void emitXml(std::ostream &os)
+        void emitDot(std::ostream &os)
         {
-            os << '<' << typeid(*this).name() << '>';
-            chldXml(os, int2type<0>());
-            os << "</" << typeid(*this).name() << '>';
+            chldDot(os, int2type<0>());
+            os << 'n' << static_cast<AstNode0*>(this) << " [label=\"" << myLbl() << "\"];\n";
         }
 
     };

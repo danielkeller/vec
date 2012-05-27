@@ -9,3 +9,5 @@ obj
 *.swp
 vc
 tags
+*.dot
+*.png

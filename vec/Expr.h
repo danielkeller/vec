@@ -24,6 +24,7 @@ namespace ast
     struct NullExpr : public Expr, public AstNode<>
     {
         NullExpr(tok::Location &&l) : Expr(std::move(l)) {};
+        std::string myLbl() {return "Null";}
     };
 
     struct VarExpr : public Expr, public AstNode<>
@@ -32,6 +33,7 @@ namespace ast
 
         VarExpr(Ident v, tok::Location &&l) : Expr(std::move(l)), var(v) {};
         bool isLval() {return true;};
+        std::string myLbl() {return "var: " + utl::to_str(var);}
     };
 
     struct ConstExpr : public Expr, public AstNode<>
@@ -43,18 +45,21 @@ namespace ast
     {
         long long value;
         IntConstExpr(long long v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        std::string myLbl() {return utl::to_str(value);}
     };
 
     struct FloatConstExpr : public ConstExpr
     {
         long double value;
         FloatConstExpr(long double v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        std::string myLbl() {return utl::to_str(value);}
     };
 
     struct StringConstExpr : public ConstExpr
     {
         Str value;
         StringConstExpr(Str v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        std::string myLbl() {return "str: " + utl::to_str(value);}
     };
 
     //general binary expressions
@@ -70,12 +75,14 @@ namespace ast
             : Expr(lhs->loc + rhs->loc),
             AstNode<Expr, Expr>(lhs, rhs), op(o)
         {};
+        std::string myLbl() {return tok::Name(op);}
     };
 
     struct AssignExpr : public BinExpr
     {
         tok::TokenType assignOp;
         AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o), assignOp(o.value.op) {};
+        std::string myLbl() {return std::string(tok::Name(op)) + '=';}
     };
 
     inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, tok::Token &op)
@@ -94,6 +101,7 @@ namespace ast
             : Expr(o.loc + arg->loc),
             AstNode<Expr>(arg), op(o.type)
         {};
+        std::string myLbl() {return tok::Name(op);}
     };
 
     struct IterExpr : public Expr, public AstNode<Expr>
@@ -104,6 +112,7 @@ namespace ast
         {};
 
         bool isLval() {return getChild<0>()->isLval();}
+        std::string myLbl() {return "`";}
     };
 
     struct AggExpr : public UnExpr
@@ -118,6 +127,7 @@ namespace ast
         ListifyExpr(Expr* arg, tok::Token &o)
             : UnExpr(arg, o)
         {};
+        std::string myLbl() {return "{...}";}
     };
 
     struct TuplifyExpr : public UnExpr
@@ -125,6 +135,7 @@ namespace ast
         TuplifyExpr(Expr* arg, tok::Token &o)
             : UnExpr(arg, o)
         {};
+        std::string myLbl() {return "[...]";}
     };
 
     //postfix expressions
@@ -136,6 +147,7 @@ namespace ast
             : Expr(arg->loc + o.loc),
             AstNode<Expr>(arg), op(o.type)
         {};
+        std::string myLbl() {return tok::Name(op);}
     };
 
     struct TupAccExpr : public BinExpr
@@ -145,6 +157,7 @@ namespace ast
         {}
 
         bool isLval() {return getChild<0>()->isLval();}
+        std::string myLbl() {return "a{b}";}
     };
 
     struct ListAccExpr : public BinExpr
@@ -154,6 +167,7 @@ namespace ast
         {}
 
         bool isLval() {return getChild<0>()->isLval();}
+        std::string myLbl() {return "a[b]";}
     };
 }
 
