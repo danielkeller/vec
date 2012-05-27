@@ -18,7 +18,7 @@ namespace lex
     {
     public:
         Lexer(std::string fname, ast::CompUnit *cu);
-        ~Lexer() {delete buffer;}
+        ~Lexer() {delete[] buffer;}
 
         tok::Token & Next();
         tok::Token & Peek() {return nextTok;}
