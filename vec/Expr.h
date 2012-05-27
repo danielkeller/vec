@@ -84,15 +84,23 @@ namespace ast
 
     struct AssignExpr : public BinExpr
     {
+        AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o) {};
+        std::string myLbl() {return "'='";}
+    };
+
+    struct OpAssignExpr : public BinExpr
+    {
         tok::TokenType assignOp;
-        AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o), assignOp(o.value.op) {};
-        std::string myLbl() {return std::string(tok::Name(op)) + '=';}
+        OpAssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o), assignOp(o.value.op) {};
+        std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 
     inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, tok::Token &op)
     {
         if (op == tok::equals)
             return new AssignExpr(lhs, rhs, op);
+        else if (op == tok::opequals)
+            return new OpAssignExpr(lhs, rhs, op);
         else
             return new BinExpr(lhs, rhs, op);
     }
@@ -119,11 +127,14 @@ namespace ast
         std::string myLbl() {return "`";}
     };
 
-    struct AggExpr : public UnExpr
+    struct AggExpr : public Expr, public AstNode<Expr>
     {
+        tok::TokenType op;
         AggExpr(Expr* arg, tok::Token &o)
-            : UnExpr(arg, o)
+            : Expr(o.loc + arg->loc),
+            AstNode<Expr>(arg), op(o.value.op)
         {};
+        std::string myLbl() {return tok::Name(op) + std::string("=");}
     };
 
     struct ListifyExpr : public UnExpr
