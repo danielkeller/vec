@@ -8,6 +8,12 @@
 
 namespace par
 {
+    //so we can easily change the syntax if needed
+    static const tok::TokenType listBegin = tok::lbrace, listEnd = tok::rbrace;
+    static const tok::TokenType tupleBegin = tok::lsquare, tupleEnd = tok::rsquare;
+
+    bool couldBeType(tok::Token &t);
+
     class Parser
     {
     public:
@@ -19,7 +25,7 @@ namespace par
         ast::CompUnit *cu;
         ast::Scope *curScope;
 
-        TypeParser tp;
+        typ::Type type;
 
         //ExprParser.cpp
         ast::Expr* parseExpression();
@@ -38,6 +44,25 @@ namespace par
         ast::Block* parseBlock();
         ast::Stmt* parseStmt();
 
+        //TypeParser.cpp
+        void parseType();
+        void parseSingle();
+        void parseTypeList();
+        /*
+        //parse list type or listify ie {int} or {1, 2, 3}
+        ast::Expr* parseListOrIfy();
+        ast::Expr* parseTupleOrIfy();
+        */
+        void parseList();
+        void parseTuple();
+        void parsePrim();
+        void parseParam();
+        void parseRef();
+        void parseNamed();
+        void parseIdent();
+        size_t checkArgs();
+
+        friend class TypeListParser;
         friend class Type;
     };
 }

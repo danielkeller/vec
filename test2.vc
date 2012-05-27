@@ -29,10 +29,6 @@ a && b;
 type asf = foo;
 );
 
-//make it so blocks turn statements back into expressions
-//this expression crap is getting silly.
-//leave declarations as expressions though
-
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else
 

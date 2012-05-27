@@ -5,10 +5,6 @@
 #include <vector>
 #include "Token.h"
 
-namespace lex
-{
-    class Lexer;
-}
 namespace utl
 {
     class weak_string;
@@ -17,10 +13,9 @@ namespace ast
 {
     class Scope;
 }
-
 namespace par
 {
-    class TypeParser;
+    class Parser;
     class TypeListParser;
 }
 
@@ -39,43 +34,32 @@ namespace typ
 
     private:
         std::string code; //string representation of type - "nominative" type
-        std::string expanded; //with all named types inserted - "duck" type
+        std::string expanded; //with all named types inserted - "actual" type
 
         friend class par::TypeListParser;
-        friend class par::TypeParser;
+        friend class par::Parser;
     };
-}
 
-namespace par
-{
-    //so we can easily change the syntax if needed
-    static const tok::TokenType listBegin = tok::lbrace, listEnd = tok::rbrace;
-    static const tok::TokenType tupleBegin = tok::lsquare, tupleEnd = tok::rsquare;
-
-    class TypeParser
+    namespace cod
     {
-        typ::Type t;
-        lex::Lexer *l;
-        ast::Scope *s;
-        
-    public:
-        typ::Type operator()(lex::Lexer *lex, ast::Scope *sc);
+        static const char list = 'L';
+        static const char tuple = 'T';
+        static const char tupname = 'v'; //name of variable for struct-style access
+        static const char dim = 'd'; //dimension of list
+        static const char arg = 'A';
+        static const char integer = 'I';
+        static const char floating = 'F';
+        static const char ref = 'R';
+        static const char named = 'N';
+        static const char any = 'Y';
+        static const char param = 'P';
+        static const char function = 'U';
 
-        void parseSingle();
-        void parseTypeList();
-        void parseList();
-        void parseTuple();
-        void parsePrim();
-        void parseParam();
-        void parseRef();
-        void parseNamed();
-        void parseIdent();
-        size_t checkArgs();
-
-        friend class TypeListParser;
-    };
-
-    bool couldBeType(tok::Token &t);
+        inline char endOf(const char begin)
+        {
+            return begin - 'A' + 'a'; //ie lowercase version
+        }
+    }
 }
 
 #endif

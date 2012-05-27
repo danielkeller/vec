@@ -85,7 +85,8 @@ void Parser::parseTypeDecl()
     if (!lexer->Expect(tok::equals))
         err::ExpectedAfter(lexer, "'='", "type name");
 
-    td.mapped = tp(lexer, curScope); //create type
+    parseType(); //create type in t
+    td.mapped = type;
 
     if (!lexer->Expect(tok::semicolon))
         err::ExpectedAfter(lexer, "';'", "type definition");
@@ -102,7 +103,7 @@ Expr* Parser::parseDecl()
 {
     tok::Location begin = lexer->Peek().loc;
 
-    typ::Type t = tp(lexer, curScope);
+    parseType();
 
     tok::Token to;
 
@@ -114,7 +115,7 @@ Expr* Parser::parseDecl()
 
     Ident id = to.value.int_v;
     
-    if (!t.isFunc()) //variable definition
+    if (!type.isFunc()) //variable definition
     {
         //variables cannot be defined twice
         if (curScope->getVarDef(id))
@@ -125,7 +126,7 @@ Expr* Parser::parseDecl()
         else
         {
             VarDef vd;
-            vd.type = t;
+            vd.type = type;
             curScope->addVarDef(id, vd);
         }
     }
