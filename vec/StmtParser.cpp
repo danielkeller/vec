@@ -20,10 +20,10 @@ Block* Parser::parseBlock()
     Scope *blockScope = new Scope(curScope);
     curScope = blockScope;
 
-    if (lexer->Peek() == tok::rparen) //empty parens
-        return new Block(new NullStmt(begin + lexer->Next().loc),
+    if (lexer->Expect(tok::rparen)) //empty parens
+        return new Block(new NullStmt(begin + lexer->Last().loc),
                          blockScope,
-                         begin + lexer->Next().loc);
+                         begin + lexer->Last().loc);
     
     Stmt* conts;
 
@@ -65,7 +65,7 @@ Stmt* Parser::parseStmtList()
 /*
 stmt
     : expression ';'
-    | expression [lower prec than with ';']
+    | expression [followed by end of block]
     | 'while' '(' expression ')' stmt-expr
     | 'if' '(' expression ')' stmt-expr
     | 'if' '(' expression ')' stmt-expr 'else' stmt-expr
@@ -132,7 +132,8 @@ Stmt* Parser::parseStmt()
     {
         lexer->Advance();
         Stmt* ret = new ReturnStmt(parseExpression(), to);
-        lexer->Expect(tok::semicolon);
+        if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
+            err::ExpectedAfter(lexer, "';'", "expression");
         return ret;
     }
     case tok::k_tail:
@@ -143,7 +144,8 @@ Stmt* Parser::parseStmt()
     default:
     {
         Stmt* ret = new ExprStmt(parseExpression());
-        lexer->Expect(tok::semicolon);
+        if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen && lexer->Last() != tok::rparen)
+            err::ExpectedAfter(lexer, "';'", "expression");
         return ret;
     }
     }

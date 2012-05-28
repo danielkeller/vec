@@ -133,3 +133,41 @@ Expr* Parser::parseDecl()
 
     return new VarExpr(id, begin + to.loc);
 }
+
+/*
+primary-expr
+    : type IDENT
+    ;
+*/
+Expr* Parser::parseDeclRHS()
+{
+    tok::Token to;
+
+    if (!lexer->Expect(tok::identifier, to))
+    {
+        err::ExpectedAfter(lexer, "identifier", "type");
+        return new NullExpr(std::move(lexer->Last().loc));
+    }
+
+    Ident id = to.value.int_v;
+    
+    if (!type.isFunc()) //variable definition
+    {
+        //variables cannot be defined twice
+        if (curScope->getVarDef(id))
+        {
+            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
+                << '\'' << err::underline << err::endl;
+        }
+        else
+        {
+            VarDef vd;
+            vd.type = type;
+            curScope->addVarDef(id, vd);
+        }
+    }
+
+    //the following is an inconsistency in location tracking, we should have it start at
+    //the beginning of the type, but we don't know where that is in this scope
+    return new VarExpr(id, std::move(to.loc));
+}

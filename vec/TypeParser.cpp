@@ -10,6 +10,7 @@
 
 using namespace par;
 using namespace typ;
+using namespace ast;
 
 bool par::couldBeType(tok::Token &t)
 {
@@ -31,7 +32,7 @@ bool par::couldBeType(tok::Token &t)
 
 void Parser::parseType()
 {
-    type = Type(); //reset type
+    type.clear(); //reset type
 
     if (lexer->Expect(tok::colon)) //void function?
     {
@@ -49,6 +50,17 @@ void Parser::parseType()
         parseSingle();
     }
 }
+
+/*
+type
+    : '{' type '}'
+    | '[' type-list ']'
+    | 'int' | 'float'
+    | '?' | '?' IDENT
+    | '@' type
+    | IDENT
+    ;
+*/
 
 void Parser::parseSingle()
 {
@@ -117,11 +129,15 @@ void Parser::parseTypeList()
 void Parser::parseList()
 {
     type.code += cod::list;
-    tok::Location errLoc = lexer->Next().loc;
+    lexer->Advance();
     parseSingle();
+    parseListEnd();
+}
 
+void Parser::parseListEnd()
+{
     if (!lexer->Expect(listEnd))
-        err::Error(errLoc) << "unterminated list type" << err::caret << err::endl;
+        err::ExpectedAfter(lexer, "'}'", "type");
 
     if (lexer->Expect(tok::bang))
     {
@@ -141,6 +157,13 @@ void Parser::parseTuple()
     type.code += cod::tuple;
     lexer->Advance();
     parseTypeList();
+    parseTupleEnd();
+}
+
+void Parser::parseTupleEnd()
+{
+    if (!lexer->Expect(tupleEnd))
+        err::ExpectedAfter(lexer, "']'", "type");
     type.code += cod::endOf(cod::tuple);
 }
 

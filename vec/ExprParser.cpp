@@ -136,7 +136,7 @@ primary-expr
     : IDENT | CONST | STRING_LITERAL
     | '{' '}' | '{' comma-expr '}'
     | '[' ']' | '[' comma-expr ']'
-    | '*' type IDENT
+    | type IDENT
     | '(' expression ')'
     ;
 */
@@ -149,22 +149,18 @@ Expr* Parser::parsePrimaryExpr()
     switch (to.type)
     {
     case tok::identifier:
-        /*
         if (curScope->getTypeDef(to.value.int_v)) //it's a type
             return parseDecl();
         //nope, it's an ID
-        */
         lexer->Advance();
-        /*
         if (lexer->Peek() == tok::identifier) //but the user thinks its a type
         {
             err::Error(to.loc) << '\'' << cu->getIdent(to.value.int_v)
                 << "' is not a type" << err::underline << err::endl; //we'll show them!
             to = lexer->Next(); //pretend it's a decl
         }
-        */
-
         return new VarExpr(to.value.int_v, std::move(to.loc));
+
     case tok::integer:
         lexer->Advance();
         return new IntConstExpr(to.value.int_v, to.loc);
@@ -180,38 +176,157 @@ Expr* Parser::parsePrimaryExpr()
         return parseBlock();
 
     case listBegin:
-        lexer->Advance();
-        ret = new ListifyExpr(parseExpression(), to);
-        if (!lexer->Expect(listEnd, to))
-            err::ExpectedAfter(lexer, tok::Name(listEnd), "expression list");
-        else
-            ret->loc += to.loc; //add } to expr location
+        type.clear(); //-orIfy doesn't clear type so do it here
+        ret = parseListOrIfy();
+        if (!ret) //it's a type
+            ret = parseDeclRHS();
         return ret;
 
     case tupleBegin:
-        lexer->Advance();
-        ret = new TuplifyExpr(parseExpression(), to);
-        if (!lexer->Expect(tupleEnd, to))
-            err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression list");
-        else
-            ret->loc += to.loc;
+        type.clear(); //-orIfy doesn't clear type so do it here
+        ret = parseTupleOrIfy();
+        if (!ret) //it's a type
+            ret = parseDeclRHS();
         return ret;
 
-    case tok::star:
-        lexer->Advance();
-        if (couldBeType(lexer->Peek()))
-            return parseDecl();
-        else
-        {
-            err::ExpectedAfter(lexer, "type", "'*'");
-            //not much we can do to recover here
-            return new NullExpr(std::move(to.loc));
-        }
-
     default:
+        if (couldBeType(lexer->Peek())) //any other type stuff
+            return parseDecl();
+
+        //otherwise we're SOL
 
         err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret << err::endl;
         lexer->Advance(); //eat it
         return new NullExpr(std::move(to.loc));
     }
+}
+
+/*
+type
+    : '{' type '}'
+    ;
+
+primary-expr
+    : '{' expression '}'
+    ;
+*/
+Expr* Parser::parseListOrIfy()
+{
+    //go ahead and insert into the type, if we're wrong it'll get cleared anyway
+    type.code += typ::cod::list;
+    tok::Token brace = lexer->Next();
+
+    //now see what's inside it...
+    tok::Token to = lexer->Peek();
+    if (to == tok::identifier) //ambiguous case #1
+    {
+        if (curScope->getTypeDef(to.value.int_v)) //it's a type
+        {
+            parseNamed();
+            parseListEnd();
+            return NULL;
+        }
+
+        //it's an expr
+        Expr* ret = parseExpression();
+        if (!lexer->Expect(listEnd))
+            err::ExpectedAfter(lexer, "'}'", "expression list");
+        return new ListifyExpr(ret, brace);
+    }
+    else if (to == listBegin || to == tupleBegin) //ambiguous case #2
+    {
+        Expr* ret;
+        if (to == listBegin)
+            ret = parseListOrIfy();
+        else
+            ret = parseTupleOrIfy();
+
+        if (ret) //it's an expr
+        {
+            if (!lexer->Expect(listEnd))
+                err::ExpectedAfter(lexer, "'}'", "expression list");
+            return new ListifyExpr(ret, brace);
+        }
+
+        //it's a type
+        parseListEnd();
+        return NULL;
+    }
+    else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
+    {
+        parseSingle();
+        parseListEnd();
+        return NULL;
+    }
+
+    //otherwise, it's an expression
+    Expr* ret = parseExpression();
+    if (!lexer->Expect(listEnd))
+        err::ExpectedAfter(lexer, "'}'", "expression list");
+    return new ListifyExpr(ret, brace);
+}
+
+/*
+type
+    : '[' type ']'
+    ;
+
+primary-expr
+    : '[' expression ']'
+    ;
+*/
+Expr* Parser::parseTupleOrIfy()
+{
+    //go ahead and insert into the type, if we're wrong it'll get cleared anyway
+    type.code += typ::cod::tuple;
+    tok::Token brace = lexer->Next();
+
+    //now see what's inside it...
+    tok::Token to = lexer->Peek();
+    if (to == tok::identifier) //ambiguous case #1
+    {
+        if (curScope->getTypeDef(to.value.int_v)) //it's a type
+        {
+            parseTypeList();
+            parseTupleEnd();
+            return NULL;
+        }
+
+        //it's an expr
+        Expr* ret = parseExpression();
+        if (!lexer->Expect(tupleEnd))
+            err::ExpectedAfter(lexer, "']'", "expression list");
+        return new TuplifyExpr(ret, brace);
+    }
+    else if (to == listBegin || to == tupleBegin) //ambiguous case #2
+    {
+        Expr* ret;
+        if (to == listBegin)
+            ret = parseListOrIfy();
+        else
+            ret = parseTupleOrIfy();
+
+        if (ret) //it's an expr
+        {
+            if (!lexer->Expect(tupleEnd))
+                err::ExpectedAfter(lexer, "']'", "expression list");
+            return new TuplifyExpr(ret, brace);
+        }
+
+        //it's a type
+        parseTypeList();
+        parseTupleEnd();
+        return NULL;
+    }
+    else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
+    {
+        parseTypeList();
+        parseTupleEnd();
+        return NULL;
+    }
+    //otherwise, it's an expression
+    Expr* ret = parseExpression();
+    if (!lexer->Expect(tupleEnd))
+        err::ExpectedAfter(lexer, "']'", "expression list");
+    return new TuplifyExpr(ret, brace);
 }

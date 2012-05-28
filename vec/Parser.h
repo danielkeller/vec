@@ -34,10 +34,16 @@ namespace par
         ast::Expr* parseUnaryExpr();
         ast::Expr* parsePostfixExpr();
         ast::Expr* parsePrimaryExpr();
+        //parse list type or listify ie {int} or {1, 2, 3}
+        //returns NULL if type is encountered
+        //this is needed because we don't know what { means w/o looking at its contents
+        ast::Expr* parseListOrIfy();
+        ast::Expr* parseTupleOrIfy();
 
         //DeclParser.cpp
         void parseTypeDecl();
         ast::Expr* parseDecl();
+        ast::Expr* parseDeclRHS(); //parse the ident part of a decl, after the type has been parsed
 
         //StmtParser.cpp
         ast::Stmt* parseStmtList();
@@ -48,13 +54,11 @@ namespace par
         void parseType();
         void parseSingle();
         void parseTypeList();
-        /*
-        //parse list type or listify ie {int} or {1, 2, 3}
-        ast::Expr* parseListOrIfy();
-        ast::Expr* parseTupleOrIfy();
-        */
+        //use these when we only want a type
         void parseList();
+        void parseListEnd();
         void parseTuple();
+        void parseTupleEnd();
         void parsePrim();
         void parseParam();
         void parseRef();

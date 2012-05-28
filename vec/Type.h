@@ -32,6 +32,8 @@ namespace typ
 
         void expand(ast::Scope *s);
 
+        void clear() {code.clear(); expanded.clear();};
+
     private:
         std::string code; //string representation of type - "nominative" type
         std::string expanded; //with all named types inserted - "actual" type
