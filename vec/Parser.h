@@ -52,6 +52,7 @@ namespace par
 
         //TypeParser.cpp
         void parseType();
+        void parseTypeEnd(); //parse possible function type at end of top level type
         void parseSingle();
         void parseTypeList();
         //use these when we only want a type

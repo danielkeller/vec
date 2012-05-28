@@ -179,14 +179,20 @@ Expr* Parser::parsePrimaryExpr()
         type.clear(); //-orIfy doesn't clear type so do it here
         ret = parseListOrIfy();
         if (!ret) //it's a type
+        {
+            parseTypeEnd(); //must be here because here we know it's a top level type
             ret = parseDeclRHS();
+        }
         return ret;
 
     case tupleBegin:
         type.clear(); //-orIfy doesn't clear type so do it here
         ret = parseTupleOrIfy();
         if (!ret) //it's a type
+        {
+            parseTypeEnd(); //must be here because here we know it's a top level type
             ret = parseDeclRHS();
+        }
         return ret;
 
     default:
@@ -287,6 +293,7 @@ Expr* Parser::parseTupleOrIfy()
     {
         if (curScope->getTypeDef(to.value.int_v)) //it's a type
         {
+            lexer->Expect(tok::comma); //get rid of the comma if it's there
             parseTypeList();
             parseTupleEnd();
             return NULL;
@@ -314,12 +321,21 @@ Expr* Parser::parseTupleOrIfy()
         }
 
         //it's a type
+        //there might be more types to parse
+        //or a tuple element name
+        if (lexer->Peek() == tok::identifier)
+        {
+            type.code += typ::cod::tupname;
+            parseIdent();
+        }
+        lexer->Expect(tok::comma); //get rid of the comma if it's there
         parseTypeList();
         parseTupleEnd();
         return NULL;
     }
     else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
     {
+        lexer->Expect(tok::comma); //get rid of the comma if it's there
         parseTypeList();
         parseTupleEnd();
         return NULL;

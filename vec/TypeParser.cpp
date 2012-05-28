@@ -43,7 +43,11 @@ void Parser::parseType()
     }
 
     parseSingle();
+    parseTypeEnd();
+}
 
+void Parser::parseTypeEnd()
+{
     if (lexer->Expect(tok::colon)) //function?
     {
         type.code += cod::function;
@@ -162,8 +166,7 @@ void Parser::parseTuple()
 
 void Parser::parseTupleEnd()
 {
-    if (!lexer->Expect(tupleEnd))
-        err::ExpectedAfter(lexer, "']'", "type");
+    //don't need to check for ], parseTypeList does that
     type.code += cod::endOf(cod::tuple);
 }
 
