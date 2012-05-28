@@ -33,14 +33,16 @@ int main ()
     openDlg(fileName);
 
     ast::CompUnit cu;
-
-    lex::Lexer l(fileName, &cu);
-
-    par::Parser p(&l);
+    {
+        lex::Lexer l(fileName, &cu);
+        par::Parser p(&l);
+    } //lexer & parser go out of scope & are destroyed
 
     std::ofstream dot(fileName + std::string(".dot"));
     dot << "digraph G {\n";
     cu.treeHead->emitDot(dot);
     dot << '}';
     dot.close();
+
+    delete cu.treeHead;
 }
