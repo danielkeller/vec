@@ -4,7 +4,7 @@ It is not object oriented, all data is POD.
 Built in data types include tuples, lists (fixed and variable) and tensors.
 A rich type inference system is included, with support for automatic type inference. Template functions are planned.
 The (not yet added) centerpiece of the language is backtick, the foreach operator.
-This will allow automaitc iteration of an expression statement over a vector type.
+This will allow automatic iteration of an expression statement over a vector type.
 For example, used in combination with $, the concatenation operator, partitioning in quicksort would look like:
 
 (`list < piv_val ? less : more) $= `list;
