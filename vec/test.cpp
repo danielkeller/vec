@@ -1,6 +1,7 @@
+#include "CompUnit.h"
 #include "Lexer.h"
 #include "Parser.h"
-#include "CompUnit.h"
+#include "Sema.h"
 
 #include <cstdio>
 #include <iostream>
@@ -33,16 +34,26 @@ int main ()
     openDlg(fileName);
 
     ast::CompUnit cu;
+    lex::Lexer l(fileName, &cu); //we need lexer's buffer for errors
     {
-        lex::Lexer l(fileName, &cu);
         par::Parser p(&l);
-    } //lexer & parser go out of scope & are destroyed
+    } //parser goes out of scope & are destroyed
 
-    std::ofstream dot(fileName + std::string(".dot"));
+    std::ofstream dot(fileName + std::string(".1.dot"));
     dot << "digraph G {\n";
     cu.treeHead->emitDot(dot);
     dot << '}';
     dot.close();
+
+    sa::Sema s(&cu);
+
+    s.Phase1();
+
+    std::ofstream dot2(fileName + std::string(".2.dot"));
+    dot2 << "digraph G {\n";
+    cu.treeHead->emitDot(dot2);
+    dot2 << '}';
+    dot2.close();
 
     delete cu.treeHead;
 }

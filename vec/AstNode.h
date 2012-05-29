@@ -158,7 +158,7 @@ namespace sa
                 action(bNode);
         };
         template <class A>
-        AstWalker(A &&act, ast::AstNode0 *r) : action(act)
+        AstWalker(A act, ast::AstNode0 *r) : action(act)
         {
             call(r);
         }

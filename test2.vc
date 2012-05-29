@@ -23,7 +23,7 @@ int:int main =
 );
 
 a + -b * c + d;
-x, y, +=c << f;
+x @= 2 + 3 + h b, y, +=c << f;
 a / (b:c++) / d{foof};
 (
 a && b;
@@ -44,6 +44,8 @@ type asf = foo;
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];
 //or whatever
 //or have something that expands tuples into others like [a,b,?...]
+
+//lambda syntax could be double parens (( a+b ))
 
 //add storage duration specifier agg
 //acts like static except initializer is run on first call to agg function
