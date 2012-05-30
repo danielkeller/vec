@@ -16,7 +16,15 @@ namespace ast
         ImpliedLoopStmt(ExprStmt* arg)
             : AstNode<ExprStmt>(arg)
         {};
-        std::string myLbl() {return "for (`)";}
+        std::string myLbl() {return "for (`)";};
+
+        void emitDot(std::ostream& os)
+        {
+            AstNode<ExprStmt>::emitDot(os);
+            for (auto n : targets)
+                os << 'n' << static_cast<AstNode0*>(this) << " -> n" << static_cast<AstNode0*>(n)
+                    << " [style=dotted];\n";
+        };
     };
 }
 
