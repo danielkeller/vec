@@ -88,10 +88,10 @@ namespace ast
         std::string myLbl() {return "'='";}
     };
 
-    struct OpAssignExpr : public BinExpr
+    struct OpAssignExpr : public AssignExpr
     {
         tok::TokenType assignOp;
-        OpAssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o), assignOp(o.value.op) {};
+        OpAssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : AssignExpr(lhs, rhs, o), assignOp(o.value.op) {};
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 

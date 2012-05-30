@@ -4,7 +4,6 @@
 #include <tuple>
 #include <type_traits>
 #include <functional>
-
 #include <ostream>
 
 namespace ast
@@ -34,6 +33,8 @@ namespace ast
         virtual ~AstNode0() {}; 
         virtual void eachChild(sa::AstWalker0*) = 0;
         virtual void emitDot(std::ostream &os) = 0;
+        //replace child of unknown position
+        virtual void replaceChild(AstNode0* old, AstNode0* n) = 0;
         virtual std::string myLbl()
         {
             return typeid(*this).name();
@@ -100,6 +101,23 @@ namespace ast
         {
         };
 
+        template<size_t i>
+        inline void replaceWith(AstNode0* old, AstNode0* n, int2type<i>)
+        {
+            //cast the old type to the child's type to compare correctly
+            typename std::tuple_element<i, conts_t>::type oldc
+                = dynamic_cast<typename std::tuple_element<i, conts_t>::type>(old);
+
+            if (oldc == std::get<i>(chld))
+                setChild<i>(dynamic_cast<decltype(oldc)>(n));
+            else
+                replaceWith(old, n, int2type<i+1>());
+        };
+        //terminate recursion
+        void replaceWith(AstNode0*, AstNode0*, int2type<conts_s>)
+        {
+        };
+
     public:
         AstNode(Children* ... c)
             : chld(c...)
@@ -117,15 +135,20 @@ namespace ast
             callOnEach(w, int2type<0>());
         }
 
+        void replaceChild(AstNode0* old, AstNode0* n)
+        {
+            replaceWith(old, n, int2type<0>());
+        }
+
         template<size_t n>
-        typename std::tuple_element<n, conts_t>::type
+        typename std::tuple_element<n, conts_t>::type &
         getChild()
         {
             return std::get<n>(chld);
         }
 
         template<size_t n>
-        void setChild(class std::tuple_element<n, conts_t>::type newchld)
+        void setChild(typename std::tuple_element<n, conts_t>::type newchld)
         {
             std::get<n>(chld)->parent = 0;
             std::get<n>(chld) = newchld;

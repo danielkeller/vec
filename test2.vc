@@ -23,8 +23,8 @@ int:int main =
 );
 
 a + -b * c + d;
-x @= 2 + 3 + h b, y, +=c << f;
-a / (b:c++) / d{foof};
+2 + b + c = 5;
+a / (b:c++) / d{foof},
 (
 a && b;
 `y : 8*9;
