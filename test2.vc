@@ -22,9 +22,9 @@ int:int main =
 (
 );
 
-a + -b * c + d;
+`a + -b * `c + d;
 2 + b + c = 5;
-a / (b:c++) / d{foof},
+a / (b:`c++) / d{foof},
 (
 a && b;
 `y : 8*9;

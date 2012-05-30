@@ -1,8 +1,9 @@
 #include "Sema.h"
-#include "Stmt.h"
+#include "SemaNodes.h"
 #include "Error.h"
 
 #include <iostream>
+#include <cassert>
 
 using namespace ast;
 using namespace sa;
@@ -20,6 +21,7 @@ void Sema::Phase1()
     //if only a few steps need that, let them implement it
 
     //eliminate () -> ExprStmt -> Expr form
+    //this needs to happen before loop point addition so regular ()s don't interfere
     AstWalk<Block>([] (Block *b)
     {
         ExprStmt* es = dynamic_cast<ExprStmt*>(b->getChild<0>());
@@ -50,4 +52,23 @@ void Sema::Phase1()
     });
 
     //add loop points for ` expr
+    AstWalk<IterExpr>([] (IterExpr* ie)
+    {
+        //find nearest exprStmt up the tree
+        AstNode0* n;
+        for (n = ie; dynamic_cast<ExprStmt*>(n) == 0; n = n->parent)
+            assert(n != 0 && "ExprStmt not found");
+
+        ExprStmt* es = dynamic_cast<ExprStmt*>(n);
+        ImpliedLoopStmt* il = dynamic_cast<ImpliedLoopStmt*>(es->parent);
+        
+        if (!il)
+        {
+            AstNode0* esParent = es->parent; //save because the c'tor clobbers it
+            il = new ImpliedLoopStmt(es);
+            esParent->replaceChild(es, il);
+        }
+        
+        il->targets.push_back(ie);
+    });
 }

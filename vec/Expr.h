@@ -26,7 +26,7 @@ namespace ast
     {
         NullExpr(tok::Location &&l) : Expr(std::move(l)) {};
         std::string myLbl() {return "Null";}
-        const char *myColor() {return "8";};
+        const char *myColor() {return "9";};
     };
 
     struct VarExpr : public Expr, public AstNode<>

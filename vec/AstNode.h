@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <functional>
 #include <ostream>
+#include <cassert>
 
 namespace ast
 {
@@ -30,6 +31,7 @@ namespace ast
     {
     public:
         AstNode0 *parent;
+        AstNode0() : parent(0) {};
         virtual ~AstNode0() {}; 
         virtual void eachChild(sa::AstWalker0*) = 0;
         virtual void emitDot(std::ostream &os) = 0;
@@ -116,6 +118,7 @@ namespace ast
         //terminate recursion
         void replaceWith(AstNode0*, AstNode0*, int2type<conts_s>)
         {
+            assert(false && "didn't find child");
         };
 
     public:
@@ -150,7 +153,6 @@ namespace ast
         template<size_t n>
         void setChild(typename std::tuple_element<n, conts_t>::type newchld)
         {
-            std::get<n>(chld)->parent = 0;
             std::get<n>(chld) = newchld;
             newchld->parent = this;
         }

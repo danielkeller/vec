@@ -21,7 +21,7 @@ namespace ast
     {
         NullStmt(tok::Location &&l) : Stmt(std::move(l)) {};
         std::string myLbl() {return "Null";}
-        const char *myColor() {return "8";};
+        const char *myColor() {return "9";};
     };
 
     struct ExprStmt : public Stmt, public AstNode<Expr>
