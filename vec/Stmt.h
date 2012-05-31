@@ -40,6 +40,17 @@ namespace ast
         StmtPair(Stmt *lhs, Stmt *rhs) : AstNode<Stmt, Stmt>(lhs, rhs) {};
         std::string myLbl() {return ";";}
         const char *myColor() {return "3";};
+        void emitDot(std::ostream &os)
+        {
+            int p = 0;
+            os << 'n' << static_cast<AstNode0*>(this) << ":p0" <<  " -> n" << static_cast<AstNode0*>(getChild<0>()) << ";\n"
+               << 'n' << static_cast<AstNode0*>(this) << ":p1" <<  " -> n" << static_cast<AstNode0*>(getChild<1>()) << ";\n";
+            ++p;
+            getChild<0>()->emitDot(os);
+            getChild<1>()->emitDot(os);
+            os << 'n' << static_cast<AstNode0*>(this)
+               << " [label=\";|<p0>|<p1>\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
+        }
     };
 
     struct Block : public Expr, public Stmt, public AstNode<Stmt>

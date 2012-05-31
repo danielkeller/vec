@@ -27,7 +27,7 @@ void Sema::Phase1()
     });
 
     //do this after types in case of ref types
-
+/*
     //check for assign to non-lval
     AstWalk<AssignExpr>([] (AssignExpr* ex)
     {
@@ -43,7 +43,7 @@ void Sema::Phase1()
             err::Error(ex->opLoc) << "cannot reference non-lval" << err::caret
                 << ex->getChild<1>()->loc << err::underline << err::endl;
     });
-
+*/
     //add loop points for ` expr
     //TODO: detect agg exprs
     AstWalk<IterExpr>([] (IterExpr* ie)
@@ -64,5 +64,81 @@ void Sema::Phase1()
         }
         
         il->targets.push_back(ie);
+    });
+
+    //any block now contains multiple statements so extract them
+    //should split the expression to parts above and below the block to output in the right order
+    AstWalk<Block>([] (Block* b)
+    {
+        if (!dynamic_cast<Expr*>(b->parent)) //regular block not in expression
+            return; //ignore
+
+        //find owning ES
+        ExprStmt* es;
+        for (AstNode0* srch = b->parent; (es = dynamic_cast<ExprStmt*>(srch)) == 0; srch = srch->parent)
+            ; //will fail-fast if es not found
+
+        //wrap exprStmt and block contents in pair
+        AstNode0* esParent = es->parent; //c'tor clobbers it
+        StmtPair* newHead = new StmtPair(es, b->getChild<0>());
+        b->getChild<0>() = new NullStmt(tok::Location());
+        esParent->replaceChild(es, newHead);
+       /* 
+        //find last stmt in block
+        Stmt* last;
+        for (last = newHead->getChild<1>(); //start with block's child
+             dynamic_cast<StmtPair*>(last); //check if it's still a StmtPair
+             last = dynamic_cast<StmtPair*>(last)->getChild<1>()) //iterate to RHS
+            ;
+
+        //extract it if it's an exprStmt. the block take on the value of the last expression
+        if (ExprStmt* lastes = dynamic_cast<ExprStmt*>(last))
+        {
+            b->parent->replaceChild(b, lastes->getChild<0>());
+            lastes->getChild<0>() = 0;
+            lastes->parent->replaceChild(lastes, new NullStmt(std::move(lastes->loc)));
+            delete lastes;
+        }*/
+
+        //delete b; //finally delete the block
+    });
+
+    //remove null stmts under StmtPairs
+    AstWalk<StmtPair>([] (StmtPair* sp)
+    {
+        Stmt* realStmt;
+        if (dynamic_cast<NullStmt*>(sp->getChild<0>()))
+        {
+            realStmt = sp->getChild<1>();
+            sp->getChild<1>() = 0; //unlink so as not to delete it
+        }
+        else if (dynamic_cast<NullStmt*>(sp->getChild<1>()))
+        {
+            realStmt = sp->getChild<0>();
+            sp->getChild<0>() = 0;
+        }
+        else
+            return; //nope
+
+        sp->parent->replaceChild(sp, realStmt);
+        delete sp;
+    });
+
+    //turn exprstmt ; exprstmt into expr , expr. this must happen after loop points.
+    AstWalk<StmtPair>([] (StmtPair* sp)
+    {
+        ExprStmt* lhs = dynamic_cast<ExprStmt*>(sp->getChild<0>());
+        ExprStmt* rhs = dynamic_cast<ExprStmt*>(sp->getChild<1>());
+        if (lhs && rhs)
+        {
+            ExprStmt* repl = new ExprStmt(
+                              new BinExpr(lhs->getChild<0>(),
+                                          rhs->getChild<0>(),
+                                          tok::comma));
+            lhs->getChild<0>() = 0;
+            rhs->getChild<0>() = 0;
+            sp->parent->replaceChild(sp, repl);
+            delete sp;
+        }
     });
 }
