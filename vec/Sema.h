@@ -30,6 +30,12 @@ namespace sa
         //any changes that need types
         void Phase4();
     };
+
+    template<class T>
+    void Sema::AstWalk(std::function<void(T*)> action)
+    {
+        AstWalker<T> aw(action, cu->treeHead);
+    }
 }
 
 #endif

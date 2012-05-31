@@ -55,5 +55,14 @@ int main ()
     dot2 << '}';
     dot2.close();
 
+    s.Phase2();
+
+    std::ofstream dot3(fileName + std::string(".3.dot"));
+    dot3 << "digraph G {\n";
+    cu.treeHead->emitDot(dot3);
+    dot3 << '}';
+    dot3.close();
+
+
     delete cu.treeHead;
 }

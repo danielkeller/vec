@@ -153,6 +153,7 @@ namespace ast
         template<size_t n>
         void setChild(typename std::tuple_element<n, conts_t>::type newchld)
         {
+            assert(newchld && "replacing child with incompatible type");
             std::get<n>(chld) = newchld;
             newchld->parent = this;
         }

@@ -2,17 +2,10 @@
 #include "SemaNodes.h"
 #include "Error.h"
 
-#include <iostream>
 #include <cassert>
 
 using namespace ast;
 using namespace sa;
-
-template<class T>
-void Sema::AstWalk(std::function<void(T*)> action)
-{
-    AstWalker<T> aw(action, cu->treeHead);
-}
 
 void Sema::Phase1()
 {
@@ -52,6 +45,7 @@ void Sema::Phase1()
     });
 
     //add loop points for ` expr
+    //TODO: detect agg exprs
     AstWalk<IterExpr>([] (IterExpr* ie)
     {
         //find nearest exprStmt up the tree

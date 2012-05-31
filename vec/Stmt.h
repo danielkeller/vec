@@ -14,12 +14,13 @@ namespace ast
         virtual bool isLval() {return false;};
         Stmt() = default;
         Stmt(tok::Location &&l) : loc(l) {};
+        Stmt(tok::Location &l) : loc(l) {};
         const char *myColor() {return "1";};
     };
 
     struct NullStmt : public Stmt, public AstNode<>
     {
-        NullStmt(tok::Location &&l) : Stmt(std::move(l)) {};
+        NullStmt(tok::Location &&l) : Stmt(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
     };
@@ -27,7 +28,7 @@ namespace ast
     struct ExprStmt : public Stmt, public AstNode<Expr>
     {
         ExprStmt(Expr* conts)
-            : Stmt(std::move(conts->loc)),
+            : Stmt(conts->loc),
             AstNode<Expr>(conts)
         {};
         std::string myLbl() {return "Expr";}
@@ -45,8 +46,8 @@ namespace ast
     {
         Scope *scope;
         Block(Stmt* conts, Scope *s, tok::Location &&l)
-            : Expr(std::move(l)),
-            Stmt(std::move(l)),
+            : Expr(l),
+            Stmt(l),
             AstNode<Stmt>(conts),
             scope(s)
         {};

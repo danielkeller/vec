@@ -18,13 +18,14 @@ namespace ast
         virtual bool isLval() {return false;};
         //Expr() = default;
         Expr(tok::Location &&l) : loc(l) {};
+        Expr(tok::Location &l) : loc(l) {};
         const char *myColor() {return "4";};
     };
 
     //leaf expression type
     struct NullExpr : public Expr, public AstNode<>
     {
-        NullExpr(tok::Location &&l) : Expr(std::move(l)) {};
+        NullExpr(tok::Location &&l) : Expr(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
     };
@@ -33,7 +34,7 @@ namespace ast
     {
         Ident var;
 
-        VarExpr(Ident v, tok::Location &&l) : Expr(std::move(l)), var(v) {};
+        VarExpr(Ident v, tok::Location &&l) : Expr(l), var(v) {};
         bool isLval() {return true;};
         std::string myLbl() {return "var: " + utl::to_str(var);}
         const char *myColor() {return "5";};
@@ -41,28 +42,28 @@ namespace ast
 
     struct ConstExpr : public Expr, public AstNode<>
     {
-        ConstExpr(tok::Location &&l) : Expr(std::move(l)) {};
+        ConstExpr(tok::Location &l) : Expr(l) {};
         const char *myColor() {return "7";};
     };
 
     struct IntConstExpr : public ConstExpr
     {
         long long value;
-        IntConstExpr(long long v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        IntConstExpr(long long v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return utl::to_str(value);}
     };
 
     struct FloatConstExpr : public ConstExpr
     {
         long double value;
-        FloatConstExpr(long double v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        FloatConstExpr(long double v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return utl::to_str(value);}
     };
 
     struct StringConstExpr : public ConstExpr
     {
         Str value;
-        StringConstExpr(Str v, tok::Location &l) : ConstExpr(std::move(l)), value(v) {};
+        StringConstExpr(Str v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return "str: " + utl::to_str(value);}
     };
 
