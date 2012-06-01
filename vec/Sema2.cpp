@@ -21,6 +21,9 @@ void Sema::Phase2()
     std::map<ExprStmt*, BasicBlock*> repl;
     AstWalk<Expr>([&curBB, &repl] (Expr* ex)
     {
+        if (dynamic_cast<TmpExpr*>(ex))
+            return; //don't make a temp for a temp
+
         //create temporary "set by" current expression
         TmpExpr* te = new TmpExpr(ex);
 

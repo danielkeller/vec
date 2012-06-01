@@ -81,9 +81,9 @@ void Sema::Phase1()
         //wrap exprStmt and block contents in pair
         AstNode0* esParent = es->parent; //c'tor clobbers it
         StmtPair* newHead = new StmtPair(es, b->getChild<0>());
-        b->getChild<0>() = new NullStmt(tok::Location());
+        b->getChild<0>() = 0;
         esParent->replaceChild(es, newHead);
-       /* 
+        
         //find last stmt in block
         Stmt* last;
         for (last = newHead->getChild<1>(); //start with block's child
@@ -91,16 +91,18 @@ void Sema::Phase1()
              last = dynamic_cast<StmtPair*>(last)->getChild<1>()) //iterate to RHS
             ;
 
-        //extract it if it's an exprStmt. the block take on the value of the last expression
+        //if it's an exprstmt, link in with a temporary
         if (ExprStmt* lastes = dynamic_cast<ExprStmt*>(last))
         {
-            b->parent->replaceChild(b, lastes->getChild<0>());
-            lastes->getChild<0>() = 0;
-            lastes->parent->replaceChild(lastes, new NullStmt(std::move(lastes->loc)));
-            delete lastes;
-        }*/
+            TmpExpr* te = new TmpExpr(lastes->getChild<0>());
+            b->parent->replaceChild(b, te);
+        }
+        else
+        {
+            b->parent->replaceChild(b, new NullExpr(std::move(static_cast<Stmt*>(b)->loc)));
+        }
 
-        //delete b; //finally delete the block
+        delete b; //finally delete the block
     });
 
     //remove null stmts under StmtPairs

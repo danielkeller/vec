@@ -103,7 +103,7 @@ namespace ast
             }
             os << 'n' << static_cast<AstNode0*>(this) << " [label=\"Block";
             for (int p = 0; p < chld.size(); ++p)
-                os << "|<p" << p << ">";
+                os << "|<p" << p << ">     ";
             os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
 
