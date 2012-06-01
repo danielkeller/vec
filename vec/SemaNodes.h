@@ -45,13 +45,12 @@ namespace ast
     };
 
     //basic block class that holds any number of instructions
-    class BasicBlock : public Stmt
+    struct BasicBlock : public Stmt
     {
         typedef std::vector<AstNode0*> conts_t;
 
         conts_t chld;
 
-    public:
         ~BasicBlock()
         {
             for (auto n : chld)

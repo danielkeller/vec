@@ -29,8 +29,36 @@ void Sema::Phase2()
             if (dynamic_cast<TmpExpr*>(ex))
                 return; //don't make a temp for a temp
 
-            //create temporary "set by" current expression
-            TmpExpr* te = new TmpExpr(ex);
+            TmpExpr* te;
+
+            if (Block* b = dynamic_cast<Block*>(ex)) //if it's a block, point to correct expr
+            {
+                AstNode0* srch = b->getChild<0>();
+                while (true)
+                {
+                    if ((b = dynamic_cast<Block*>(srch)))
+                        srch = b->getChild<0>();
+                    else if (StmtPair* sp = dynamic_cast<StmtPair*>(srch))
+                        srch = sp->getChild<1>();
+                    else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
+                        srch = es->getChild<0>();
+                    else if (TmpExpr* e = dynamic_cast<TmpExpr*>(srch)) //other than block
+                    {
+                        //conveniently, the temp expr is already there
+                        te = new TmpExpr(e->setBy); //copy it so it doesn't get deleted
+                        break;
+                    }
+                    else //it's a stmt of some sort
+                    {
+                        NullExpr* ne = new NullExpr(std::move(ex->loc));
+                        te = new TmpExpr(ne);
+                        curBB->appendChild(ne);
+                        break;
+                    }
+                }
+            }
+            else //create temporary "set by" current expression
+                te = new TmpExpr(ex);
 
             //attach temporary to expression's parent in lieu of it
             ex->parent->replaceChild(ex, te);
@@ -58,4 +86,56 @@ void Sema::Phase2()
 
     //call it
     AstWalk<ExprStmt>(blockInsert);
+
+    //now split basic blocks where blocks occur inside them
+    AstWalk<BasicBlock>([] (BasicBlock* bb)
+    {
+        while (true)
+        {
+            auto blkit = std::find_if(bb->chld.begin(),
+                                      bb->chld.end(),
+                                      [](AstNode0*& a){return (bool)dynamic_cast<Block*>(a);});
+
+            if (blkit == bb->chld.end())
+                return;
+
+            BasicBlock* left = new BasicBlock();
+            left->chld.insert(left->chld.begin(), bb->chld.begin(), blkit);
+            bb->chld.erase(bb->chld.begin(), blkit);
+
+            //begin is now blkit, blkit is now invalid because of erase
+            blkit = bb->chld.begin();
+
+            BasicBlock* right = new BasicBlock();
+            right->chld.insert(right->chld.begin(), blkit + 1, bb->chld.end());
+            
+            Block* blk = dynamic_cast<Block*>(*blkit); //save the block
+            bb->parent->replaceChild(bb, blk);
+            bb->chld.clear();
+            delete bb;
+
+            if (left->chld.size())
+                blk->parent->replaceChild(blk, new StmtPair(left, blk));
+            else
+                delete left;
+
+            if (right->chld.size())
+                blk->parent->replaceChild(blk, new StmtPair(blk, right));
+            else
+            {
+                delete right;
+                return; //there are no more
+            }
+
+            bb = right; //keep going!
+        }
+    });
+
+    //now we can just delete all the rest of the blocks
+    AstWalk<Block>([] (Block* b)
+    {
+        b->parent->replaceChild(b, b->getChild<0>());
+        b->getChild<0>() = 0;
+        delete b;
+    });
 }
