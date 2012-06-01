@@ -1,35 +1,12 @@
-[[int]] asdf;
-
-if (x)
-    asdf;
-else
-    dasfds;
- + fo + fpp;
-
-sadf = [a, b, c];
-type foo = {int}!6;
-
-type bar = {foo}!3;
-
-if (2 < 5)
-    ferwf + food;
-
-
-{bar} baf;
-int beer;
-
-int:int main = 
-(
-);
-
 `a + -b * `c + d;
-2 + b + c = 5;
-a / (b:`c++) / d{foof},
+a / (b:`c++) / d{foof};
+
+a = 2, x = 
 (
 a && b;
 `y : 8*9;
-type asf = foo;
-);
+),
+`x + 6;
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else

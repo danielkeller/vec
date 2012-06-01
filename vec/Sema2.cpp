@@ -18,7 +18,8 @@ void Sema::Phase2()
     //when we reach the end of an expression end the basic block
     //and start a new one. closure is used to save state (current BB) between calls
     BasicBlock* curBB = new BasicBlock();
-    AstWalk<Expr>([&curBB] (Expr* ex)
+    std::map<ExprStmt*, BasicBlock*> repl;
+    AstWalk<Expr>([&curBB, &repl] (Expr* ex)
     {
         //create temporary "set by" current expression
         TmpExpr* te = new TmpExpr(ex);
@@ -33,11 +34,20 @@ void Sema::Phase2()
         ExprStmt* es = dynamic_cast<ExprStmt*>(te->parent);
         if (es)
         {
-            es->parent->replaceChild(es, curBB); //attach the old one
-            es->getChild<0>() = 0;
-            delete es;
+            repl[es] = curBB; //attach the old one
             curBB = new BasicBlock(); //start a new one
         }
     });
     delete curBB; //an extra one was created
+
+    //replace exprstmts with corresponding basic blocks
+    AstWalk<ExprStmt>([&repl] (ExprStmt* es)
+    {
+        if (!repl.count(es)) //doesn't exist?
+            return;
+
+        es->parent->replaceChild(es, repl[es]);
+        //the child is an unneeded temp, don't bother to unlink it
+        delete es;
+    });
 }
