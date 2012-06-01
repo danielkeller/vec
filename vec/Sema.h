@@ -34,7 +34,7 @@ namespace sa
     template<class T>
     void Sema::AstWalk(std::function<void(T*)> action)
     {
-        AstWalker<T> aw(action, cu->treeHead);
+        AstWalker<T> aw(cu->treeHead, action);
     }
 }
 

@@ -65,7 +65,7 @@ void Sema::Phase1()
         
         il->targets.push_back(ie);
     });
-
+/*
     //any block now contains multiple statements so extract them
     //should split the expression to parts above and below the block to output in the right order
     AstWalk<Block>([] (Block* b)
@@ -104,7 +104,7 @@ void Sema::Phase1()
 
         delete b; //finally delete the block
     });
-
+*/
     //remove null stmts under StmtPairs
     AstWalk<StmtPair>([] (StmtPair* sp)
     {
