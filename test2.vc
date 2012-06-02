@@ -4,12 +4,11 @@ a / (b:`c++) / d{foof};
 a = 2, x = 
 (
 `a && b;
-(
-2;
-y : 8*9;
-)
-),
-`x + 6;
+if (a = 6)
+2, y : 8*9;
+b
+);
+return x + 6;
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else

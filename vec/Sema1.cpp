@@ -143,4 +143,16 @@ void Sema::Phase1()
             delete sp;
         }
     });
+    
+    //create expr stmts for other things that contain expressions
+    AstWalk<CondStmt>([] (CondStmt* cs)
+    {
+        Expr* e = cs->getExpr();
+        TmpExpr* te = new TmpExpr(e);
+        cs->replaceChild(e, te);
+        
+        AstNode0* parent = cs->parent;
+        StmtPair* sp = new StmtPair(new ExprStmt(e), cs);
+        parent->replaceChild(cs, sp);
+    });
 }

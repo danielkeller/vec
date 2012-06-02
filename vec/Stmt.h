@@ -67,49 +67,61 @@ namespace ast
         const char *myColor() {return "3";};
     };
 
-    struct IfStmt : public Stmt, public AstNode<Expr, Stmt>
+    //base class for stmts that contain expressions among other things
+    struct CondStmt : public Stmt
     {
-        IfStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : Stmt(o.loc + act->loc),
-            AstNode<Expr, Stmt>(pred, act)
-        {};
-        std::string myLbl() {return "if";}
+        virtual Expr* getExpr() = 0;
+        CondStmt(tok::Location &&l) : Stmt(l) {};
     };
 
-    struct IfElseStmt : public Stmt, public AstNode<Expr, Stmt, Stmt>
+    struct IfStmt : public CondStmt, public AstNode<Expr, Stmt>
+    {
+        IfStmt(Expr* pred, Stmt* act, tok::Token &o)
+            : CondStmt(o.loc + act->loc),
+            AstNode<Expr, Stmt>(pred, act)
+        {};
+        std::string myLbl() {return "if";};
+        Expr* getExpr() {return getChild<0>();};
+    };
+
+    struct IfElseStmt : public CondStmt, public AstNode<Expr, Stmt, Stmt>
     {
         IfElseStmt(Expr* pred, Stmt* act1, Stmt* act2, tok::Token &o)
-            : Stmt(o.loc + act2->loc),
+            : CondStmt(o.loc + act2->loc),
             AstNode<Expr, Stmt, Stmt>(pred, act1, act2)
         {};
         std::string myLbl() {return "if-else";}
+        Expr* getExpr() {return getChild<0>();};
     };
 
-    struct SwitchStmt : public Stmt, public AstNode<Expr, Stmt>
+    struct SwitchStmt : public CondStmt, public AstNode<Expr, Stmt>
     {
         SwitchStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : Stmt(o.loc + act->loc),
+            : CondStmt(o.loc + act->loc),
             AstNode<Expr, Stmt>(pred, act)
         {};
         std::string myLbl() {return "switch";}
+        Expr* getExpr() {return getChild<0>();};
     };
 
-    struct WhileStmt : public Stmt, public AstNode<Expr, Stmt>
+    struct WhileStmt : public CondStmt, public AstNode<Expr, Stmt>
     {
         WhileStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : Stmt(o.loc + act->loc),
+            : CondStmt(o.loc + act->loc),
             AstNode<Expr, Stmt>(pred, act)
         {};
         std::string myLbl() {return "while";}
+        Expr* getExpr() {return getChild<0>();};
     };
 
-    struct ReturnStmt : public Stmt, public AstNode<Expr>
+    struct ReturnStmt : public CondStmt, public AstNode<Expr>
     {
         ReturnStmt(Expr* arg, tok::Token &o)
-            : Stmt(o.loc + arg->loc),
+            : CondStmt(o.loc + arg->loc),
             AstNode<Expr>(arg)
         {};
         std::string myLbl() {return "return";}
+        Expr* getExpr() {return getChild<0>();};
     };
 }
 
