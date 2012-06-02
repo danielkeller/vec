@@ -80,7 +80,7 @@ void Sema::Phase2()
         //the child is an unneeded temp, don't bother to unlink it
         delete es;
     
-        //recurse in case we just inserted more exprstmt that would be missed
+        //recurse in case we just inserted more exprstmts that would be missed
         AstWalker<ExprStmt>(repl[es], blockInsert);
     };
 
