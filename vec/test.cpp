@@ -63,6 +63,7 @@ int main ()
     dot3 << '}';
     dot3.close();
 
+    s.Phase3();
 
     delete cu.treeHead;
 }

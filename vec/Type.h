@@ -34,12 +34,32 @@ namespace typ
 
         void clear() {code.clear(); expanded.clear();};
 
+        TypeIter begin();
+        TypeIter end();
+        //iterators to expanded type
+        TypeIter exbegin();
+        TypeIter exend();
+
     private:
         std::string code; //string representation of type - "nominative" type
         std::string expanded; //with all named types inserted - "actual" type
 
         friend class par::TypeListParser;
         friend class par::Parser;
+    };
+
+    class TypeIter
+    {
+        std::string::iterator pos;
+
+    public:
+        TypeIter& operator++();
+        const char operator*() {return *pos};
+        bool operator==(TypeIter& other) {return pos == other.pos;};
+        bool operator!=(TypeIter& other) {return pos != other.pos;};
+        void descend() {++pos;};
+        utl::weak_string w_str();
+        Type type();
     };
 
     namespace cod

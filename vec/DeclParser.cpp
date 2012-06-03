@@ -166,6 +166,12 @@ Expr* Parser::parseDeclRHS()
             curScope->addVarDef(id, vd);
         }
     }
+    else
+    {
+        //start a scope for the function
+        Scope *blockScope = new Scope(curScope);
+        curScope = blockScope;
+    }
 
     //the following is an inconsistency in location tracking, we should have it start at
     //the beginning of the type, but we don't know where that is in this scope
