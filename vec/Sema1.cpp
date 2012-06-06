@@ -108,6 +108,9 @@ void Sema::Phase1()
     //remove null stmts under StmtPairs
     AstWalk<StmtPair>([] (StmtPair* sp)
     {
+        if (!sp->parent)
+            return; //we're screwed
+
         Stmt* realStmt;
         if (dynamic_cast<NullStmt*>(sp->getChild<0>()))
         {
