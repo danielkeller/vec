@@ -29,8 +29,9 @@ namespace par
             }
         }
         if (!l->Expect(endTok))
-            err::Error(beginLoc + l->Peek().loc) << "unterminated list of " << contsName
-                << "; found " << l->Peek().Name() << err::underline << err::endl;
+            err::Error(beginLoc + l->Last().loc) << "unterminated list of " << contsName
+                << "; found " << l->Peek().Name() << err::underline
+                << l->Peek().loc << err::caret << err::endl;
     }
 }
 
