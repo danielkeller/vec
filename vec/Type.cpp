@@ -19,9 +19,8 @@ namespace
         return ret;
     }
 
-    std::string readType(std::string::iterator &it)
+    std::string::iterator endOfType(std::string::iterator it, bool skipName = true)
     {
-        std::string::iterator start = it;
         char begin = *it;
         char end = cod::endOf(*it);
         int lvl = 1;
@@ -34,6 +33,17 @@ namespace
                 --lvl;
             ++it;
         }
+
+        if (skipName && *it == cod::tupname) //special case
+            readNum(++it);
+
+        return it;
+    }
+
+    std::string readType(std::string::iterator &it)
+    {
+        std::string::iterator start = it;
+        it = endOfType(it);
         return std::string(start, it);
     }   
 
@@ -46,11 +56,21 @@ namespace
 
         return std::make_pair(alias & 0xFFFF, (alias >> 16) - 1);
     }
+
+    inline bool isType(char c)
+    {
+        return c >= 'A' && c <= 'Z';
+    }
 }
 
 Type::Type()
     : code(""), expanded("")
 {}
+
+Type::Type(TypeIter &ti)
+{
+    code.assign(ti.pos, endOfType(ti.pos));
+}
 
 void Type::expand(ast::Scope *s)
 {
@@ -122,6 +142,28 @@ void Type::expand(ast::Scope *s)
     }
 }
 
+TypeIter Type::begin(bool arg)
+{
+    //beginning of argument type corresponds to end of return type + 1
+    //will return invalid iterator if called on non-function type
+    return arg ? end(false) + 1: code.begin();
+}
+
+TypeIter Type::end(bool arg)
+{
+    return arg ? code.end() : std::find(code.begin(), code.end(), cod::function); //returns end if not function
+}
+
+TypeIter Type::exbegin(bool arg)
+{
+    return arg ? end(false) + 1: expanded.begin();
+}
+
+TypeIter Type::exend(bool arg)
+{
+    return arg ? expanded.end() : std::find(expanded.begin(), expanded.end(), cod::function); //returns end if not function
+}
+
 bool Type::isFunc()
 {
     return code.find(cod::function) != std::string::npos;
@@ -140,4 +182,83 @@ utl::weak_string Type::ex_w_str()
 utl::weak_string Type::w_str()
 {
     return utl::weak_string(&*code.begin(), &*code.end());
+}
+
+TypeIter TypeIter::operator+(size_t offset)
+{
+    TypeIter ret(*this);
+    return ret += offset;
+}
+
+TypeIter& TypeIter::operator+=(size_t offset)
+{
+    pos += offset;
+    return *this;
+}
+
+TypeIter& TypeIter::operator++()
+{
+    //go to next type
+    while(!isType(*pos) && *pos != cod::function && *pos != '\0')
+        ++pos;
+
+    return *this;
+}
+
+void TypeIter::descend()
+{
+    ++pos;
+}
+
+bool TypeIter::atBottom()
+{
+    return !isType(*(pos + 1));
+}
+
+void TypeIter::advance()
+{
+    pos = endOfType(pos) + 1;
+}
+
+bool TypeIter::atEnd()
+{
+    return !isType(*(endOfType(pos) + 1));
+}
+
+void TypeIter::ascend()
+{
+    operator++();
+}
+
+bool TypeIter::atTop()
+{
+    return *this != ++TypeIter(*this);
+}
+
+ast::Ident TypeIter::getName()
+{
+    std::string::iterator it = pos;
+    switch (*pos)
+    {
+    case cod::arg:
+    case cod::named:
+    case cod::param:
+        return readNum(it);
+    default:
+        return -1;
+    }
+}
+
+ast::Ident TypeIter::getTupName()
+{
+    std::string::iterator it = endOfType(pos, false);
+    if (*++it == cod::tupname)
+        return readNum(it);
+    else
+        return -1;
+}
+    
+utl::weak_string TypeIter::w_str()
+{
+    return utl::weak_string(&*pos, &*endOfType(pos));
 }

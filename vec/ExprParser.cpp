@@ -41,6 +41,17 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
             + (op.Asso_ty() == tok::LeftAssoc ? 1 : 0)));
         //precidence can be the same if it is right associative
 
+        //special case for functions
+        if (op == tok::equals && dynamic_cast<VarExpr*>(lhs))
+        {
+            VarExpr* ve = dynamic_cast<VarExpr*>(lhs);
+            if (ve->type.isFunc())
+            {
+                rhs = new Block(new ExprStmt(rhs), curScope, std::move(rhs->loc)); //wrap in block with function scope created in DeclParser
+                curScope = curScope->getParent(); //pop scope stack
+            }
+        }
+
         //reduce
         lhs = makeBinExpr(lhs, rhs, op);
         //fall through and "tail recurse"

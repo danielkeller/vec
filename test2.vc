@@ -1,3 +1,9 @@
+
+int:[int argc, {int!8} argv] main =
+(
+    argc + 6;
+);
+
 `a + -b * `c + d;
 a / (b:`c++) / d{foof};
 

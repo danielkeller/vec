@@ -101,37 +101,9 @@ primary-expr
 */
 Expr* Parser::parseDecl()
 {
-    tok::Location begin = lexer->Peek().loc;
-
     parseType();
 
-    tok::Token to;
-
-    if (!lexer->Expect(tok::identifier, to))
-    {
-        err::ExpectedAfter(lexer, "identifier", "type");
-        return new NullExpr(begin + lexer->Last().loc);
-    }
-
-    Ident id = to.value.int_v;
-    
-    if (!type.isFunc()) //variable definition
-    {
-        //variables cannot be defined twice
-        if (curScope->getVarDef(id))
-        {
-            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
-                << '\'' << err::underline << err::endl;
-        }
-        else
-        {
-            VarDef vd;
-            vd.type = type;
-            curScope->addVarDef(id, vd);
-        }
-    }
-
-    return new VarExpr(id, begin + to.loc);
+    return parseDeclRHS();
 }
 
 /*
@@ -145,7 +117,7 @@ Expr* Parser::parseDeclRHS()
 
     if (!lexer->Expect(tok::identifier, to))
     {
-        err::ExpectedAfter(lexer, "identifier", "type");
+        err::Error(lexer->Last().loc) << "expected identifier in declaration" << err::postcaret << err::endl;
         return new NullExpr(std::move(lexer->Last().loc));
     }
 
@@ -169,8 +141,21 @@ Expr* Parser::parseDeclRHS()
     else
     {
         //start a scope for the function
-        Scope *blockScope = new Scope(curScope);
-        curScope = blockScope;
+        curScope = new Scope(curScope);
+
+        //insert args into scope
+        typ::TypeIter ti = type.begin(true);
+        if (*ti == typ::cod::tuple && !ti.atBottom())
+        {
+            ti.descend(); //enter tuple
+            while (!ti.atEnd())
+            {
+                VarDef vd;
+                vd.type = typ::Type(ti);
+                curScope->addVarDef(ti.getTupName(), vd);
+                ti.advance();
+            }
+        }
     }
 
     //the following is an inconsistency in location tracking, we should have it start at

@@ -12,6 +12,7 @@ namespace utl
 namespace ast
 {
     class Scope;
+    typedef int Ident;
 }
 namespace par
 {
@@ -21,10 +22,13 @@ namespace par
 
 namespace typ
 {
+    class TypeIter;
+
     class Type
     {
     public:
         Type();
+        Type(TypeIter &ti);
         utl::weak_string w_str();
         utl::weak_string ex_w_str();
         bool isFunc();
@@ -34,11 +38,11 @@ namespace typ
 
         void clear() {code.clear(); expanded.clear();};
 
-        TypeIter begin();
-        TypeIter end();
+        TypeIter begin(bool arg = false);
+        TypeIter end(bool arg = false);
         //iterators to expanded type
-        TypeIter exbegin();
-        TypeIter exend();
+        TypeIter exbegin(bool arg = false);
+        TypeIter exend(bool arg = false);
 
     private:
         std::string code; //string representation of type - "nominative" type
@@ -51,15 +55,30 @@ namespace typ
     class TypeIter
     {
         std::string::iterator pos;
+        TypeIter(std::string::iterator init) : pos(init) {};
 
     public:
+        //repeatedly calling ++ will depth first search the type
         TypeIter& operator++();
-        const char operator*() {return *pos};
+        TypeIter operator+(size_t offset);
+        TypeIter& operator+=(size_t offset);
+        const char operator*() {return *pos;};
         bool operator==(TypeIter& other) {return pos == other.pos;};
         bool operator!=(TypeIter& other) {return pos != other.pos;};
-        void descend() {++pos;};
+
+        void descend();
+        bool atBottom(); //the current type has no contents
+        void advance();
+        bool atEnd(); //the thing after the current type is not a type
+        void ascend();
+        bool atTop(); //there is not another type somewhere ahead
+
+        ast::Ident getName(); //get name of any type with a name, -1 otherwise
+        ast::Ident getTupName(); //get name of tuple element
+
         utl::weak_string w_str();
-        Type type();
+
+        friend class Type;
     };
 
     namespace cod
