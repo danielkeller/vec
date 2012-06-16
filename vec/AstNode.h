@@ -32,7 +32,7 @@ namespace ast
     public:
         AstNode0 *parent;
         AstNode0() : parent(0) {};
-        virtual ~AstNode0() {}; 
+        virtual ~AstNode0() {};
         virtual void eachChild(sa::AstWalker0*) = 0;
         virtual void emitDot(std::ostream &os) = 0;
         //replace child of unknown position
@@ -40,11 +40,11 @@ namespace ast
         virtual std::string myLbl()
         {
             return typeid(*this).name();
-        };
+        }
         virtual const char* myColor()
         {
             return "1";
-        };
+        }
     };
 
     //ast node from which all others are derived
@@ -62,33 +62,33 @@ namespace ast
         {
             std::get<i>(chld)->parent = this;
             init(int2type<i+1>());
-        };
+        }
         //terminate template recursion
         inline void init(int2type<conts_s>)
         {
-        };
+        }
 
         template<size_t i>
         inline void destroy(int2type<i>)
         {
             delete std::get<i>(chld);
             destroy(int2type<i+1>());
-        };
+        }
         //terminate template recursion
         inline void destroy(int2type<conts_s>) //need default param for AstNode<>
         {
-        };
+        }
 
         template<size_t i>
         inline void callOnEach(sa::AstWalker0 *walker, int2type<i>)
         {
             walker->call(std::get<i>(chld));
             callOnEach(walker, int2type<i+1>());
-        };
+        }
         //terminate recursion
         void callOnEach(sa::AstWalker0*, int2type<conts_s>)
         {
-        };
+        }
 
         template<size_t i>
         inline void chldDot(std::ostream &os, int2type<i>)
@@ -97,11 +97,11 @@ namespace ast
             os << 'n' << static_cast<AstNode0*>(this) << " -> n" << static_cast<AstNode0*>(std::get<i>(chld)) << ";\n";
             std::get<i>(chld)->emitDot(os);
             chldDot(os, int2type<i+1>());
-        };
+        }
         //terminate template recursion
         inline void chldDot(std::ostream &os, int2type<conts_s>)
         {
-        };
+        }
 
         template<size_t i>
         inline void replaceWith(AstNode0* old, AstNode0* n, int2type<i>)
@@ -114,24 +114,24 @@ namespace ast
                 setChild<i>(dynamic_cast<decltype(oldc)>(n));
             else
                 replaceWith(old, n, int2type<i+1>());
-        };
+        }
         //terminate recursion
         void replaceWith(AstNode0*, AstNode0*, int2type<conts_s>)
         {
             assert(false && "didn't find child");
-        };
+        }
 
     public:
         AstNode(Children* ... c)
             : chld(c...)
         {
             init(int2type<0>());
-        };
+        }
 
         ~AstNode()
         {
             destroy(int2type<0>());
-        };
+        }
 
         void eachChild(sa::AstWalker0 *w)
         {

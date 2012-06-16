@@ -45,7 +45,7 @@ namespace
         std::string::iterator start = it;
         it = endOfType(it);
         return std::string(start, it);
-    }   
+    }
 
     std::pair<int, int> readNumAndOwner(std::string::iterator &it)
     {
@@ -69,7 +69,7 @@ Type::Type()
 
 Type::Type(TypeIter &ti)
 {
-    code.assign(ti.pos, endOfType(ti.pos));
+    code.assign(ti.pos, endOfType(ti.pos, false));
 }
 
 void Type::expand(ast::Scope *s)
@@ -98,7 +98,7 @@ void Type::expand(ast::Scope *s)
 
             //copy in type.
             //alias type parameters which are not specified or aliased
-            
+
             std::string::iterator it2 = td->mapped.expanded.begin();
             while (it2 != td->mapped.expanded.end())
             {
@@ -217,12 +217,12 @@ bool TypeIter::atBottom()
 
 void TypeIter::advance()
 {
-    pos = endOfType(pos) + 1;
+    pos = endOfType(pos);
 }
 
 bool TypeIter::atEnd()
 {
-    return !isType(*(endOfType(pos) + 1));
+    return !isType(*(endOfType(pos)));
 }
 
 void TypeIter::ascend()
@@ -257,8 +257,8 @@ ast::Ident TypeIter::getTupName()
     else
         return -1;
 }
-    
+
 utl::weak_string TypeIter::w_str()
 {
-    return utl::weak_string(&*pos, &*endOfType(pos));
+    return utl::weak_string(&*pos, &*endOfType(pos, false));
 }

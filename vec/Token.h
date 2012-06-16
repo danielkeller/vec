@@ -29,7 +29,7 @@ namespace tok
             add,
             multiply,
         };
-    };
+    }
 
     enum Associativity
     {
@@ -87,7 +87,7 @@ namespace tok
         floating,
         stringlit,
         identifier,
-    
+
         k_agg,
         k_break,
         k_case,
@@ -139,7 +139,7 @@ namespace tok
         Token(TokenType t, TokenType o, Location & l) : type(t), loc(l) {value.op = o;}
         */
     };
-    
+
     bool operator==(Token &lhs, TokenType rhs);
     bool operator==(TokenType lhs, Token &rhs);
     bool operator==(Token &lhs, Token &rhs);

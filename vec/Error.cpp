@@ -10,12 +10,25 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
     Error(l->Last().loc) << "expected " << expected << " after " << after << err::postcaret << err::endl;
 }
 
+#ifdef _WIN32
+
+#define COLOFF ""
+#define MGNTA ""
+#define RED ""
+#define YEL ""
+#define GRN ""
+#define BOLD ""
+
+#else
+
 #define COLOFF "\033[0m"
 #define MGNTA "\033[1;35m"
 #define RED "\033[1;31m"
 #define YEL "\033[1;33m"
 #define GRN "\033[1;32m"
 #define BOLD "\033[1m"
+
+#endif
 
 Error::Error(Level lvl, tok::Location &&l)
     : posn(0), loc(l)
@@ -31,7 +44,7 @@ Error::Error(Level lvl, tok::Location &&l)
     case error:
         std::cerr << RED "error: " COLOFF BOLD;
         break;
-        
+
     case warning:
     case nitpick:
         std::cerr << YEL "warning: " COLOFF;

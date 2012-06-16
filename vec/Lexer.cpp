@@ -14,7 +14,8 @@ using namespace lex;
 Lexer::Lexer(std::string fname, ast::CompUnit *cu)
     : fileName(fname), compUnit(cu)
 {
-    std::ifstream t(fileName.c_str());
+    std::ifstream t(fileName.c_str(), std::ios_base::in | std::ios_base::binary); //to keep CR / CRLF from messing us up
+
     if (!t.is_open())
     {
         //this doesnt work for some reason?
@@ -28,7 +29,7 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
 
     t.seekg(0);
     t.read(buffer, size);
-    buffer[size] = '\0';
+    buffer[size] = 0;
 
     fileName = fileName.substr(fileName.find_last_of('\\') + 1);
     fileName = fileName.substr(fileName.find_last_of('/') + 1); //portability!
@@ -53,7 +54,7 @@ bool Lexer::Expect(tok::TokenType t)
 {
     if (Peek() != t)
         return false;
-    
+
     Advance();
     return true;
 }
@@ -62,7 +63,7 @@ bool Lexer::Expect(tok::TokenType t, tok::Token &to)
 {
     if (Peek() != t)
         return false;
-    
+
     to = Next();
     return true;
 }
@@ -192,7 +193,7 @@ inline void Lexer::lexNumber()
     {
         ++end;
     }
-    
+
     // need this here for error printing
     nextTok.loc.setLength(end - curChr);
 
@@ -204,7 +205,7 @@ inline void Lexer::lexNumber()
     if (end == convEnd) //parsed long
     {
         //this is in here in case of 999999999999999999. for example
-        if (errno == ERANGE) 
+        if (errno == ERANGE)
         {
             err::Error(nextTok.loc) << "integer constant out of range"
                 << err::underline << err::endl;
@@ -320,7 +321,7 @@ inline void Lexer::lexChar()
 
     if (*curChr == '\'') //otherwise, unterminated
         return;
-    
+
     const char * end = curChr;
     while (*end != '\'' && *end != '\n' && *end != '\0') //look for ' on rest of line
         ++end;

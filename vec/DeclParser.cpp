@@ -21,17 +21,20 @@ Parser::Parser(lex::Lexer *l)
 
 namespace
 {
-    bool isIdent(tok::Token &t) {return t == tok::identifier;}
-    class TypeDeclParamParser
+bool isIdent(tok::Token &t)
+{
+    return t == tok::identifier;
+}
+class TypeDeclParamParser
+{
+    TypeDef *td;
+public:
+    TypeDeclParamParser(TypeDef *d) : td(d) {}
+    void operator()(lex::Lexer *l)
     {
-        TypeDef *td;
-    public:
-        TypeDeclParamParser(TypeDef *d) : td(d) {}
-        void operator()(lex::Lexer *l)
-        {
-            td->params.push_back(l->Next().value.int_v);
-        }
-    };
+        td->params.push_back(l->Next().value.int_v);
+    }
+};
 }
 
 /*
@@ -53,13 +56,13 @@ void Parser::parseTypeDecl()
         lexer->ErrUntil(tok::semicolon);
         return;
     }
-    
+
     Ident name = t.value.int_v;
 
     if (curScope->getTypeDef(name))
     {
         err::Error(t.loc) << "redefinition of type '" << cu->getIdent(name) << '\''
-            << err::underline << err::endl;
+        << err::underline << err::endl;
         lexer->ErrUntil(tok::semicolon);
         return;
     }
@@ -76,7 +79,7 @@ void Parser::parseTypeDecl()
         else //junk
         {
             err::Error(lexer->Peek().loc) << "unexpected " << lexer->Peek().Name()
-                << " in type parameter list" << err::caret << err::endl;
+            << " in type parameter list" << err::caret << err::endl;
             lexer->ErrUntil(tok::semicolon);
             return;
         }
@@ -122,40 +125,19 @@ Expr* Parser::parseDeclRHS()
     }
 
     Ident id = to.value.int_v;
-    
-    if (!type.isFunc()) //variable definition
+
+    if (curScope->getVarDef(id))
     {
         //variables cannot be defined twice
-        if (curScope->getVarDef(id))
-        {
+        if (!type.isFunc())
             err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
-                << '\'' << err::underline << err::endl;
-        }
-        else
-        {
-            VarDef vd;
-            vd.type = type;
-            curScope->addVarDef(id, vd);
-        }
+            << '\'' << err::underline << err::endl;
     }
     else
     {
-        //start a scope for the function
-        curScope = new Scope(curScope);
-
-        //insert args into scope
-        typ::TypeIter ti = type.begin(true);
-        if (*ti == typ::cod::tuple && !ti.atBottom())
-        {
-            ti.descend(); //enter tuple
-            while (!ti.atEnd())
-            {
-                VarDef vd;
-                vd.type = typ::Type(ti);
-                curScope->addVarDef(ti.getTupName(), vd);
-                ti.advance();
-            }
-        }
+        VarDef vd;
+        vd.type = type;
+        curScope->addVarDef(id, vd);
     }
 
     //the following is an inconsistency in location tracking, we should have it start at

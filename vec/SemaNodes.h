@@ -17,7 +17,7 @@ namespace ast
         Expr* setBy;
 
         TmpExpr(Expr* sb) : Expr(sb->loc), setBy(sb){};
-        
+
         void emitDot(std::ostream& os)
         {
             AstNode<>::emitDot(os);
@@ -101,7 +101,7 @@ namespace ast
                 n->emitDot(os);
             }
             os << 'n' << static_cast<AstNode0*>(this) << " [label=\"Block";
-            for (int p = 0; p < chld.size(); ++p)
+            for (unsigned int p = 0; p < chld.size(); ++p)
                 os << "|<p" << p << ">     ";
             os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }

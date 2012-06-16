@@ -11,3 +11,5 @@ vc
 tags
 *.dot
 *.png
+*.depend
+*.layout
