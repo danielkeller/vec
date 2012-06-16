@@ -42,10 +42,8 @@ namespace ast
         const char *myColor() {return "3";};
         void emitDot(std::ostream &os)
         {
-            int p = 0;
             os << 'n' << static_cast<AstNode0*>(this) << ":p0" <<  " -> n" << static_cast<AstNode0*>(getChild<0>()) << ";\n"
                << 'n' << static_cast<AstNode0*>(this) << ":p1" <<  " -> n" << static_cast<AstNode0*>(getChild<1>()) << ";\n";
-            ++p;
             getChild<0>()->emitDot(os);
             getChild<1>()->emitDot(os);
             os << 'n' << static_cast<AstNode0*>(this)

@@ -79,7 +79,7 @@ void Sema::Phase2()
         es->parent->replaceChild(es, repl[es]);
         //the child is an unneeded temp, don't bother to unlink it
         delete es;
-    
+
         //recurse in case we just inserted more exprstmts that would be missed
         AstWalker<ExprStmt>(repl[es], blockInsert);
     };
@@ -108,7 +108,7 @@ void Sema::Phase2()
 
             BasicBlock* right = new BasicBlock();
             right->chld.insert(right->chld.begin(), blkit + 1, bb->chld.end());
-            
+
             Block* blk = dynamic_cast<Block*>(*blkit); //save the block
             bb->parent->replaceChild(bb, blk);
             bb->chld.clear();
