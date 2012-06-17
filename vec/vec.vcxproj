@@ -13,18 +13,21 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{10143A56-C153-4FBC-A4AB-669A74B13091}</ProjectGuid>
     <RootNamespace>vec</RootNamespace>
+    <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''">$(VCTargetsPath11)</VCTargetsPath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -41,6 +44,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -60,18 +64,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AstNode.h" />
+    <ClInclude Include="CompUnit.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="Expr.h" />
     <ClInclude Include="Lexer.h" />
     <ClInclude Include="Location.h" />
+    <ClInclude Include="Parser.h" />
+    <ClInclude Include="ParseUtils.h" />
+    <ClInclude Include="Scope.h" />
+    <ClInclude Include="Sema.h" />
+    <ClInclude Include="SemaNodes.h" />
+    <ClInclude Include="Stmt.h" />
     <ClInclude Include="Token.h" />
+    <ClInclude Include="Type.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CompUnit.cpp" />
+    <ClCompile Include="DeclParser.cpp" />
     <ClCompile Include="Error.cpp" />
+    <ClCompile Include="ExprParser.cpp" />
     <ClCompile Include="Lexer.cpp" />
     <ClCompile Include="Location.cpp" />
+    <ClCompile Include="Scope.cpp" />
+    <ClCompile Include="Sema1.cpp" />
+    <ClCompile Include="Sema2.cpp" />
+    <ClCompile Include="StmtParser.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="Token.cpp" />
+    <ClCompile Include="Type.cpp" />
+    <ClCompile Include="TypeParser.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

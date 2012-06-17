@@ -15,6 +15,8 @@ namespace sa
         template<class T>
         void AstWalk(std::function<void(T*)> action);
 
+		void validateTree();
+
     public:
         Sema(ast::CompUnit* c) : cu(c) {};
 

@@ -160,17 +160,17 @@ Expr* Parser::parsePrimaryExpr()
     switch (to.type)
     {
     case tok::identifier:
-        if (curScope->getTypeDef(to.value.int_v)) //it's a type
+		if (curScope->getTypeDef(to.value.ident_v)) //it's a type
             return parseDecl();
         //nope, it's an ID
         lexer->Advance();
         if (lexer->Peek() == tok::identifier) //but the user thinks its a type
         {
-            err::Error(to.loc) << '\'' << cu->getIdent(to.value.int_v)
+            err::Error(to.loc) << '\'' << cu->getIdent(to.value.ident_v)
                 << "' is not a type" << err::underline << err::endl; //we'll show them!
             to = lexer->Next(); //pretend it's a decl
         }
-        return new VarExpr(to.value.int_v, std::move(to.loc));
+        return new VarExpr(to.value.ident_v, std::move(to.loc));
 
     case tok::integer:
         lexer->Advance();
@@ -180,7 +180,7 @@ Expr* Parser::parsePrimaryExpr()
         return new FloatConstExpr(to.value.dbl_v, to.loc);
     case tok::stringlit:
         lexer->Advance();
-        return new StringConstExpr(to.value.int_v, to.loc);
+        return new StringConstExpr(to.value.ident_v, to.loc);
 
 
     case tok::lparen:
@@ -237,7 +237,7 @@ Expr* Parser::parseListOrIfy()
     tok::Token to = lexer->Peek();
     if (to == tok::identifier) //ambiguous case #1
     {
-        if (curScope->getTypeDef(to.value.int_v)) //it's a type
+        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
         {
             parseNamed();
             parseListEnd();
@@ -302,7 +302,7 @@ Expr* Parser::parseTupleOrIfy()
     tok::Token to = lexer->Peek();
     if (to == tok::identifier) //ambiguous case #1
     {
-        if (curScope->getTypeDef(to.value.int_v)) //it's a type
+        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
         {
             lexer->Expect(tok::comma); //get rid of the comma if it's there
             parseTypeList();

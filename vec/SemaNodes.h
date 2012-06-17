@@ -10,7 +10,7 @@ namespace ast
         const char *myColor() {return "8";};
     };
 
-    struct TmpExpr : public Expr, public AstNode<>
+    struct TmpExpr : public Expr, public AstNode0
     {
         const char *myColor() {return "8";};
         std::string myLbl () {return "tmp";};
@@ -20,26 +20,26 @@ namespace ast
 
         void emitDot(std::ostream& os)
         {
-            AstNode<>::emitDot(os);
+            AstNode0::emitDot(os);
             //shows a "sets" relationship
-            os << 'n' << static_cast<AstNode0*>(setBy) << " -> n" << static_cast<AstNode0*>(this)
+            os << 'n' << static_cast<AstNodeB*>(setBy) << " -> n" << static_cast<AstNodeB*>(this)
                 << " [style=dotted];\n";
         };
     };
 
-    struct ImpliedLoopStmt : public SemaStmt, public AstNode<Stmt>
+    struct ImpliedLoopStmt : public SemaStmt, public AstNode1<Stmt>
     {
         std::vector<IterExpr*> targets;
         ImpliedLoopStmt(ExprStmt* arg)
-            : AstNode<Stmt>(arg)
+            : AstNode1<Stmt>(arg)
         {};
         std::string myLbl() {return "for (`)";};
 
         void emitDot(std::ostream& os)
         {
-            AstNode<Stmt>::emitDot(os);
+            AstNode1<Stmt>::emitDot(os);
             for (auto n : targets)
-                os << 'n' << static_cast<AstNode0*>(this) << " -> n" << static_cast<AstNode0*>(n)
+                os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(n)
                     << " [style=dotted];\n";
         };
     };
@@ -47,7 +47,7 @@ namespace ast
     //basic block class that holds any number of instructions
     struct BasicBlock : public Stmt
     {
-        typedef std::vector<AstNode0*> conts_t;
+        typedef std::vector<AstNodeB*> conts_t;
 
         conts_t chld;
 
@@ -63,9 +63,9 @@ namespace ast
                 w->call(n);
         }
 
-        void replaceChild(AstNode0* old, AstNode0* nw)
+        void replaceChild(AstNodeB* old, AstNodeB* nw)
         {
-            for (AstNode0*& n : chld) //specify ref type to be able to modify it
+            for (AstNodeB*& n : chld) //specify ref type to be able to modify it
                 if (n == old)
                 {
                     n = nw;
@@ -74,18 +74,18 @@ namespace ast
             assert(false && "didn't find child");
         }
 
-        AstNode0*& getChild(int n)
+        AstNodeB*& getChild(int n)
         {
             return chld[n];
         }
 
-        void setChild(int n, AstNode0* c)
+        void setChild(int n, AstNodeB* c)
         {
             c->parent = this;
             chld[n] = c;
         }
 
-        void appendChild(AstNode0* c)
+        void appendChild(AstNodeB* c)
         {
             c->parent = this;
             chld.push_back(c);
@@ -96,11 +96,11 @@ namespace ast
             int p = 0;
             for (auto n : chld)
             {
-                os << 'n' << static_cast<AstNode0*>(this) << ":p" << p <<  " -> n" << static_cast<AstNode0*>(n) << ";\n";
+                os << 'n' << static_cast<AstNodeB*>(this) << ":p" << p <<  " -> n" << static_cast<AstNodeB*>(n) << ";\n";
                 ++p;
                 n->emitDot(os);
             }
-            os << 'n' << static_cast<AstNode0*>(this) << " [label=\"Block";
+            os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"Block";
             for (unsigned int p = 0; p < chld.size(); ++p)
                 os << "|<p" << p << ">     ";
             os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";

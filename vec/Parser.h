@@ -68,7 +68,7 @@ namespace par
         size_t checkArgs();
 
         friend class TypeListParser;
-        friend class Type;
+        friend class typ::Type;
     };
 }
 

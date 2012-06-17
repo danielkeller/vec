@@ -45,11 +45,11 @@ namespace err
         void init(Level lvl);
 
     public:
-        Error(Level lvl, tok::Location &&loc);
-        Error(Level lvl, tok::Location &loc) : Error(lvl, std::move(loc)) {};
+        Error(Level lvl, tok::Location &&loc) : loc(loc) {init(lvl);}
+        Error(Level lvl, tok::Location &loc) : loc(loc) {init(lvl);}
 
-        Error(tok::Location &&loc) : Error(err::error, std::move(loc)) {};
-        Error(tok::Location &loc) : Error(std::move(loc)) {};
+		Error(tok::Location &&loc) : loc(loc) {init(err::error);}
+        Error(tok::Location &loc) : loc(loc) {init(err::error);}
 
         template<class T>
         Error & operator<< (T toPrint);

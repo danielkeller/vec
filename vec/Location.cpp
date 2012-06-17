@@ -4,6 +4,15 @@
 
 using namespace tok;
 
+Location::Location()
+	: line(0),
+	firstCol(0),
+	lastCol(0),
+	fileName(""),
+	lineStr(fileName, fileName) //beginning and ending of empty str.
+{
+}
+
 Location tok::operator+ (Location & lhs, Location & rhs)
 {
     Location ret = lhs;

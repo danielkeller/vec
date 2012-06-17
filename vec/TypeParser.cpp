@@ -186,7 +186,7 @@ void Parser::parsePrim()
         tok::Token to;
         if (lexer->Expect(tok::integer, to))
         {
-            width = to.value.int_v;
+            width = (int)to.value.int_v;
 
             if (c == cod::integer)
             {
@@ -224,12 +224,12 @@ void Parser::parseRef()
 
 void Parser::parseNamed()
 {
-    ast::TypeDef * td = curScope->getTypeDef(lexer->Peek().value.int_v);
+	ast::TypeDef * td = curScope->getTypeDef(lexer->Peek().value.ident_v);
 
     if (!td)
     {
         err::Error(lexer->Peek().loc) << "undefined type '"
-            << lexer->getCompUnit()->getIdent(lexer->Peek().value.int_v) << '\''
+			<< lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\''
             << err::underline << err::endl;
         type.code += cod::integer + cod::endOf(cod::integer); //recover
         lexer->Advance(); //don't parse it twice

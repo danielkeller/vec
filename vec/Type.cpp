@@ -15,7 +15,7 @@ namespace
     {
         char *end;
         int ret = strtol(&*it, &end, 10);
-        it = std::string::iterator(end);
+        it += (end - &*it);
         return ret;
     }
 
@@ -52,7 +52,7 @@ namespace
         char *end;
 
         int alias = strtol(&*it, &end, 10);
-        it = std::string::iterator(end);
+        it += (end - &*it);
 
         return std::make_pair(alias & 0xFFFF, (alias >> 16) - 1);
     }

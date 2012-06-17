@@ -8,6 +8,15 @@
 using namespace ast;
 using namespace sa;
 
+void Sema::validateTree()
+{
+	AstWalk<AstNodeB>([] (AstNodeB *n)
+	{
+		if (n->parent)
+			n->parent->replaceChild(n, n); //will fire assertion if n is not a child
+	});
+}
+
 void Sema::Phase2()
 {
     //insert temporaries above all expressions
@@ -33,15 +42,15 @@ void Sema::Phase2()
 
             if (Block* b = dynamic_cast<Block*>(ex)) //if it's a block, point to correct expr
             {
-                AstNode0* srch = b->getChild<0>();
+                AstNodeB* srch = b->getChildA();
                 while (true)
                 {
-                    if ((b = dynamic_cast<Block*>(srch)))
-                        srch = b->getChild<0>();
+                    if ((b = dynamic_cast<Block*>(srch)) != 0)
+                        srch = b->getChildA();
                     else if (StmtPair* sp = dynamic_cast<StmtPair*>(srch))
-                        srch = sp->getChild<1>();
+                        srch = sp->getChildB();
                     else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
-                        srch = es->getChild<0>();
+                        srch = es->getChildA();
                     else if (TmpExpr* e = dynamic_cast<TmpExpr*>(srch)) //other than block
                     {
                         //conveniently, the temp expr is already there
@@ -68,10 +77,8 @@ void Sema::Phase2()
         });
     });
 
-    std::function<void(ExprStmt*)> blockInsert;
-
     //replace exprstmts with corresponding basic blocks
-    blockInsert = [&repl, &blockInsert] (ExprStmt* es)
+    std::function<void(ExprStmt*)> blockInsert = [&repl, &blockInsert] (ExprStmt* es)
     {
         assert (repl.count(es) && "basic block doesn't exist");
 
@@ -88,13 +95,13 @@ void Sema::Phase2()
     AstWalk<ExprStmt>(blockInsert);
 
     //now split basic blocks where blocks occur inside them
-    AstWalk<BasicBlock>([] (BasicBlock* bb)
+    AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         while (true)
         {
             auto blkit = std::find_if(bb->chld.begin(),
                                       bb->chld.end(),
-                                      [](AstNode0*& a){return (bool)dynamic_cast<Block*>(a);});
+                                      [](AstNodeB*& a){return dynamic_cast<Block*>(a) != 0;});
 
             if (blkit == bb->chld.end())
                 return;
@@ -114,18 +121,24 @@ void Sema::Phase2()
             bb->chld.clear();
             delete bb;
 
+			AstNodeB* blkParent = blk->parent; //this is needed because StmtPair's ctor will hose blk->parent
+
             if (left->chld.size())
-                blk->parent->replaceChild(blk, new StmtPair(left, blk));
+                blkParent->replaceChild(blk, new StmtPair(left, blk));
             else
                 delete left;
 
+			blkParent = blk->parent;
+
             if (right->chld.size())
-                blk->parent->replaceChild(blk, new StmtPair(blk, right));
+                blkParent->replaceChild(blk, new StmtPair(blk, right));
             else
             {
                 delete right;
                 return; //there are no more
             }
+			
+			//validateTree();
 
             bb = right; //keep going!
         }
@@ -134,8 +147,8 @@ void Sema::Phase2()
     //now we can just delete all the rest of the blocks
     AstWalk<Block>([] (Block* b)
     {
-        b->parent->replaceChild(b, b->getChild<0>());
-        b->getChild<0>() = 0;
+        b->parent->replaceChild(b, b->getChildA());
+        b->nullChildA();
         delete b;
     });
 }

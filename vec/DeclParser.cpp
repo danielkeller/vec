@@ -32,7 +32,7 @@ public:
     TypeDeclParamParser(TypeDef *d) : td(d) {}
     void operator()(lex::Lexer *l)
     {
-        td->params.push_back(l->Next().value.int_v);
+        td->params.push_back(l->Next().value.ident_v);
     }
 };
 }
@@ -57,7 +57,7 @@ void Parser::parseTypeDecl()
         return;
     }
 
-    Ident name = t.value.int_v;
+    Ident name = t.value.ident_v;
 
     if (curScope->getTypeDef(name))
     {
@@ -75,7 +75,7 @@ void Parser::parseTypeDecl()
             par::parseListOf(lexer, isIdent, tdp, tok::rparen, "identifiers");
         }
         else if (lexer->Peek() == tok::identifier) //single
-            td.params.push_back(lexer->Next().value.int_v);
+            td.params.push_back(lexer->Next().value.ident_v);
         else //junk
         {
             err::Error(lexer->Peek().loc) << "unexpected " << lexer->Peek().Name()
@@ -124,7 +124,7 @@ Expr* Parser::parseDeclRHS()
         return new NullExpr(std::move(lexer->Last().loc));
     }
 
-    Ident id = to.value.int_v;
+    Ident id = to.value.ident_v;
 
     if (curScope->getVarDef(id))
     {

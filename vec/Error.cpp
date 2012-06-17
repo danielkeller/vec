@@ -30,9 +30,10 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 
 #endif
 
-Error::Error(Level lvl, tok::Location &&l)
-    : posn(0), loc(l)
+void Error::init(Level lvl)
 {
+	posn = 0;
+
     std::cerr << loc << ": ";
 
     switch (lvl) //do error level filtering here

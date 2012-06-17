@@ -8,6 +8,12 @@
 #include <cerrno>
 #include <algorithm>
 
+//MSVC doesn't have strtoll / strtold
+#ifdef _WIN32
+#define strtoll _strtoi64
+#define strtold strtod //no replacement?
+#endif
+
 using namespace lex;
 
 
@@ -25,7 +31,7 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
 
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
-    buffer = new char[size + 1];
+	buffer = new char[(size_t)size + 1];
 
     t.seekg(0);
     t.read(buffer, size);
@@ -170,7 +176,7 @@ inline void Lexer::lexIdent()
     const char * end = getEndOfWord(curChr);
     nextTok.type = tok::identifier;
     std::string idname(curChr, end);
-    nextTok.value.int_v = compUnit->addIdent(idname);
+	nextTok.value.ident_v = compUnit->addIdent(idname);
     nextTok.loc.setLength(end - curChr);
     curChr = end - 1;
 }
@@ -262,8 +268,8 @@ inline char Lexer::consumeChar()
             ret = '\t';
             break;
         case 'v':
-            break;
             ret = '\v';
+            break;
         case 'b':
             ret = '\b';
             break;

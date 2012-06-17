@@ -11,7 +11,7 @@ namespace ast
     typedef int Str;
 
     //abstract expression type
-    struct Expr : public virtual AstNode0
+    struct Expr : public virtual AstNodeB
     {
         typ::Type type;
         tok::Location loc;
@@ -23,14 +23,14 @@ namespace ast
     };
 
     //leaf expression type
-    struct NullExpr : public Expr, public AstNode<>
+    struct NullExpr : public Expr, public AstNode0
     {
         NullExpr(tok::Location &&l) : Expr(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
     };
 
-    struct VarExpr : public Expr, public AstNode<>
+    struct VarExpr : public Expr, public AstNode0
     {
         Ident var;
 
@@ -40,7 +40,7 @@ namespace ast
         const char *myColor() {return "5";};
     };
 
-    struct ConstExpr : public Expr, public AstNode<>
+    struct ConstExpr : public Expr, public AstNode0
     {
         ConstExpr(tok::Location &l) : Expr(l) {};
         const char *myColor() {return "7";};
@@ -68,17 +68,17 @@ namespace ast
     };
 
     //general binary expressions
-    struct BinExpr : public Expr, public AstNode<Expr, Expr>
+    struct BinExpr : public Expr, public AstNode2<Expr, Expr>
     {
         tok::TokenType op;
         tok::Location opLoc;
         BinExpr(Expr* lhs, Expr* rhs, tok::Token &o)
             : Expr(lhs->loc + rhs->loc),
-            AstNode<Expr, Expr>(lhs, rhs), op(o.type), opLoc(o.loc)
+            AstNode2<Expr, Expr>(lhs, rhs), op(o.type), opLoc(o.loc)
         {};
         BinExpr(Expr* lhs, Expr* rhs, tok::TokenType o)
             : Expr(lhs->loc + rhs->loc),
-            AstNode<Expr, Expr>(lhs, rhs), op(o)
+            AstNode2<Expr, Expr>(lhs, rhs), op(o)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
@@ -107,33 +107,33 @@ namespace ast
     }
 
     //unary expressions
-    struct UnExpr : public Expr, public AstNode<Expr>
+    struct UnExpr : public Expr, public AstNode1<Expr>
     {
         tok::TokenType op;
         UnExpr(Expr* arg, tok::Token &o)
             : Expr(o.loc + arg->loc),
-            AstNode<Expr>(arg), op(o.type)
+            AstNode1<Expr>(arg), op(o.type)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
 
-    struct IterExpr : public Expr, public AstNode<Expr>
+    struct IterExpr : public Expr, public AstNode1<Expr>
     {
         IterExpr(Expr* arg, tok::Token &o)
             : Expr(o.loc + arg->loc),
-            AstNode<Expr>(arg)
+            AstNode1<Expr>(arg)
         {};
 
-        bool isLval() {return getChild<0>()->isLval();}
+        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "`";}
     };
 
-    struct AggExpr : public Expr, public AstNode<Expr>
+    struct AggExpr : public Expr, public AstNode1<Expr>
     {
         tok::TokenType op;
         AggExpr(Expr* arg, tok::Token &o)
             : Expr(o.loc + arg->loc),
-            AstNode<Expr>(arg), op(o.value.op)
+            AstNode1<Expr>(arg), op(o.value.op)
         {};
         std::string myLbl() {return tok::Name(op) + std::string("=");}
     };
@@ -156,12 +156,12 @@ namespace ast
 
     //postfix expressions
     //for ++ and --
-    struct PostExpr : public Expr, public AstNode<Expr>
+    struct PostExpr : public Expr, public AstNode1<Expr>
     {
         tok::TokenType op;
         PostExpr(Expr* arg, tok::Token &o)
             : Expr(arg->loc + o.loc),
-            AstNode<Expr>(arg), op(o.type)
+            AstNode1<Expr>(arg), op(o.type)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
@@ -172,7 +172,7 @@ namespace ast
             : BinExpr(lhs, rhs, o)
         {}
 
-        bool isLval() {return getChild<0>()->isLval();}
+        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "a{b}";}
     };
 
@@ -182,7 +182,7 @@ namespace ast
             : BinExpr(lhs, rhs, o)
         {}
 
-        bool isLval() {return getChild<0>()->isLval();}
+        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "a[b]";}
     };
 }

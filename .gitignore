@@ -4,12 +4,12 @@ ipch
 Release
 vec/Debug
 vec/Release
-vec.sdf
+*.sdf
+*.opensdf
+*.suo
 obj
 *.swp
 vc
 tags
 *.dot
 *.png
-*.depend
-*.layout

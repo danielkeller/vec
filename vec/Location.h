@@ -13,9 +13,11 @@ namespace tok
         int line;
         int firstCol, lastCol;
 
-        utl::weak_string lineStr;
-        
+		Location();
+
         const char * fileName; //char * instead of weak_string because we have nul terminator
+		
+        utl::weak_string lineStr;
 
         int printCaret(int start = 0);
         int printPostCaret(int start = 0);

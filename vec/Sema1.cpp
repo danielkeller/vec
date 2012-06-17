@@ -17,11 +17,11 @@ void Sema::Phase1()
     //this needs to happen before loop point addition so regular ()s don't interfere
     AstWalk<Block>([] (Block *b)
     {
-        ExprStmt* es = dynamic_cast<ExprStmt*>(b->getChild<0>());
+        ExprStmt* es = dynamic_cast<ExprStmt*>(b->getChildA());
         if (es)
         {
-            b->parent->replaceChild(b, es->getChild<0>());
-            es->getChild<0>() = 0; //null so we don't delete everything
+            b->parent->replaceChild(b, es->getChildA());
+            es->nullChildA(); //null so we don't delete everything
             delete b;
         }
     });
@@ -49,7 +49,7 @@ void Sema::Phase1()
     AstWalk<IterExpr>([] (IterExpr* ie)
     {
         //find nearest exprStmt up the tree
-        AstNode0* n;
+        AstNodeB* n;
         for (n = ie; dynamic_cast<ExprStmt*>(n) == 0; n = n->parent)
             assert(n != 0 && "ExprStmt not found");
 
@@ -58,53 +58,14 @@ void Sema::Phase1()
         
         if (!il)
         {
-            AstNode0* esParent = es->parent; //save because the c'tor clobbers it
+            AstNodeB* esParent = es->parent; //save because the c'tor clobbers it
             il = new ImpliedLoopStmt(es);
             esParent->replaceChild(es, il);
         }
         
         il->targets.push_back(ie);
     });
-/*
-    //any block now contains multiple statements so extract them
-    //should split the expression to parts above and below the block to output in the right order
-    AstWalk<Block>([] (Block* b)
-    {
-        if (!dynamic_cast<Expr*>(b->parent)) //regular block not in expression
-            return; //ignore
 
-        //find owning ES
-        ExprStmt* es;
-        for (AstNode0* srch = b->parent; (es = dynamic_cast<ExprStmt*>(srch)) == 0; srch = srch->parent)
-            ; //will fail-fast if es not found
-
-        //wrap exprStmt and block contents in pair
-        AstNode0* esParent = es->parent; //c'tor clobbers it
-        StmtPair* newHead = new StmtPair(es, b->getChild<0>());
-        b->getChild<0>() = 0;
-        esParent->replaceChild(es, newHead);
-        
-        //find last stmt in block
-        Stmt* last;
-        for (last = newHead->getChild<1>(); //start with block's child
-             dynamic_cast<StmtPair*>(last); //check if it's still a StmtPair
-             last = dynamic_cast<StmtPair*>(last)->getChild<1>()) //iterate to RHS
-            ;
-
-        //if it's an exprstmt, link in with a temporary
-        if (ExprStmt* lastes = dynamic_cast<ExprStmt*>(last))
-        {
-            TmpExpr* te = new TmpExpr(lastes->getChild<0>());
-            b->parent->replaceChild(b, te);
-        }
-        else
-        {
-            b->parent->replaceChild(b, new NullExpr(std::move(static_cast<Stmt*>(b)->loc)));
-        }
-
-        delete b; //finally delete the block
-    });
-*/
     //remove null stmts under StmtPairs
     AstWalk<StmtPair>([] (StmtPair* sp)
     {
@@ -112,15 +73,15 @@ void Sema::Phase1()
             return; //we're screwed
 
         Stmt* realStmt;
-        if (dynamic_cast<NullStmt*>(sp->getChild<0>()))
+        if (dynamic_cast<NullStmt*>(sp->getChildA()))
         {
-            realStmt = sp->getChild<1>();
-            sp->getChild<1>() = 0; //unlink so as not to delete it
+            realStmt = sp->getChildB();
+            sp->nullChildB(); //unlink so as not to delete it
         }
-        else if (dynamic_cast<NullStmt*>(sp->getChild<1>()))
+        else if (dynamic_cast<NullStmt*>(sp->getChildB()))
         {
-            realStmt = sp->getChild<0>();
-            sp->getChild<0>() = 0;
+            realStmt = sp->getChildA();
+            sp->nullChildA();
         }
         else
             return; //nope
@@ -132,16 +93,16 @@ void Sema::Phase1()
     //turn exprstmt ; exprstmt into expr , expr. this must happen after loop points.
     AstWalk<StmtPair>([] (StmtPair* sp)
     {
-        ExprStmt* lhs = dynamic_cast<ExprStmt*>(sp->getChild<0>());
-        ExprStmt* rhs = dynamic_cast<ExprStmt*>(sp->getChild<1>());
+        ExprStmt* lhs = dynamic_cast<ExprStmt*>(sp->getChildA());
+        ExprStmt* rhs = dynamic_cast<ExprStmt*>(sp->getChildB());
         if (lhs && rhs)
         {
             ExprStmt* repl = new ExprStmt(
-                              new BinExpr(lhs->getChild<0>(),
-                                          rhs->getChild<0>(),
+                              new BinExpr(lhs->getChildA(),
+                                          rhs->getChildA(),
                                           tok::comma));
-            lhs->getChild<0>() = 0;
-            rhs->getChild<0>() = 0;
+			lhs->nullChildA();
+            rhs->nullChildA();
             sp->parent->replaceChild(sp, repl);
             delete sp;
         }
@@ -154,7 +115,7 @@ void Sema::Phase1()
         TmpExpr* te = new TmpExpr(e);
         cs->replaceChild(e, te);
         
-        AstNode0* parent = cs->parent;
+        AstNodeB* parent = cs->parent;
         StmtPair* sp = new StmtPair(new ExprStmt(e), cs);
         parent->replaceChild(cs, sp);
     });
