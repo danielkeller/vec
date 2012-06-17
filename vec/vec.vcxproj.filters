@@ -108,4 +108,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\test.vc">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\test2.vc">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

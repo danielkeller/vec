@@ -97,6 +97,10 @@
     <ClCompile Include="TypeParser.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\test.vc" />
+    <None Include="..\test2.vc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
