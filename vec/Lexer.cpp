@@ -25,7 +25,7 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
     if (!t.is_open())
     {
         //this doesnt work for some reason?
-        err::Error(tok::Location()) << "Could not open file '" << fileName << '\'' << err::endl;
+        err::Error(tok::Location()) << "Could not open file '" << fileName << '\'';
         exit(-1);
     }
 
@@ -213,8 +213,7 @@ inline void Lexer::lexNumber()
         //this is in here in case of 999999999999999999. for example
         if (errno == ERANGE)
         {
-            err::Error(nextTok.loc) << "integer constant out of range"
-                << err::underline << err::endl;
+            err::Error(nextTok.loc) << "integer constant out of range" << err::underline;
             l = 0; //recover. fall thru to call it a long
         }
 
@@ -235,8 +234,7 @@ inline void Lexer::lexNumber()
         //this is in here in case of 9999999e999999e99999 for example
         if (errno == ERANGE)
         {
-            err::Error(nextTok.loc) << "floating point constant out of range"
-                << err::underline << err::endl;
+            err::Error(nextTok.loc) << "floating point constant out of range" << err::underline;
             d = 0.; //recover. fall thru to call it a double
         }
 
@@ -247,8 +245,7 @@ inline void Lexer::lexNumber()
     }
 
     //nope, just junk
-    err::Error(nextTok.loc) << "numeric constant not parseable"
-        << err::underline << err::endl;
+    err::Error(nextTok.loc) << "numeric constant not parseable" << err::underline;
     nextTok.type = tok::integer; //recover
     nextTok.value.int_v = 0;
     curChr = end - 1;
@@ -298,7 +295,7 @@ inline char Lexer::consumeChar()
             tok::Location escLoc = nextTok.loc;
             escLoc.firstCol = nextTok.loc.lastCol + 1;
             err::Error(err::error, escLoc) << "invalid escape sequence '\\"
-                << curChr[1] << '\'' << err::caret << err::endl;
+                << curChr[1] << '\'' << err::caret;
             ret = 0;
             break;
         }
@@ -335,13 +332,11 @@ inline void Lexer::lexChar()
     nextTok.loc.setLength(nextTok.loc.getLength() + (end - curChr));
     if (*end == '\'') //found it
     {
-        err::Error(nextTok.loc) << "character constant too long"
-            << err::underline << err::endl;
+        err::Error(nextTok.loc) << "character constant too long" << err::underline;
     }
     else //didn't find it
     {
-        err::Error(nextTok.loc) << "unterminated character constant"
-            << err::caret << err::endl;
+        err::Error(nextTok.loc) << "unterminated character constant" << err::caret;
     }
     //recover
     curChr = (*end == '\0') ? end - 1 : end;
@@ -359,7 +354,7 @@ inline void Lexer::lexString()
         strdata += consumeChar();
 
     if (*curChr == '\0')
-        err::Error(nextTok.loc) << "eof in string literal" << err::caret << err::endl;
+        err::Error(nextTok.loc) << "eof in string literal" << err::caret;
 
     //insert string as new entry only if it's not already there
     nextTok.value.int_v = compUnit->addString(strdata);

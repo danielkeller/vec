@@ -97,8 +97,7 @@ void Parser::parseSingle()
         break;
 
     default:
-        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting type"
-            << err::caret << err::endl;
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting type" << err::caret;
         lexer->Advance();
     }
 }
@@ -192,8 +191,7 @@ void Parser::parsePrim()
             {
                 if (width != 8 && width != 16 && width != 32 && width != 64)
                 {
-                    err::Error(to.loc) << '\'' << width << "' is not a valid integer width"
-                        << err::caret << err::endl;
+                    err::Error(to.loc) << '\'' << width << "' is not a valid integer width" << err::caret;
                     width = 32;
                 }
             }
@@ -201,8 +199,7 @@ void Parser::parsePrim()
             {
                 if (width != 16 && width != 32 && width != 64 && width != 80)
                 {
-                    err::Error(to.loc) << '\'' << width << "' is not a valid floating point width"
-                        << err::caret << err::endl;
+                    err::Error(to.loc) << '\'' << width << "' is not a valid floating point width" << err::caret;
                     width = 32;
                 }
             }
@@ -229,8 +226,7 @@ void Parser::parseNamed()
     if (!td)
     {
         err::Error(lexer->Peek().loc) << "undefined type '"
-			<< lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\''
-            << err::underline << err::endl;
+			<< lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\'' << err::underline;
         type.code += cod::integer + cod::endOf(cod::integer); //recover
         lexer->Advance(); //don't parse it twice
     }
@@ -248,7 +244,7 @@ void Parser::parseNamed()
 
     if (td && nargs && nargs != td->params.size())
         err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
-            td->params.size() << ", got " << nargs << err::underline << err::endl;
+            td->params.size() << ", got " << nargs << err::underline;
 
     type.code += cod::endOf(cod::named);
 }

@@ -126,7 +126,7 @@ Stmt* Parser::parseStmt()
 
     case tok::k_break:
     case tok::k_continue:
-        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
+        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline;
         exit(-1);
     case tok::k_return:
     {
@@ -139,7 +139,7 @@ Stmt* Parser::parseStmt()
     case tok::k_tail:
     case tok::k_goto:
         //parse jump expr
-        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline << err::endl;
+        err::Error(to.loc) << "I can't deal with " << to.Name() << err::underline;
         exit(-1);
     default:
     {

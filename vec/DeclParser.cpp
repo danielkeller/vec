@@ -61,8 +61,7 @@ void Parser::parseTypeDecl()
 
     if (curScope->getTypeDef(name))
     {
-        err::Error(t.loc) << "redefinition of type '" << cu->getIdent(name) << '\''
-        << err::underline << err::endl;
+        err::Error(t.loc) << "redefinition of type '" << cu->getIdent(name) << '\'' << err::underline;
         lexer->ErrUntil(tok::semicolon);
         return;
     }
@@ -79,7 +78,7 @@ void Parser::parseTypeDecl()
         else //junk
         {
             err::Error(lexer->Peek().loc) << "unexpected " << lexer->Peek().Name()
-            << " in type parameter list" << err::caret << err::endl;
+				<< " in type parameter list" << err::caret;
             lexer->ErrUntil(tok::semicolon);
             return;
         }
@@ -120,7 +119,7 @@ Expr* Parser::parseDeclRHS()
 
     if (!lexer->Expect(tok::identifier, to))
     {
-        err::Error(lexer->Last().loc) << "expected identifier in declaration" << err::postcaret << err::endl;
+        err::Error(lexer->Last().loc) << "expected identifier in declaration" << err::postcaret;
         return new NullExpr(std::move(lexer->Last().loc));
     }
 
@@ -131,7 +130,7 @@ Expr* Parser::parseDeclRHS()
         //variables cannot be defined twice
         if (!type.isFunc())
             err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
-            << '\'' << err::underline << err::endl;
+            << '\'' << err::underline;
     }
     else
     {

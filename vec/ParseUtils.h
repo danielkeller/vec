@@ -22,8 +22,7 @@ namespace par
             if (!l->Expect(tok::comma))
             {
                 if (P(l->Peek()))
-                    err::Error(l->Peek().loc) << "missing comma in list of "
-                        << contsName << err::caret << err::endl;
+                    err::Error(l->Peek().loc) << "missing comma in list of " << contsName << err::caret;
                 else
                     break;
             }

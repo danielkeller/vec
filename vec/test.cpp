@@ -52,5 +52,7 @@ int main ()
 
 //    s.Phase3();
 
+	getchar();
+
     delete cu.treeHead;
 }

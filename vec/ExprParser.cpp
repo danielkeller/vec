@@ -167,7 +167,7 @@ Expr* Parser::parsePrimaryExpr()
         if (lexer->Peek() == tok::identifier) //but the user thinks its a type
         {
             err::Error(to.loc) << '\'' << cu->getIdent(to.value.ident_v)
-                << "' is not a type" << err::underline << err::endl; //we'll show them!
+                << "' is not a type" << err::underline; //we'll show them!
             to = lexer->Next(); //pretend it's a decl
         }
         return new VarExpr(to.value.ident_v, std::move(to.loc));
@@ -212,7 +212,7 @@ Expr* Parser::parsePrimaryExpr()
 
         //otherwise we're SOL
 
-        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret << err::endl;
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret;
         lexer->Advance(); //eat it
         return new NullExpr(std::move(to.loc));
     }

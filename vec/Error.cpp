@@ -7,7 +7,7 @@ using namespace err;
 
 void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 {
-    Error(l->Last().loc) << "expected " << expected << " after " << after << err::postcaret << err::endl;
+    Error(l->Last().loc) << "expected " << expected << " after " << after << err::postcaret;
 }
 
 #ifdef _WIN32
@@ -53,6 +53,11 @@ void Error::init(Level lvl)
     }
 }
 
+Error::~Error()
+{
+    std::cerr << std::endl << std::endl;
+}
+
 Error & Error::operator<< (tok::Location &&l)
 {
     if (l.line != loc.line) //if its not on the same line, we need to print the new line
@@ -66,11 +71,6 @@ Error & Error::operator<< (tok::Location &&l)
 Error & Error::operator<< (Special toPrint)
 {
     std::cerr << COLOFF;
-    if (toPrint == endl)
-    {
-        std::cerr << std::endl << std::endl;
-        return *this;
-    }
 
     if (toPrint == note)
     {

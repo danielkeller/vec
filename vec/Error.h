@@ -31,8 +31,7 @@ namespace err
         caret,
         postcaret,
         underline,
-        note,
-        endl
+        note
     };
 
     void ExpectedAfter(lex::Lexer *l, const char *expected, const char *after);
@@ -50,6 +49,8 @@ namespace err
 
 		Error(tok::Location &&loc) : loc(loc) {init(err::error);}
         Error(tok::Location &loc) : loc(loc) {init(err::error);}
+
+        ~Error();
 
         template<class T>
         Error & operator<< (T toPrint);
