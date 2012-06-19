@@ -15,6 +15,7 @@ namespace sa
         template<class T>
         void AstWalk(std::function<void(T*)> action);
         template<class T>
+        void ReverseAstWalk(std::function<void(T*)> action);
 
         void validateTree();
 
@@ -38,6 +39,12 @@ namespace sa
     void Sema::AstWalk(std::function<void(T*)> action)
     {
         AstWalker<T> aw(cu->treeHead, action);
+    }
+
+    template<class T>
+    void Sema::ReverseAstWalk(std::function<void(T*)> action)
+    {
+        ReverseAstWalker<T> aw(cu->treeHead, action);
     }
 }
 

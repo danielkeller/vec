@@ -151,4 +151,28 @@ void Sema::Phase2()
         b->nullChildA();
         delete b;
     });
+
+    //the tree of stmt pairs is pretty messed up by now, lets fix it
+    ReverseAstWalk<StmtPair>([] (StmtPair* upper)
+    {
+        //is the left child also a stmt pair?
+        StmtPair* lower = dynamic_cast<StmtPair*>(upper->getChildA());
+
+        if (lower == 0)
+            return;
+
+        /*
+             ===                ===
+              / \                | \
+             === c      ===\     a  ===
+              /|        ===/         | \
+             a b                     b  c
+        */
+
+        upper->setChildA(lower->getChildA());
+        lower->setChildA(lower->getChildB());
+        lower->setChildB(upper->getChildB());
+        upper->setChildB(lower);
+        //whew!
+    });
 }

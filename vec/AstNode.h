@@ -262,6 +262,26 @@ namespace sa
             call(r);
         }
     };
+
+    template<class Base>
+    class ReverseAstWalker : public AstWalker0
+    {
+        std::function<void(Base*)> action;
+
+    public:
+        void call(ast::AstNodeB* node)
+        {
+            Base * bNode = dynamic_cast<Base*>(node);
+            if (bNode)
+                action(bNode);
+            node->eachChild(this);
+        };
+        template <class A>
+        ReverseAstWalker(ast::AstNodeB *r, A act) : action(act)
+        {
+            call(r);
+        }
+    };
 }
 
 
