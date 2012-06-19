@@ -78,21 +78,13 @@ void Sema::Phase2()
     });
 
     //replace exprstmts with corresponding basic blocks
-    std::function<void(ExprStmt*)> blockInsert = [&repl, &blockInsert] (ExprStmt* es)
+    for (auto p : repl)
     {
-        assert (repl.count(es) && "basic block doesn't exist");
-
         //attach basic block in place of expression statement
-        es->parent->replaceChild(es, repl[es]);
+        p.first->parent->replaceChild(p.first, p.second);
         //the child is an unneeded temp, don't bother to unlink it
-        delete es;
-
-        //recurse in case we just inserted more exprstmts that would be missed
-        AstWalker<ExprStmt>(repl[es], blockInsert);
-    };
-
-    //call it
-    AstWalk<ExprStmt>(blockInsert);
+        delete p.first;
+    }
 
     //now split basic blocks where blocks occur inside them
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
