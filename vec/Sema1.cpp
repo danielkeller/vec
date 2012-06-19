@@ -89,24 +89,6 @@ void Sema::Phase1()
         sp->parent->replaceChild(sp, realStmt);
         delete sp;
     });
-
-    //turn exprstmt ; exprstmt into expr , expr. this must happen after loop points.
-    AstWalk<StmtPair>([] (StmtPair* sp)
-    {
-        ExprStmt* lhs = dynamic_cast<ExprStmt*>(sp->getChildA());
-        ExprStmt* rhs = dynamic_cast<ExprStmt*>(sp->getChildB());
-        if (lhs && rhs)
-        {
-            ExprStmt* repl = new ExprStmt(
-                              new BinExpr(lhs->getChildA(),
-                                          rhs->getChildA(),
-                                          tok::comma));
-            lhs->nullChildA();
-            rhs->nullChildA();
-            sp->parent->replaceChild(sp, repl);
-            delete sp;
-        }
-    });
     
     //create expr stmts for other things that contain expressions
     AstWalk<CondStmt>([] (CondStmt* cs)

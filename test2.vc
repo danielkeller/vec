@@ -5,7 +5,7 @@ int:[int argc, {int!8} argv] main =
 );
 
 `a + -b * `c + d;
-a / (b:`c++) / d{foof};
+a / (b:c++) / d{foof};
 
 a = 2, x = 
 (

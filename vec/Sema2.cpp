@@ -176,4 +176,26 @@ void Sema::Phase2()
             //whew!
         }
     });
+
+    //combine adjacent BasicBlocks
+    AstWalk<StmtPair>([] (StmtPair* sp)
+    {
+        BasicBlock* lhs = dynamic_cast<BasicBlock*>(sp->getChildA());
+        if (lhs == 0)
+            return;
+        StmtPair* sp2 = dynamic_cast<StmtPair*>(sp->getChildB());
+        if (sp2 == 0)
+            return;
+        BasicBlock* rhs = dynamic_cast<BasicBlock*>(sp2->getChildA());
+        if (rhs == 0)
+            return;
+        Stmt* other = sp2->getChildB();
+        sp2->nullChildB();
+
+        lhs->chld.insert(lhs->chld.end(), rhs->chld.begin(), rhs->chld.end());
+        rhs->chld.clear();
+        delete sp2; //also deletes rhs
+
+        sp->setChildB(other); //reattach it
+    });
 }
