@@ -12,7 +12,7 @@ namespace ast
     {
         tok::Location loc;
         virtual bool isLval() {return false;};
-		Stmt() : loc() {};
+        Stmt() : loc() {};
         Stmt(tok::Location &&l) : loc(l) {};
         Stmt(tok::Location &l) : loc(l) {};
         const char *myColor() {return "1";};

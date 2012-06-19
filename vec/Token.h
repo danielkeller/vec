@@ -129,7 +129,7 @@ namespace tok
             TokenType op; //for binop-equals
             long double dbl_v;
             long long int_v;
-			ast::Ident ident_v;
+            ast::Ident ident_v;
         } value;
 
         Location loc;

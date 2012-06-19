@@ -36,19 +36,19 @@ namespace ast
         AstNodeB *parent;
         AstNodeB() : parent(0) {};
         virtual ~AstNodeB() {};
-		virtual void eachChild(sa::AstWalker0*) = 0;
+        virtual void eachChild(sa::AstWalker0*) = 0;
 
-		virtual void emitDot(std::ostream &os)
-		{
+        virtual void emitDot(std::ostream &os)
+        {
             os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"" << myLbl()
                 << "\",style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
-		}
+        }
 
         //replace child of unknown position
-		virtual void replaceChild(AstNodeB*, AstNodeB*)
-		{
-			assert(false && "didn't find child");
-		}
+        virtual void replaceChild(AstNodeB*, AstNodeB*)
+        {
+            assert(false && "didn't find child");
+        }
 
         virtual std::string myLbl()
         {
@@ -61,12 +61,12 @@ namespace ast
         }
     };
 
-	class AstNode0 : public virtual AstNodeB
+    class AstNode0 : public virtual AstNodeB
     {
     public:
         AstNode0() {};
         ~AstNode0() {};
-		void eachChild(sa::AstWalker0*) {};
+        void eachChild(sa::AstWalker0*) {};
     };
 
     //ast node from which all others are derived
@@ -97,7 +97,7 @@ namespace ast
             if (dynamic_cast<A*>(old) == a)
                 setChildA(dynamic_cast<A*>(n));
             else
-				AstNode0::replaceChild(old, n);
+                AstNode0::replaceChild(old, n);
         }
 
         A* getChildA()
@@ -112,40 +112,40 @@ namespace ast
             newchld->parent = this;
         }
 
-		//unlink if we're about to delete this
-		void nullChildA()
-		{
-			a = 0;
-		}
+        //unlink if we're about to delete this
+        void nullChildA()
+        {
+            a = 0;
+        }
 
         void emitDot(std::ostream &os)
         {
             os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(a) << ";\n";
             a->emitDot(os);
-			AstNode0::emitDot(os);
+            AstNode0::emitDot(os);
         }
     };
 
     template<class A, class B>
     class AstNode2 : public AstNode1<A>
     {
-		B* b;
+        B* b;
 
     public:
         AstNode2(A* a_i, B* b_i)
             : AstNode1<A>(a_i), b(b_i)
         {
-			b->parent = this;
+            b->parent = this;
         }
 
         ~AstNode2()
         {
-			delete b;
+            delete b;
         }
 
         void eachChild(sa::AstWalker0 *w)
         {
-			AstNode1<A>::eachChild(w);
+            AstNode1<A>::eachChild(w);
             w->call(b);
         }
 
@@ -155,7 +155,7 @@ namespace ast
             if (dynamic_cast<B*>(old) == b)
                 setChildB(dynamic_cast<B*>(n));
             else
-				AstNode1<A>::replaceChild(old, n);
+                AstNode1<A>::replaceChild(old, n);
         }
 
         B* getChildB()
@@ -170,39 +170,39 @@ namespace ast
             newchld->parent = this;
         }
 
-		void nullChildB()
-		{
-			b = 0;
-		}
+        void nullChildB()
+        {
+            b = 0;
+        }
 
         void emitDot(std::ostream &os)
         {
             os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(b) << ";\n";
             b->emitDot(os);
-			AstNode1<A>::emitDot(os);
+            AstNode1<A>::emitDot(os);
         }
     };
 
     template<class A, class B, class C>
     class AstNode3 : public AstNode2<A, B>
     {
-		C* c;
+        C* c;
 
     public:
         AstNode3(A* a_i, B* b_i, C* c_i)
-			: AstNode2<A, B>(a_i, b_i), c(c_i)
+            : AstNode2<A, B>(a_i, b_i), c(c_i)
         {
-			c->parent = this;
+            c->parent = this;
         }
 
         ~AstNode3()
         {
-			delete c;
+            delete c;
         }
 
         void eachChild(sa::AstWalker0 *w)
         {
-			AstNode2<A, B>::eachChild(w);
+            AstNode2<A, B>::eachChild(w);
             w->call(c);
         }
 
@@ -212,7 +212,7 @@ namespace ast
             if (dynamic_cast<C*>(old) == c)
                 setChildC(dynamic_cast<C*>(n));
             else
-				AstNode2<A, B>::replaceChild(old, n);
+                AstNode2<A, B>::replaceChild(old, n);
         }
 
         C* getChildC()
@@ -227,16 +227,16 @@ namespace ast
             newchld->parent = this;
         }
 
-		void nullChildC()
-		{
-			c = 0;
-		}
+        void nullChildC()
+        {
+            c = 0;
+        }
 
         void emitDot(std::ostream &os)
         {
             os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(c) << ";\n";
             c->emitDot(os);
-			AstNode2<A, B>::emitDot(os);
+            AstNode2<A, B>::emitDot(os);
         }
     };
 }

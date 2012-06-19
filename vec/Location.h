@@ -13,10 +13,10 @@ namespace tok
         int line;
         int firstCol, lastCol;
 
-		Location();
+        Location();
 
         const char * fileName; //char * instead of weak_string because we have nul terminator
-		
+        
         utl::weak_string lineStr;
 
         int printCaret(int start = 0);

@@ -221,12 +221,12 @@ void Parser::parseRef()
 
 void Parser::parseNamed()
 {
-	ast::TypeDef * td = curScope->getTypeDef(lexer->Peek().value.ident_v);
+    ast::TypeDef * td = curScope->getTypeDef(lexer->Peek().value.ident_v);
 
     if (!td)
     {
         err::Error(lexer->Peek().loc) << "undefined type '"
-			<< lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\'' << err::underline;
+            << lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\'' << err::underline;
         type.code += cod::integer + cod::endOf(cod::integer); //recover
         lexer->Advance(); //don't parse it twice
     }

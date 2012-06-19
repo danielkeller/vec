@@ -10,11 +10,11 @@ using namespace sa;
 
 void Sema::validateTree()
 {
-	AstWalk<AstNodeB>([] (AstNodeB *n)
-	{
-		if (n->parent)
-			n->parent->replaceChild(n, n); //will fire assertion if n is not a child
-	});
+    AstWalk<AstNodeB>([] (AstNodeB *n)
+    {
+        if (n->parent)
+            n->parent->replaceChild(n, n); //will fire assertion if n is not a child
+    });
 }
 
 void Sema::Phase2()
@@ -121,14 +121,14 @@ void Sema::Phase2()
             bb->chld.clear();
             delete bb;
 
-			AstNodeB* blkParent = blk->parent; //this is needed because StmtPair's ctor will hose blk->parent
+            AstNodeB* blkParent = blk->parent; //this is needed because StmtPair's ctor will hose blk->parent
 
             if (left->chld.size())
                 blkParent->replaceChild(blk, new StmtPair(left, blk));
             else
                 delete left;
 
-			blkParent = blk->parent;
+            blkParent = blk->parent;
 
             if (right->chld.size())
                 blkParent->replaceChild(blk, new StmtPair(blk, right));
@@ -137,8 +137,8 @@ void Sema::Phase2()
                 delete right;
                 return; //there are no more
             }
-			
-			//validateTree();
+            
+            //validateTree();
 
             bb = right; //keep going!
         }

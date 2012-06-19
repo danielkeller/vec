@@ -101,7 +101,7 @@ void Sema::Phase1()
                               new BinExpr(lhs->getChildA(),
                                           rhs->getChildA(),
                                           tok::comma));
-			lhs->nullChildA();
+            lhs->nullChildA();
             rhs->nullChildA();
             sp->parent->replaceChild(sp, repl);
             delete sp;

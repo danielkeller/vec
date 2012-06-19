@@ -47,7 +47,7 @@ namespace err
         Error(Level lvl, tok::Location &&loc) : loc(loc) {init(lvl);}
         Error(Level lvl, tok::Location &loc) : loc(loc) {init(lvl);}
 
-		Error(tok::Location &&loc) : loc(loc) {init(err::error);}
+        Error(tok::Location &&loc) : loc(loc) {init(err::error);}
         Error(tok::Location &loc) : loc(loc) {init(err::error);}
 
         ~Error();

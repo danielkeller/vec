@@ -160,7 +160,7 @@ Expr* Parser::parsePrimaryExpr()
     switch (to.type)
     {
     case tok::identifier:
-		if (curScope->getTypeDef(to.value.ident_v)) //it's a type
+        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
             return parseDecl();
         //nope, it's an ID
         lexer->Advance();

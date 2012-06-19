@@ -31,7 +31,7 @@ Lexer::Lexer(std::string fname, ast::CompUnit *cu)
 
     t.seekg(0, std::ios::end);
     std::streamoff size = t.tellg();
-	buffer = new char[(size_t)size + 1];
+    buffer = new char[(size_t)size + 1];
 
     t.seekg(0);
     t.read(buffer, size);
@@ -176,7 +176,7 @@ inline void Lexer::lexIdent()
     const char * end = getEndOfWord(curChr);
     nextTok.type = tok::identifier;
     std::string idname(curChr, end);
-	nextTok.value.ident_v = compUnit->addIdent(idname);
+    nextTok.value.ident_v = compUnit->addIdent(idname);
     nextTok.loc.setLength(end - curChr);
     curChr = end - 1;
 }

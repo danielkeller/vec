@@ -32,7 +32,7 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 
 void Error::init(Level lvl)
 {
-	posn = 0;
+    posn = 0;
 
     std::cerr << loc << ": ";
 

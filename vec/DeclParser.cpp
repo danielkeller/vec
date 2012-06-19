@@ -78,7 +78,7 @@ void Parser::parseTypeDecl()
         else //junk
         {
             err::Error(lexer->Peek().loc) << "unexpected " << lexer->Peek().Name()
-				<< " in type parameter list" << err::caret;
+                << " in type parameter list" << err::caret;
             lexer->ErrUntil(tok::semicolon);
             return;
         }
