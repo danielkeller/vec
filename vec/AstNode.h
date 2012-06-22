@@ -1,11 +1,10 @@
 #ifndef ASTNODE_H
 #define ASTNODE_H
 
-#include <tuple>
-#include <type_traits>
 #include <functional>
 #include <ostream>
 #include <cassert>
+#include <list>
 
 #ifdef _WIN32
 #pragma warning (disable: 4250 4127) //inherits via dominance, cond expr is constant
@@ -33,7 +32,9 @@ namespace ast
     class AstNodeB
     {
     public:
+        tok::Location loc; //might not be set
         AstNodeB *parent;
+        AstNodeB(tok::Location &l) : loc(l), parent(0) {};
         AstNodeB() : parent(0) {};
         virtual ~AstNodeB() {};
         virtual void eachChild(sa::AstWalker0*) = 0;
@@ -243,6 +244,7 @@ namespace ast
 
 namespace sa
 {
+    //walks up the tree from the bottom
     template<class Base>
     class AstWalker : public AstWalker0
     {
@@ -263,6 +265,7 @@ namespace sa
         }
     };
 
+    //walks down the tree from the root
     template<class Base>
     class ReverseAstWalker : public AstWalker0
     {
@@ -280,6 +283,32 @@ namespace sa
         ReverseAstWalker(ast::AstNodeB *r, A act) : action(act)
         {
             call(r);
+        }
+    };
+
+    //walks up the tree, but stores the results so more destructive
+    //modifications can take place without crashing
+    //you still may not delete any nodes in the cache
+    template<class Base>
+    class CachedAstWalker : public AstWalker0
+    {
+        std::function<void(Base*)> action;
+        std::list<Base*> cache;
+
+    public:
+        void call(ast::AstNodeB* node)
+        {
+            node->eachChild(this);
+            Base * bNode = dynamic_cast<Base*>(node);
+            if (bNode)
+                cache.push_back(bNode);
+        };
+        template <class A>
+        CachedAstWalker(ast::AstNodeB *r, A act) : action(act)
+        {
+            call(r);
+            for (auto it : cache)
+                action(it);
         }
     };
 }

@@ -7,6 +7,9 @@
 using namespace ast;
 using namespace sa;
 
+//Phase one is for insertion / modification of nodes in a way which
+//generally preserves the structure of the AST, and/or which need that
+//structure to not be compacted into basic blocks
 void Sema::Phase1()
 {
     //if there's a lot of dynamic casting going on, try adding new ast walker
@@ -24,6 +27,33 @@ void Sema::Phase1()
             es->nullChildA(); //null so we don't delete everything
             delete b;
         }
+    });
+
+    CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
+    {
+        FuncDeclExpr* fde = dynamic_cast<FuncDeclExpr*>(ae->getChildA());
+        if (fde == 0)
+            return;
+
+        //a function definition is really a statement masquerading as an expression
+        //doing it this way is a. easier (less ambiguity), and b. gives better errors
+        ExprStmt* es = dynamic_cast<ExprStmt*>(ae->parent);
+        if (!es)
+        {
+            err::Error(ae->parent->loc) << "a function definition may not be part of an expression" << err::underline;
+            return; //can't deal with it
+        }
+
+        //create and insert function definition
+        es->parent->replaceChild(es,
+            new FunctionDef(fde,
+                new ExprStmt(ae->getChildB())
+            )
+        );
+
+        ae->nullChildA();
+        ae->nullChildB();
+        delete es; //delete expr stmt and assign expr
     });
 
     //do this after types in case of ref types

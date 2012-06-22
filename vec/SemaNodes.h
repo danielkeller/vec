@@ -44,6 +44,14 @@ namespace ast
         };
     };
 
+    struct FunctionDef : public SemaStmt, public AstNode1<Stmt>
+    {
+        FuncDeclExpr* decl; //store it here so the walker can't find it
+        FunctionDef(FuncDeclExpr* fde, Stmt* s) : AstNode1<Stmt>(s), decl(fde) {}
+        std::string myLbl() {return decl->myLbl();}
+        ~FunctionDef() {delete decl;} //its not in the tree, we have to delete it manually
+    };
+
     //basic block class that holds any number of instructions
     struct BasicBlock : public Stmt
     {

@@ -10,11 +10,10 @@ namespace ast
     //abstract statement type
     struct Stmt : public virtual AstNodeB
     {
-        tok::Location loc;
         virtual bool isLval() {return false;};
-        Stmt() : loc() {};
-        Stmt(tok::Location &&l) : loc(l) {};
-        Stmt(tok::Location &l) : loc(l) {};
+        Stmt() {};
+        Stmt(tok::Location &&l) : AstNodeB(l) {};
+        Stmt(tok::Location &l) : AstNodeB(l) {};
         const char *myColor() {return "1";};
     };
 

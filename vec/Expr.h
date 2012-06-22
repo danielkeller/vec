@@ -14,11 +14,10 @@ namespace ast
     struct Expr : public virtual AstNodeB
     {
         typ::Type type;
-        tok::Location loc;
         virtual bool isLval() {return false;};
         //Expr() = default;
-        Expr(tok::Location &&l) : loc(l) {};
-        Expr(tok::Location &l) : loc(l) {};
+        Expr(tok::Location &&l) : AstNodeB(l) {};
+        Expr(tok::Location &l) : AstNodeB(l) {};
         const char *myColor() {return "4";};
     };
 
@@ -54,7 +53,7 @@ namespace ast
     //put this here so it knows what a DeclExpr is
     std::string VarExpr::myLbl()
     {
-        return "var " + utl::to_str(var->name);
+        return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
     }
 
     struct FuncDeclExpr : public DeclExpr

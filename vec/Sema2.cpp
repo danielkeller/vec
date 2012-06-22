@@ -16,6 +16,9 @@ void Sema::validateTree()
     });
 }
 
+//Phase two is where the AST is compacted into basic blocks. at some point in the future
+//it may also turn it into a CFG (control flow graph), but for now it maintains the
+//superstructure of the AST
 void Sema::Phase2()
 {
     //insert temporaries above all expressions
@@ -50,7 +53,7 @@ void Sema::Phase2()
                         srch = sp->getChildB();
                     else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
                         srch = es->getChildA();
-                    else if (TmpExpr* e = dynamic_cast<TmpExpr*>(srch)) //other than block
+                    else if (TmpExpr* e = dynamic_cast<TmpExpr*>(srch))
                     {
                         //conveniently, the temp expr is already there
                         te = new TmpExpr(e->setBy); //copy it so it doesn't get deleted
@@ -79,8 +82,18 @@ void Sema::Phase2()
     //replace exprstmts with corresponding basic blocks
     for (auto p : repl)
     {
+        //if it's a function, we need to save the temporary containing the result
+        //the "result" temp is the child of the ExprStmt. Since the value of
+        // a basic block is its last child, append the temp to it.
+        if (dynamic_cast<FunctionDef*>(p.first->parent))
+        {
+            p.second->appendChild(p.first->getChildA());
+            p.first->nullChildA(); //don't delete the temp!
+        }
+
         //attach basic block in place of expression statement
         p.first->parent->replaceChild(p.first, p.second);
+
         //the child is an unneeded temp, don't bother to unlink it
         delete p.first;
     }

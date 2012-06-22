@@ -3,12 +3,15 @@ int foo = 7;
 
 int:int baz = 
 (
+	float:[int x] qwer = x * 7.3;
+
 	int bar = foo + 1;
 
 	if (23 + bar + foo)
 	(
 		float asdf = 7.7;
 	)
+	int a = (15; 16; 17);
 );
 
 
