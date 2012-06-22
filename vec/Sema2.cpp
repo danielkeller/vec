@@ -2,7 +2,6 @@
 #include "SemaNodes.h"
 #include "Error.h"
 
-#include <iostream>
 #include <cassert>
 
 using namespace ast;

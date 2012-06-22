@@ -17,8 +17,8 @@ Block* Parser::parseBlock()
 {
     tok::Location begin = lexer->Next().loc;
 
-    Scope *blockScope = new Scope(curScope);
-    curScope = blockScope;
+    cu->scopes.emplace_back(curScope);
+    Scope* blockScope = curScope = &cu->scopes.back();
 
     if (lexer->Expect(tok::rparen)) //empty parens
         return new Block(new NullStmt(begin + lexer->Last().loc),
@@ -32,7 +32,7 @@ Block* Parser::parseBlock()
     if(!lexer->Expect(tok::rparen))
         err::ExpectedAfter(lexer, "')'", "block");
 
-    curScope = blockScope->getParent();
+    curScope = curScope->getParent();
     return new Block(conts, blockScope, begin + lexer->Last().loc);
 }
 

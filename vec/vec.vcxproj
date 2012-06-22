@@ -94,6 +94,7 @@
     <ClCompile Include="Scope.cpp" />
     <ClCompile Include="Sema1.cpp" />
     <ClCompile Include="Sema2.cpp" />
+    <ClCompile Include="Sema3.cpp" />
     <ClCompile Include="StmtParser.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="Token.cpp" />

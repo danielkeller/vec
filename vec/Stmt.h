@@ -60,7 +60,6 @@ namespace ast
             AstNode1<Stmt>(conts),
             scope(s)
         {};
-        ~Block() {delete scope;};
         std::string myLbl() {return "(...)";}
         const char *myColor() {return "3";};
     };

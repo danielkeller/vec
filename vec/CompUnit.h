@@ -5,7 +5,7 @@
 #include "Stmt.h"
 
 #include <map>
-#include <vector>
+#include <list>
 #include <string>
 
 namespace ast
@@ -26,6 +26,7 @@ namespace ast
         Ident addIdent(std::string &str);
 
         Scope global;
+        std::list<Scope> scopes;
         Stmt* treeHead;
 
         std::string & getStr(Str idx) {return stringTbl[idx];}

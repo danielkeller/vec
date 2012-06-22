@@ -176,12 +176,12 @@ bool Type::isTempl()
 
 utl::weak_string Type::ex_w_str()
 {
-    return utl::weak_string(&*expanded.begin(), &*expanded.end());
+    return utl::weak_string(&*expanded.begin(), &*(expanded.end()-1) + 1);
 }
 
 utl::weak_string Type::w_str()
 {
-    return utl::weak_string(&*code.begin(), &*code.end());
+    return utl::weak_string(&*code.begin(), &*(code.end()-1) + 1);
 }
 
 TypeIter TypeIter::operator+(size_t offset)

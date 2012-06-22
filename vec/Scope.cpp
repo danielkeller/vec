@@ -9,7 +9,7 @@ void Scope::addTypeDef(Ident name, TypeDef &td)
 
 TypeDef * Scope::getTypeDef(Ident name)
 {
-    std::map<Ident, TypeDef>::iterator it = typeDefs.find(name);
+    auto it = typeDefs.find(name);
     if (it == typeDefs.end())
     {
         if (parent)
@@ -21,14 +21,14 @@ TypeDef * Scope::getTypeDef(Ident name)
         return &it->second;
 }
 
-void Scope::addVarDef(Ident name, VarDef &tr)
+void Scope::addVarDef(Ident name, DeclExpr* decl)
 {
-    varDefs[name] = tr;
+    varDefs[name] = decl;
 }
 
-VarDef * Scope::getVarDef(Ident name)
+DeclExpr* Scope::getVarDef(Ident name)
 {
-    std::map<Ident, VarDef>::iterator it = varDefs.find(name);
+    auto it = varDefs.find(name);
     if (it == varDefs.end())
     {
         if (parent)
@@ -37,5 +37,5 @@ VarDef * Scope::getVarDef(Ident name)
             return 0;
     }
     else
-        return &it->second;
+        return it->second;
 }

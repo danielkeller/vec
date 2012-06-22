@@ -1,20 +1,16 @@
 
-int:[int argc, {int!8} argv] main =
+int foo = 7;
+
+int:int baz = 
 (
-    argc + 6;
+	int bar = foo + 1;
+
+	if (23 + bar + foo)
+	(
+		float asdf = 7.7;
+	)
 );
 
-`a + -b * `c + d;
-a / (b:c++) / d{foof};
-
-a = 2, x = 
-(
-`a && b;
-if (a = 6)
-2, y : 8*9;
-b
-);
-return x + 6;
 
 //TODO: don't expand types until sema phase.
 //then, recursively expand along with everything else

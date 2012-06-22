@@ -124,6 +124,7 @@ Expr* Parser::parseDeclRHS()
     }
 
     Ident id = to.value.ident_v;
+    DeclExpr* ret;
 
     if (curScope->getVarDef(id))
     {
@@ -131,15 +132,24 @@ Expr* Parser::parseDeclRHS()
         if (!type.isFunc())
             err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
             << '\'' << err::underline;
+
+        return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
     }
-    else
+    else if (type.isFunc())
     {
-        VarDef vd;
-        vd.type = type;
-        curScope->addVarDef(id, vd);
+        //TODO: insert type params into this scope
+        cu->scopes.emplace_back(curScope);
+        curScope = &cu->scopes.back(); //create scope for function args
+        ret = new FuncDeclExpr(id, type, curScope, to.loc);
+    }
+    else //variable
+    {
+        ret = new DeclExpr(id, type, curScope, to.loc);
     }
 
-    //the following is an inconsistency in location tracking, we should have it start at
+    //this is an inconsistency in location tracking, we should have it start at
     //the beginning of the type, but we don't know where that is in this scope
-    return new VarExpr(id, std::move(to.loc));
+
+    curScope->addVarDef(id, ret);
+    return ret;
 }

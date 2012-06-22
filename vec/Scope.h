@@ -8,6 +8,7 @@
 namespace ast
 {
     typedef int Ident;
+    struct DeclExpr;
 
     struct TypeDef
     {
@@ -15,26 +16,24 @@ namespace ast
         typ::Type mapped;
     };
 
-    struct VarDef
-    {
-        typ::Type type;
-    };
-
     class Scope
     {
         std::map<Ident, TypeDef> typeDefs;
-        std::map<Ident, VarDef> varDefs;
+        std::map<Ident, DeclExpr*> varDefs;
         Scope *parent;
 
     public:
         Scope() : parent(0) {};
         Scope(Scope *p) : parent(p) {};
 
+        //insert var def into current scope
+        void addVarDef(Ident name, DeclExpr* decl);
+        //recursively find def in all scope parents
+        DeclExpr* getVarDef(ast::Ident name);
+
+        //likewise
         void addTypeDef(Ident name, TypeDef & td);
         TypeDef * getTypeDef(ast::Ident name);
-
-        void addVarDef(Ident name, VarDef & vd);
-        VarDef * getVarDef(ast::Ident name);
 
         Scope* getParent() {return parent;};
     };

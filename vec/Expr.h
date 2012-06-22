@@ -30,14 +30,37 @@ namespace ast
         const char *myColor() {return "9";};
     };
 
+    struct DeclExpr;
+
     struct VarExpr : public Expr, public AstNode0
     {
-        Ident var;
+        DeclExpr* var; //the variable we belong to
 
-        VarExpr(Ident v, tok::Location &&l) : Expr(l), var(v) {};
+        VarExpr(DeclExpr* v, tok::Location &l) : Expr(l), var(v) {};
         bool isLval() {return true;};
-        std::string myLbl() {return "var: " + utl::to_str(var);}
+        inline std::string myLbl();
         const char *myColor() {return "5";};
+    };
+
+    //could possible have a weak_string of its name?
+    struct DeclExpr : public VarExpr
+    {
+        Scope* owner; //to look up typedefs
+        Ident name; //for errors
+        DeclExpr(Ident n, typ::Type& t, Scope* o, tok::Location &l) : VarExpr(this, l), owner(o), name(n) {type = t;}
+        std::string myLbl() {return std::string(type.w_str()) + " " + utl::to_str(name);}
+    };
+
+    //put this here so it knows what a DeclExpr is
+    std::string VarExpr::myLbl()
+    {
+        return "var " + utl::to_str(var->name);
+    }
+
+    struct FuncDeclExpr : public DeclExpr
+    {
+        Scope* funcScope;
+        FuncDeclExpr(Ident n, typ::Type& t, Scope* s, tok::Location &l) : DeclExpr(n, t, s->getParent(), l), funcScope(s) {}
     };
 
     struct ConstExpr : public Expr, public AstNode0

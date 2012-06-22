@@ -42,15 +42,9 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
         //precidence can be the same if it is right associative
 
         //special case for functions
-        if (op == tok::equals && dynamic_cast<VarExpr*>(lhs))
-        {
-            VarExpr* ve = dynamic_cast<VarExpr*>(lhs);
-            if (ve->type.isFunc())
-            {
-                rhs = new Block(new ExprStmt(rhs), curScope, std::move(rhs->loc)); //wrap in block with function scope created in DeclParser
-                curScope = curScope->getParent(); //pop scope stack
-            }
-        }
+        DeclExpr* de = dynamic_cast<DeclExpr*>(lhs);
+        if (op == tok::equals && de && de->type.isFunc())
+            curScope = curScope->getParent(); //pop scope stack
 
         //reduce
         lhs = makeBinExpr(lhs, rhs, op);
@@ -160,6 +154,7 @@ Expr* Parser::parsePrimaryExpr()
     switch (to.type)
     {
     case tok::identifier:
+    {
         if (curScope->getTypeDef(to.value.ident_v)) //it's a type
             return parseDecl();
         //nope, it's an ID
@@ -168,10 +163,14 @@ Expr* Parser::parsePrimaryExpr()
         {
             err::Error(to.loc) << '\'' << cu->getIdent(to.value.ident_v)
                 << "' is not a type" << err::underline; //we'll show them!
-            to = lexer->Next(); //pretend it's a decl
+            to = lexer->Next(); //ignore.
         }
-        return new VarExpr(to.value.ident_v, std::move(to.loc));
 
+        DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
+        if (decl == 0) //didn't find decl
+            err::Error(to.loc) << "variable '" << cu->getIdent(to.value.ident_v) << "' is undefined" << err::underline;
+        return new VarExpr(decl, to.loc);
+    }
     case tok::integer:
         lexer->Advance();
         return new IntConstExpr(to.value.int_v, to.loc);
