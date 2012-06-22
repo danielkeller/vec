@@ -82,15 +82,6 @@ void Sema::Phase2()
     //replace exprstmts with corresponding basic blocks
     for (auto p : repl)
     {
-        //if it's a function, we need to save the temporary containing the result
-        //the "result" temp is the child of the ExprStmt. Since the value of
-        // a basic block is its last child, append the temp to it.
-        if (dynamic_cast<FunctionDef*>(p.first->parent))
-        {
-            p.second->appendChild(p.first->getChildA());
-            p.first->nullChildA(); //don't delete the temp!
-        }
-
         //attach basic block in place of expression statement
         p.first->parent->replaceChild(p.first, p.second);
 
@@ -187,19 +178,33 @@ void Sema::Phase2()
         BasicBlock* lhs = dynamic_cast<BasicBlock*>(sp->getChildA());
         if (lhs == 0)
             return;
+
         StmtPair* sp2 = dynamic_cast<StmtPair*>(sp->getChildB());
-        if (sp2 == 0)
-            return;
-        BasicBlock* rhs = dynamic_cast<BasicBlock*>(sp2->getChildA());
+        BasicBlock* rhs = dynamic_cast<BasicBlock*>(sp->getChildB());
+
+        if (sp2 != 0) //rhs must be 0, block could be down the right subtree
+            rhs = dynamic_cast<BasicBlock*>(sp2->getChildA());
+
         if (rhs == 0)
-            return;
-        Stmt* other = sp2->getChildB();
-        sp2->nullChildB();
+            return; //no other block
 
         lhs->chld.insert(lhs->chld.end(), rhs->chld.begin(), rhs->chld.end());
         rhs->chld.clear();
-        delete sp2; //also deletes rhs
-
-        sp->setChildB(other); //reattach it
+        
+        if (sp2)
+        {
+            //reattach what's down the tree
+            Stmt* other = sp2->getChildB();
+            sp2->nullChildB();
+            delete sp2; //also deletes rhs
+            sp->setChildB(other); //reattach it
+        }
+        else
+        {
+            //only one stmt, don't need stmt pair
+            sp->parent->replaceChild(sp, lhs);
+            sp->nullChildA();
+            delete sp;
+        }
     });
 }
