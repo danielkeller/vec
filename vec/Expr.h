@@ -16,8 +16,8 @@ namespace ast
         typ::Type type;
         virtual bool isLval() {return false;};
         //Expr() = default;
-        Expr(tok::Location &&l) : AstNodeB(l) {};
-        Expr(tok::Location &l) : AstNodeB(l) {};
+        //Expr(tok::Location &&l) : AstNodeB(l) {};
+        Expr(tok::Location const &l) : AstNodeB(l) {};
         const char *myColor() {return "4";};
     };
 
@@ -35,7 +35,7 @@ namespace ast
     {
         DeclExpr* var; //the variable we belong to
 
-        VarExpr(DeclExpr* v, tok::Location &l) : Expr(l), var(v) {};
+        VarExpr(DeclExpr* v, tok::Location const &l) : Expr(l), var(v) {};
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
@@ -46,7 +46,7 @@ namespace ast
     {
         Scope* owner; //to look up typedefs
         Ident name; //for errors
-        DeclExpr(Ident n, typ::Type& t, Scope* o, tok::Location &l) : VarExpr(this, l), owner(o), name(n) {type = t;}
+        DeclExpr(Ident n, typ::Type const &t, Scope* o, tok::Location const &l) : VarExpr(this, l), owner(o), name(n) {type = t;}
         std::string myLbl() {return std::string(type.w_str()) + " " + utl::to_str(name);}
     };
 

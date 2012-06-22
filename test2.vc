@@ -3,7 +3,7 @@ int foo = 7;
 
 int:int baz = 
 (
-	float:[int x] qwer = x * 7.3;
+	float:int qwer = arg * 7.3;
 
 	int bar = foo + 1;
 

@@ -22,8 +22,8 @@ namespace ast
     public:
         CompUnit();
 
-        Str addString(std::string &str);
-        Ident addIdent(std::string &str);
+        Str addString(const std::string &str);
+        Ident addIdent(const std::string &str);
 
         Scope global;
         std::list<Scope> scopes;
@@ -31,6 +31,13 @@ namespace ast
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}
+
+        //reserved identifiers. like keywords, but handled as identifiers
+        //for ease of parsing. the struct is syntactic sugar
+        struct
+        {
+            Ident arg;
+        } reserved;
     };
 }
 

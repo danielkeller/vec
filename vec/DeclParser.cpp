@@ -140,16 +140,22 @@ Expr* Parser::parseDeclRHS()
         //TODO: insert type params into this scope
         cu->scopes.emplace_back(curScope);
         curScope = &cu->scopes.back(); //create scope for function args
+
+        //leave the decl expr hanging, it will get attached later
+        curScope->addVarDef(cu->reserved.arg,
+            new DeclExpr(cu->reserved.arg, type.begin(true), curScope, to.loc));
+
         ret = new FuncDeclExpr(id, type, curScope, to.loc);
+        curScope->parent->addVarDef(id, ret);
     }
     else //variable
     {
         ret = new DeclExpr(id, type, curScope, to.loc);
+        curScope->addVarDef(id, ret);
     }
 
     //this is an inconsistency in location tracking, we should have it start at
     //the beginning of the type, but we don't know where that is in this scope
 
-    curScope->addVarDef(id, ret);
     return ret;
 }

@@ -34,7 +34,7 @@ namespace ast
     public:
         tok::Location loc; //might not be set
         AstNodeB *parent;
-        AstNodeB(tok::Location &l) : loc(l), parent(0) {};
+        AstNodeB(tok::Location const &l) : loc(l), parent(0) {};
         AstNodeB() : parent(0) {};
         virtual ~AstNodeB() {};
         virtual void eachChild(sa::AstWalker0*) = 0;

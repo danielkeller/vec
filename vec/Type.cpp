@@ -67,7 +67,7 @@ Type::Type()
     : code(""), expanded("")
 {}
 
-Type::Type(TypeIter &ti)
+Type::Type(TypeIter const &ti)
 {
     code.assign(ti.pos, endOfType(ti.pos, false));
 }

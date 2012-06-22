@@ -44,16 +44,22 @@ void Sema::Phase1()
             return; //can't deal with it
         }
 
+        Stmt* conts = new ExprStmt(ae->getChildB());
+
+        //add decl exprs generated earlier to the AST
+        for (auto it : fde->funcScope->varDefs)
+        {
+            conts = new StmtPair(new ExprStmt(it.second), conts);
+        }
+
         //create and insert function definition
-        es->parent->replaceChild(es,
-            new FunctionDef(fde,
-                new ExprStmt(ae->getChildB())
-            )
-        );
+        es->parent->replaceChild(es, new FunctionDef(fde, conts));
 
         ae->nullChildA();
         ae->nullChildB();
         delete es; //delete expr stmt and assign expr
+
+        validateTree();
     });
 
     //do this after types in case of ref types

@@ -28,7 +28,7 @@ namespace typ
     {
     public:
         Type();
-        Type(TypeIter &ti);
+        Type(TypeIter const &ti);
         utl::weak_string w_str();
         utl::weak_string ex_w_str();
         bool isFunc();

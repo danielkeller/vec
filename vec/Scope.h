@@ -18,11 +18,12 @@ namespace ast
 
     class Scope
     {
+    public: //maybe find a better way?
+
         std::map<Ident, TypeDef> typeDefs;
         std::map<Ident, DeclExpr*> varDefs;
         Scope *parent;
 
-    public:
         Scope() : parent(0) {};
         Scope(Scope *p) : parent(p) {};
 

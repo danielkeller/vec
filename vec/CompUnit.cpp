@@ -5,7 +5,7 @@
 
 using namespace ast;
 
-Str CompUnit::addString(std::string &str)
+Str CompUnit::addString(const std::string &str)
 {
     TblType::iterator it = std::find(stringTbl.begin(), stringTbl.end(), str);
     Str ret = it - stringTbl.begin();
@@ -14,7 +14,7 @@ Str CompUnit::addString(std::string &str)
     return ret;
 }
 
-Ident CompUnit::addIdent(std::string &str)
+Ident CompUnit::addIdent(const std::string &str)
 {
     TblType::iterator it = std::find(identTbl.begin(), identTbl.end(), str);
     Ident ret = it - identTbl.begin();
@@ -25,4 +25,6 @@ Ident CompUnit::addIdent(std::string &str)
 
 CompUnit::CompUnit()
 {
+    //add reserved identifiers
+    reserved.arg = addIdent("arg");
 }
