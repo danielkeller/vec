@@ -1,13 +1,15 @@
 
 int foo = 7;
 
+float:int baf = 7.7;
+
 int:int baz = 
 (
-	float:int qwer = arg * 7.3;
+	float:int qwer = baf:arg;
 
-	int bar = foo + 1;
+	int bar = foo;
 
-	if (23 + bar + foo)
+	if (baz:foo)
 	(
 		float asdf = 7.7;
 	)
