@@ -2,7 +2,8 @@
 #define TYPE_H
 
 #include <string>
-#include <vector>
+#include <list>
+#include <map>
 #include "Token.h"
 
 namespace utl
@@ -17,45 +18,217 @@ namespace ast
 namespace par
 {
     class Parser;
-    class TypeListParser;
+    class TupleContsParser;
 }
 
 namespace typ
 {
     class TypeIter;
 
+    struct TypeNodeB;
+
+    class FuncType;
+    class ListType;
+    class TupleType;
+    class RefType;
+    class NamedType;
+    class ParamType;
+    class PrimitiveType;
+
     class Type
     {
+    protected:
+        TypeNodeB* node;
+        operator TypeNodeB*() {return node;}
+
     public:
         Type();
         Type(TypeIter const &ti);
-        utl::weak_string w_str();
-        utl::weak_string ex_w_str();
-        bool isFunc();
-        bool isTempl();
+        Type(TypeNodeB& n) : node(&n) {}
+        Type(TypeNodeB* n) : node(n) {}
 
-        void expand(ast::Scope *s);
+        TypeIter begin();
 
-        void clear() {code.clear(); expanded.clear();};
+        int compare(Type& other);
+        bool operator==(const Type& other) const {return node == other.node;}
 
-        TypeIter begin(bool arg = false);
-        TypeIter end(bool arg = false);
-        //iterators to expanded type
-        TypeIter exbegin(bool arg = false);
-        TypeIter exend(bool arg = false);
+        //factory functions for derived types
+        FuncType getFunc();
+        ListType getList();
+        TupleType getTuple();
+        RefType getRef();
+        NamedType getNamed();
+        ParamType getParam();
+        PrimitiveType getPrimitive();
 
-    private:
-        std::string code; //string representation of type - "nominative" type
-        std::string expanded; //with all named types inserted - "actual" type
-
-        friend class par::TypeListParser;
-        friend class par::Parser;
+        friend class TypeManager;
     };
 
+    struct FuncNode;
+    struct ListNode;
+    struct TupleNode;
+    struct RefNode;
+    struct NamedNode;
+    struct ParamNode;
+    struct PrimitiveNode;
+
+    //horrible copy-paste coding, but with templates we can't preserve encapsulation
+    class FuncType : public Type
+    {
+        FuncNode* und_node;
+    public:
+        Type arg();
+        Type ret();
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class ListType : public Type
+    {
+        ListNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class TupleType : public Type
+    {
+        TupleNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class RefType : public Type
+    {
+        RefNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class NamedType : public Type
+    {
+        NamedNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class ParamType : public Type
+    {
+        ParamNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    class PrimitiveType : public Type
+    {
+        PrimitiveNode* und_node;
+    public:
+        bool isValid() {return und_node != 0;}
+        friend class Type;
+    };
+
+    extern Type int8;
+    extern Type int16;
+    extern Type int32;
+    extern Type int64;
+
+    extern Type float16;
+    extern Type float32;
+    extern Type float64;
+    extern Type float80;
+
+    extern Type any;
+    extern Type null;
+
+    class TypeManager
+    {
+        std::list<TypeNodeB*> nodes;
+        std::list<std::pair<TypeNodeB*, ast::Ident>> tupleConts;
+        std::map<ast::Ident, TypeNodeB*> namedConts;
+
+        //either add n to the list of known nodes
+        //or delete n and return an identical node from the list
+        TypeNodeB* unique(TypeNodeB* n);
+
+    public:
+        ~TypeManager();
+
+        Type makeList(Type conts, int length = 0);
+        Type makeRef(Type conts);
+        Type makeParam(ast::Ident name);
+        Type makeFunc(Type ret, Type arg);
+        
+        void addNamedArg(ast::Ident name, Type t) {namedConts[name] = t;}
+        void clearNamedArgs() {namedConts.clear();} //if there was an error
+        Type finishNamed(Type conts, ast::Ident name);
+
+        void addToTuple(Type elem, ast::Ident name) {tupleConts.emplace_back(elem.node, name);}
+        void clearTuple() {tupleConts.clear();} //if there was an error
+        Type finishTuple();
+
+        //these functions aren't really part of the public interface but its simper to make them public
+
+        //creates a new type with params repaced by the specified types
+        Type substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs);
+        //performs a deep copy, keeping everything unique and subbing in params
+        TypeNodeB* clone(TypeNodeB* n);
+    };
+
+    //result of comparison saying how "close" two types are
+    //if they are entirely different the score is -1
+    class TypeCompareResult
+    {
+        int score;
+        TypeCompareResult(int s) : score(s) {}
+
+    public:
+        TypeCompareResult(bool valid) {score = valid ? 0 : -1;}
+        operator bool() {return score != -1;}
+
+        TypeCompareResult& operator+=(int diff)
+        {
+            if (*this)
+                score += diff;
+            return *this;
+        }
+
+        TypeCompareResult operator+(int diff)
+        {
+            return TypeCompareResult(*this) += diff;
+        }
+
+        TypeCompareResult& operator+= (TypeCompareResult& other)
+        {
+            if (other)
+                operator+=(other.score);
+            else
+                *this = invalid;
+            return *this;
+        }
+
+        TypeCompareResult operator+ (TypeCompareResult other)
+        {
+            return TypeCompareResult(*this) += other;
+        }
+
+        //invalid if either are -1
+        bool operator< (TypeCompareResult& other) {return score < other.score;}
+
+        bool operator== (TypeCompareResult& other) {return score == other.score;}
+        bool operator!= (TypeCompareResult& other) {return !(*this == other);}
+
+        static TypeCompareResult valid;
+        static TypeCompareResult invalid;
+    };
+
+    /*
     class TypeIter
     {
-        std::string::iterator pos;
-        TypeIter(std::string::iterator init) : pos(init) {};
+        TypeNode* node;
 
     public:
         //repeatedly calling ++ will depth first search the type
@@ -79,28 +252,7 @@ namespace typ
         utl::weak_string w_str();
 
         friend class Type;
-    };
-
-    namespace cod
-    {
-        static const char list = 'L';
-        static const char tuple = 'T';
-        static const char tupname = 'v'; //name of variable for struct-style access
-        static const char dim = 'd'; //dimension of list
-        static const char arg = 'A';
-        static const char integer = 'I';
-        static const char floating = 'F';
-        static const char ref = 'R';
-        static const char named = 'N';
-        static const char any = 'Y';
-        static const char param = 'P';
-        static const char function = 'U';
-
-        inline char endOf(const char begin)
-        {
-            return begin - 'A' + 'a'; //ie lowercase version
-        }
-    }
+    };*/
 }
 
 #endif

@@ -25,16 +25,6 @@ bool isIdent(tok::Token &t)
 {
     return t == tok::identifier;
 }
-class TypeDeclParamParser
-{
-    TypeDef *td;
-public:
-    TypeDeclParamParser(TypeDef *d) : td(d) {}
-    void operator()(lex::Lexer *l)
-    {
-        td->params.push_back(l->Next().value.ident_v);
-    }
-};
 }
 
 /*
@@ -70,8 +60,10 @@ void Parser::parseTypeDecl()
     {
         if (lexer->Expect(tok::lparen)) //list
         {
-            TypeDeclParamParser tdp(&td);
-            par::parseListOf(lexer, isIdent, tdp, tok::rparen, "identifiers");
+            par::parseListOf(lexer, isIdent, tok::rparen, "identifiers", [this, &td] ()
+            {
+                td.params.push_back(lexer->Next().value.ident_v);
+            });
         }
         else if (lexer->Peek() == tok::identifier) //single
             td.params.push_back(lexer->Next().value.ident_v);
@@ -129,13 +121,13 @@ Expr* Parser::parseDeclRHS()
     if (curScope->getVarDef(id))
     {
         //variables cannot be defined twice
-        if (!type.isFunc())
+        if (!type.getFunc().isValid())
             err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
             << '\'' << err::underline;
 
         return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
     }
-    else if (type.isFunc())
+    else if (type.getFunc().isValid())
     {
         //TODO: insert type params into this scope
         cu->scopes.emplace_back(curScope);
@@ -143,7 +135,7 @@ Expr* Parser::parseDeclRHS()
 
         //leave the decl expr hanging, it will get attached later
         curScope->addVarDef(cu->reserved.arg,
-            new DeclExpr(cu->reserved.arg, type.begin(true), curScope, to.loc));
+            new DeclExpr(cu->reserved.arg, type.getFunc().arg(), curScope, to.loc));
 
         ret = new FuncDeclExpr(id, type, curScope, to.loc);
         curScope->parent->addVarDef(id, ret);

@@ -30,15 +30,19 @@ bool par::couldBeType(tok::Token &t)
     }
 }
 
+/*
+type
+    : single-type
+    | ':' single-type
+    | single-type ':' single-type
+    ;
+*/
 void Parser::parseType()
 {
-    type.clear(); //reset type
-
     if (lexer->Expect(tok::colon)) //void function?
     {
-        type.code += cod::any;
-        type.code += cod::function;
         parseSingle();
+        type = cu->tm.makeFunc(typ::null, type);
         return;
     }
 
@@ -50,22 +54,22 @@ void Parser::parseTypeEnd()
 {
     if (lexer->Expect(tok::colon)) //function?
     {
-        type.code += cod::function;
+        Type ret = type;
         parseSingle();
+        type = cu->tm.makeFunc(ret, type);
     }
 }
 
 /*
-type
+single-type
     : '{' type '}'
     | '[' type-list ']'
-    | 'int' | 'float'
+    | ('int' | 'float') ('!' int-const)?
     | '?' | '?' IDENT
     | '@' type
-    | IDENT
+    | IDENT | IDENT '!' type | IDENT '!' '(' type-list ')'
     ;
 */
-
 void Parser::parseSingle()
 {
     tok::Token to = lexer->Peek();
@@ -102,36 +106,35 @@ void Parser::parseSingle()
     }
 }
 
-namespace par
-{
-    class TypeListParser
-    {
-        Parser *tp;
-    public:
-        int num;
-        TypeListParser(Parser *t) : tp(t), num(0) {}
-        void operator()(lex::Lexer *lexer)
-        {
-            ++num;
-            tp->parseSingle();
-            if (lexer->Peek() == tok::identifier)
-            {
-                tp->type.code += cod::tupname;
-                tp->parseIdent();
-            }
-        }
-    };
-}
-
+/*
+type-list
+    : type
+    | type-list ',' type
+    ;
+*/
 void Parser::parseTypeList()
 {
-    TypeListParser tlp(this);
-    par::parseListOf(lexer, couldBeType, tlp, tupleEnd, "types");
+    int num;
+    par::parseListOf(lexer, couldBeType, tupleEnd, "types", [this, &num] ()
+    {
+        ++num;
+        parseSingle();
+        if (lexer->Peek() == tok::identifier)
+        {
+            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
+        }
+        else
+            cu->tm.addToTuple(type, cu->reserved.null);
+    });
 }
 
+/*
+single-type
+    : '{' type '}'
+    ;
+*/
 void Parser::parseList()
 {
-    type.code += cod::list;
     lexer->Advance();
     parseSingle();
     parseListEnd();
@@ -147,17 +150,25 @@ void Parser::parseListEnd()
         tok::Token to;
         if (lexer->Expect(tok::integer, to))
         {
-            type.code += cod::dim + utl::to_str(to.value.int_v);
+            type = cu->tm.makeList(type, to.value.ident_v);
         }
         else
+        {
             err::ExpectedAfter(lexer, "list length", "'!'");
+            type = cu->tm.makeList(type);
+        }
     }
-    type.code += cod::endOf(cod::list);
+    else
+        type = cu->tm.makeList(type);
 }
 
+/*
+single-type
+    : '[' type-list ']'
+    ;
+*/
 void Parser::parseTuple()
 {
-    type.code += cod::tuple;
     lexer->Advance();
     parseTypeList();
     parseTupleEnd();
@@ -165,80 +176,150 @@ void Parser::parseTuple()
 
 void Parser::parseTupleEnd()
 {
+    type = cu->tm.finishTuple();
     //don't need to check for ], parseTypeList does that
-    type.code += cod::endOf(cod::tuple);
 }
 
+/*
+single-type
+    : ('int' | 'float') ('!' int-const)?
+    ;
+*/
 void Parser::parsePrim()
 {
-    char c;
-
     if (lexer->Next() == tok::k_int)
-        c = cod::integer;
-    else 
-        c = cod::floating;
-
-    int width = 32;
-
-    if (lexer->Expect(tok::bang))
     {
-        tok::Token to;
-        if (lexer->Expect(tok::integer, to))
+        if (!lexer->Expect(tok::bang))
         {
-            width = (int)to.value.int_v;
-
-            if (c == cod::integer)
-            {
-                if (width != 8 && width != 16 && width != 32 && width != 64)
-                {
-                    err::Error(to.loc) << '\'' << width << "' is not a valid integer width" << err::caret;
-                    width = 32;
-                }
-            }
-            else
-            {
-                if (width != 16 && width != 32 && width != 64 && width != 80)
-                {
-                    err::Error(to.loc) << '\'' << width << "' is not a valid floating point width" << err::caret;
-                    width = 32;
-                }
-            }
+            type = typ::int32;
+            return;
         }
-        else
-            err::ExpectedAfter(lexer, "numeric width", "'!'");
-    }
 
-    type.code += c + utl::to_str(width) + cod::endOf(c);
+        tok::Token to;
+        if (!lexer->Expect(tok::integer, to))
+        {
+            err::ExpectedAfter(lexer, "numeric width", "'!'");
+            type = typ::int32;
+            return;
+        }
+
+        switch (to.value.int_v)
+        {
+        case 8:
+            type = typ::int8;
+            break;
+        case 16:
+            type = typ::int16;
+            break;
+        case 32:
+            type = typ::int32;
+            break;
+        case 64:
+            type = typ::int64;
+            break;
+        default:
+            err::Error(to.loc) << '\'' << to.value.int_v << "' is not a valid integer width"
+                << err::underline;
+            type = typ::int32;
+            break;
+        }
+    }
+    else 
+    {
+        if (!lexer->Expect(tok::bang))
+        {
+            type = typ::float32;
+            return;
+        }
+
+        tok::Token to;
+        if (!lexer->Expect(tok::integer, to))
+        {
+            err::ExpectedAfter(lexer, "numeric width", "'!'");
+            type = typ::float32;
+            return;
+        }
+
+        switch (to.value.int_v)
+        {
+           case 16:
+                type = typ::float16;
+                break;
+            case 32:
+                type = typ::float32;
+                break;
+            case 64:
+                type = typ::float64;
+                break;
+            case 80:
+                type = typ::float80;
+                break;
+            default:
+                err::Error(to.loc) << '\'' << to.value.int_v << "' is not a valid floating point width"
+                    << err::underline;
+                type = typ::float32;
+                break;
+        }
+    }
 }
 
+/*
+single-type
+    : '@' type
+    ;
+*/
 void Parser::parseRef()
 {
-    type.code += cod::ref;
     lexer->Advance();
     parseSingle();
-    type.code += cod::endOf(cod::ref);
+    type = cu->tm.makeRef(type);
 }
 
+/*
+single-type
+    : IDENT
+    | IDENT '!' type
+    | IDENT '!' '(' type-list ')'
+    ;
+*/
 void Parser::parseNamed()
 {
-    ast::TypeDef * td = curScope->getTypeDef(lexer->Peek().value.ident_v);
+    tok::Token& to = lexer->Next();
+    ast::Ident typeName = to.value.ident_v;
+    ast::TypeDef * td = curScope->getTypeDef(typeName);
 
     if (!td)
     {
-        err::Error(lexer->Peek().loc) << "undefined type '"
-            << lexer->getCompUnit()->getIdent(lexer->Peek().value.ident_v) << '\'' << err::underline;
-        type.code += cod::integer + cod::endOf(cod::integer); //recover
-        lexer->Advance(); //don't parse it twice
+        err::Error(to.loc) << "undefined type '"
+            << lexer->getCompUnit()->getIdent(typeName) << '\'' << err::underline;
+        type = typ::int32; //recover
+        return;
     }
-    else
-    {
-        type.code += cod::named;
-        parseIdent();
-    }
-    
+
     tok::Location argsLoc = lexer->Peek().loc;
 
-    size_t nargs = checkArgs();
+    size_t nargs = 0;
+
+    if (lexer->Expect(tok::bang))
+    {
+        if (lexer->Expect(tok::lparen))
+        {
+            par::parseListOf(lexer, couldBeType, tok::rparen, "types", [&] ()
+            {
+                parseSingle();
+                if (nargs < td->params.size()) //otherwise, error
+                    cu->tm.addNamedArg(td->params[nargs], type);
+                ++nargs; //keep incrementing, we can detect the error that way
+            });
+        }
+        else
+        {
+            parseSingle();
+            if (td->params.size() == 1) //otherwise, error
+                cu->tm.addNamedArg(td->params[0], type);
+            nargs = 1;
+        }
+    }
 
     argsLoc = argsLoc + lexer->Last().loc;
 
@@ -246,47 +327,26 @@ void Parser::parseNamed()
         err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline;
 
-    type.code += cod::endOf(cod::named);
+    //recover as best we can. also do "aliasing" (ie replacing ?T with ? when not spec'd) here.
+    while (nargs < td->params.size())
+        cu->tm.addNamedArg(td->params[nargs++], typ::any);
+
+    type = cu->tm.finishNamed(td->mapped, typeName);
 }
 
+/*
+single-type
+    : '?'
+    | '?' IDENT
+    ;
+*/
 void Parser::parseParam()
 {
     lexer->Advance();
     if (lexer->Peek() == tok::identifier)
     {
-        type.code += cod::param;
-        parseIdent();
-        type.code += cod::endOf(cod::param);
+        type = cu->tm.makeParam(lexer->Next().value.ident_v);
     }
     else
-        type.code += cod::any + cod::endOf(cod::any);
-}
-
-size_t Parser::checkArgs()
-{
-    if (lexer->Expect(tok::bang))
-    {
-        type.code += cod::arg;
-        if (lexer->Expect(tok::lparen))
-        {
-            TypeListParser tlp(this);
-            par::parseListOf(lexer, couldBeType, tlp, tok::rparen, "types");
-            type.code += cod::endOf(cod::arg);
-
-            return tlp.num;
-        }
-        else
-        {
-            parseSingle();
-            type.code += cod::endOf(cod::arg);
-            
-            return 1;
-        }
-    }
-    return 0;
-}
-
-void Parser::parseIdent()
-{
-    type.code += utl::to_str(lexer->Next().value.int_v);
+        type = typ::any;
 }

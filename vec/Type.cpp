@@ -4,261 +4,476 @@
 #include "CompUnit.h"
 #include "Parser.h"
 
-#include <cstdlib>
+#include <list>
+#include <algorithm>
 
 using namespace par;
 using namespace typ;
 
-namespace
+namespace typ
 {
-    int readNum(std::string::iterator &it)
+
+TypeCompareResult TypeCompareResult::valid(true);
+TypeCompareResult TypeCompareResult::invalid(false);
+    
+struct TypeNodeB
+{
+    //standard fuzzy type comparison
+    virtual TypeCompareResult compare (TypeNodeB* other) = 0;
+
+    //exact comparison with param substitution used when inserting
+    virtual bool insertCompare (TypeNodeB* toAdd) = 0;
+
+    virtual TypeNodeB* clone(TypeManager*) = 0;
+
+    virtual ~TypeNodeB() {};
+};
+
+template <class T>
+struct TypeNode : public TypeNodeB
+{
+    TypeCompareResult compare (TypeNodeB* other);
+    bool insertCompare (TypeNodeB* toAdd);
+};
+
+//CRTP FTW
+struct FuncNode : public TypeNode<FuncNode>
+{
+    TypeNodeB *ret, *arg;
+    TypeCompareResult compareTo(FuncNode* other);
+    bool insertCompareTo(FuncNode* other);
+    TypeNodeB* clone(TypeManager*);
+};
+
+struct ListNode : public TypeNode<ListNode>
+{
+    int length;
+    TypeNodeB* contents;
+    TypeCompareResult compareTo(ListNode* other);
+    bool insertCompareTo(ListNode* other);
+    TypeNodeB* clone(TypeManager*);
+};
+
+struct TupleNode : public TypeNode<TupleNode>
+{
+    std::list<std::pair<TypeNodeB*, ast::Ident>> conts;
+    TypeCompareResult compareTo(TupleNode* other);
+    bool insertCompareTo(TupleNode* other);
+    TypeNodeB* clone(TypeManager*);
+};
+
+struct RefNode : public TypeNode<RefNode>
+{
+    TypeNodeB* contents;
+    TypeCompareResult compareTo(RefNode* other);
+    bool insertCompareTo(RefNode* other);
+    TypeNodeB* clone(TypeManager*);
+};
+
+//this represents the USE of a named type
+struct NamedNode : public TypeNode<NamedNode>
+{
+    //the real type with all args subbed in. what it "really is."
+    TypeNodeB* type;
+    ast::Ident name;
+    //all of the args to the typedef
+    std::map<ast::Ident, TypeNodeB*> args;
+    TypeCompareResult compareTo(NamedNode*);
+    bool insertCompareTo(NamedNode* other);
+    TypeNodeB* clone(TypeManager*);
+};
+
+struct ParamNode : public TypeNode<ParamNode>
+{
+    ast::Ident name;
+    TypeNodeB* sub; //the type this temporarily represents while substituting
+    TypeCompareResult compareTo(ParamNode* other);
+    bool insertCompareTo(ParamNode* other);
+    TypeNodeB* clone(TypeManager*);
+    ParamNode() : sub(0) {}
+};
+
+struct PrimitiveNode : public TypeNode<PrimitiveNode>
+{
+    const char * name;
+    PrimitiveNode(const char * n) : name(n) {}
+    TypeCompareResult compareTo(PrimitiveNode* other) {return this == other;}
+    bool insertCompareTo(PrimitiveNode* other) {return this == other;}
+    TypeNodeB* clone(TypeManager*) {return this;}
+};
+
+//get a version of this with temporary param subs
+//return true if it did something
+bool sub(TypeNodeB*& node)
+{
+    ParamNode* pn = dynamic_cast<ParamNode*>(node);
+    if (pn && pn->sub)
     {
-        char *end;
-        int ret = strtol(&*it, &end, 10);
-        it += (end - &*it);
-        return ret;
+        node = pn->sub;
+        return true;
     }
-
-    std::string::iterator endOfType(std::string::iterator it, bool skipName = true)
-    {
-        char begin = *it;
-        char end = cod::endOf(*it);
-        int lvl = 1;
-        ++it;
-        while (lvl > 0)
-        {
-            if (*it == begin)
-                ++lvl;
-            else if (*it == end)
-                --lvl;
-            ++it;
-        }
-
-        if (skipName && *it == cod::tupname) //special case
-            readNum(++it);
-
-        return it;
-    }
-
-    std::string readType(std::string::iterator &it)
-    {
-        std::string::iterator start = it;
-        it = endOfType(it);
-        return std::string(start, it);
-    }
-
-    std::pair<int, int> readNumAndOwner(std::string::iterator &it)
-    {
-        char *end;
-
-        int alias = strtol(&*it, &end, 10);
-        it += (end - &*it);
-
-        return std::make_pair(alias & 0xFFFF, (alias >> 16) - 1);
-    }
-
-    inline bool isType(char c)
-    {
-        return c >= 'A' && c <= 'Z';
-    }
+    else
+        return false;
 }
+
+//also strip names
+TypeCompareResult dename(TypeNodeB*& node)
+{
+    if (NamedNode* realNode = dynamic_cast<NamedNode*>(node))
+    {
+        node = realNode->type;
+        return TypeCompareResult::valid + 1;
+    }
+    return TypeCompareResult::valid;
+}
+
+template<class T>
+TypeCompareResult TypeNode<T>::compare (TypeNodeB* other)
+{
+    if (this == other) //early out!
+        return TypeCompareResult::valid;
+        
+    TypeNodeB* realThis = this;
+        
+    //only call compare again if either function did something, otherwise fall through
+    TypeCompareResult penalty = dename(realThis) + dename(other);
+    if (penalty != TypeCompareResult::valid)
+        return realThis->compare(other) + penalty;
+
+    if (T* otherT = dynamic_cast<T*>(other)) //see if it's one of us
+        return static_cast<T*>(this)->compareTo(otherT); //keep comparing
+    else
+        return TypeCompareResult::invalid;
+}
+
+template<class T>
+bool TypeNode<T>::insertCompare (TypeNodeB* toAdd)
+{
+    //only call compare again if either function did something, otherwise fall through
+    //only sub in toAdd because we don't want to mess with this
+    //sub before doing equality comparison otherwise params will not work
+    if (sub(toAdd))
+        return insertCompare(toAdd);
+
+    //don't early out
+    //name expand both?? i'm not sure
+    //only call compare again if either function did something, otherwise fall through
+    TypeNodeB* realThis = this;
+    //TypeCompareResult penalty = dename(realThis) + dename(toAdd);
+    //if (penalty != TypeCompareResult::valid)
+    //    return realThis->compare(toAdd);
+
+    if (T* toAddT = dynamic_cast<T*>(toAdd)) //see if it's one of us
+        return static_cast<T*>(realThis)->insertCompareTo(toAddT); //keep comparing
+    else
+        return false;
+}
+
+TypeCompareResult FuncNode::compareTo(FuncNode* other)
+{
+    return ret->compare(other->ret) + arg->compare(other->arg);
+}
+
+bool FuncNode::insertCompareTo(FuncNode* other)
+{
+    return ret->insertCompare(other->ret) && arg->insertCompare(other->arg);
+}
+
+TypeNodeB* FuncNode::clone(TypeManager* mgr)
+{
+    FuncNode* copy = new FuncNode();
+    copy->ret = mgr->clone(ret);
+    copy->arg = mgr->clone(arg);
+    return copy;
+}
+
+TypeCompareResult ListNode::compareTo(ListNode* other)
+{
+    return contents->compare(other);
+}
+
+bool ListNode::insertCompareTo(ListNode* other)
+{
+    return contents->insertCompare(other->contents);
+}
+
+TypeNodeB* ListNode::clone(TypeManager* mgr)
+{
+    ListNode* copy = new ListNode(*this);
+    copy->contents = mgr->clone(contents);
+    return copy;
+}
+
+TypeCompareResult TupleNode::compareTo(TupleNode* other)
+{
+    if (other->conts.size() != conts.size())
+        return TypeCompareResult::invalid;
+
+    TypeCompareResult ret = TypeCompareResult::valid;
+    auto myit = conts.begin();
+    auto otherit = other->conts.begin();
+    for (; myit != conts.end(); ++myit, ++otherit) //only need to check one
+    {
+        if (myit->second != otherit->second)
+            ret += 1; //this is a de-naming, i guess?
+        ret += myit->first->compare(otherit->first);
+    }
+    return ret;
+}
+
+bool TupleNode::insertCompareTo(TupleNode* other)
+{
+    if (other->conts.size() != conts.size())
+        return false;
+
+    auto myit = conts.begin();
+    auto otherit = other->conts.begin();
+    for (; myit != conts.end(); ++myit, ++otherit) //only need to check one
+    {
+        if (myit->second != otherit->second)
+            return false;
+        if (!myit->first->insertCompare(otherit->first))
+            return false;
+    }
+    return true;
+}
+
+TypeNodeB* TupleNode::clone(TypeManager* mgr)
+{
+    TupleNode* copy = new TupleNode();
+    for (auto t : conts)
+        copy->conts.emplace_back(mgr->clone(t.first), t.second);
+    return copy;
+}
+
+TypeCompareResult RefNode::compareTo(RefNode* other)
+{
+    return contents->compare(other);
+}
+
+bool RefNode::insertCompareTo(RefNode* other)
+{
+    return contents->compare(other);
+}
+
+TypeNodeB* RefNode::clone(TypeManager* mgr)
+{
+    RefNode* copy = new RefNode();
+    copy->contents = mgr->clone(contents);
+    return copy;
+}
+
+TypeCompareResult NamedNode::compareTo(NamedNode* other)
+{
+    return insertCompareTo(other); //dummy
+}
+
+bool NamedNode::insertCompareTo(NamedNode* other)
+{
+    //don't bother doing fuzzy compares, it's only used in insertcompares
+    return name == other->name
+            && type == other->type
+            && args.size() == other->args.size()
+            && std::equal(args.begin(), args.end(), other->args.begin());
+}
+
+TypeNodeB* NamedNode::clone(TypeManager* mgr)
+{
+    NamedNode* copy = new NamedNode();
+    for (auto t : args)
+        copy->args[t.first] = mgr->clone(t.second);
+    copy->name = name;
+    copy->type = mgr->clone(type);
+    return copy;
+}
+
+TypeCompareResult ParamNode::compareTo(ParamNode* other)
+{
+    return name == other->name;
+}
+
+bool ParamNode::insertCompareTo(ParamNode* other)
+{
+    return name == other->name;
+}
+
+TypeNodeB* ParamNode::clone(TypeManager*)
+{
+    assert(sub && "sub should be set here");
+    return sub;
+}
+
+//get the node of this type (if it is that type) behind any typedefs
+//this is used to construct type category specific Type subclasses
+template<class T>
+T* underlying_node(TypeNodeB* curNode)
+{
+    NamedNode* nn;
+    //iterate past all named nodes
+    while ((nn = dynamic_cast<NamedNode*>(curNode)) != 0)
+    {
+        curNode = nn->type;
+    }
+    //cast to desired type
+    return dynamic_cast<T*>(curNode);
+}
+
+PrimitiveNode nint8("int!8");
+PrimitiveNode nint16("int!16");
+PrimitiveNode nint32("int!32");
+PrimitiveNode nint64("int!64");
+    
+PrimitiveNode nfloat16("float!16");
+PrimitiveNode nfloat32("float!32");
+PrimitiveNode nfloat64("float!64");
+PrimitiveNode nfloat80("float!80");
+
+PrimitiveNode nany("?");
+PrimitiveNode nnull("void");
+
+Type int8(nint8);
+Type int16(nint16);
+Type int32(nint32);
+Type int64(nint64);
+
+Type float16(nfloat16);
+Type float32(nfloat32);
+Type float64(nfloat64);
+Type float80(nfloat80);
+
+Type any(nany);
+Type null(nnull);
 
 Type::Type()
-    : code(""), expanded("")
+    : node(&nnull)
 {}
 
-Type::Type(TypeIter const &ti)
+int Type::compare(Type& other)
 {
-    code.assign(ti.pos, endOfType(ti.pos, false));
+    return node->compare(other.node);
 }
 
-void Type::expand(ast::Scope *s)
+//make our lives a little easer with a macro
+#define ListSubGetter(T) \
+T ## Type Type::get ## T() \
+{ \
+    T ## Type ret; \
+    ret.und_node = underlying_node<T ## Node>(node); \
+    return ret; \
+}
+
+ListSubGetter(Func);
+ListSubGetter(List);
+ListSubGetter(Tuple);
+ListSubGetter(Ref);
+ListSubGetter(Named);
+ListSubGetter(Param);
+ListSubGetter(Primitive);
+
+Type FuncType::arg() {return und_node->arg;}
+Type FuncType::ret() {return und_node->ret;}
+
+TypeManager::~TypeManager()
 {
-    //fill in expnaded type
-    expanded.clear();
-    std::string::iterator it = code.begin();
+    for (auto it : nodes)
+        delete it;
+}
 
-    while (it != code.end())
+Type TypeManager::makeList(Type conts, int length)
+{
+    ListNode* n = new ListNode();
+    n->contents = conts;
+    n->length = length;
+    return unique(n);
+}
+
+Type TypeManager::makeRef(Type conts)
+{
+    RefNode* n = new RefNode();
+    n->contents = conts;
+    return unique(n);
+}
+
+Type TypeManager::finishNamed(Type conts, ast::Ident name)
+{
+    NamedNode* n = new NamedNode();
+    n->name = name;
+    std::swap(n->args, namedConts);
+    n->type = substitute(conts, n->args);
+    return unique(n); //we still need to unique n, n != n->type
+}
+
+Type TypeManager::makeParam(ast::Ident name)
+{
+    ParamNode* n = new ParamNode();
+    n->name = name;
+    return unique(n);
+}
+
+Type TypeManager::makeFunc(Type ret, Type arg)
+{
+    FuncNode* n = new FuncNode();
+    n->ret = ret;
+    n->arg = arg;
+    return unique(n);
+}
+
+Type TypeManager::finishTuple()
+{
+    TupleNode* n = new TupleNode();
+    std::swap(n->conts, tupleConts); //handily clears out tupleConts
+    return unique(n);
+}
+
+TypeNodeB* TypeManager::unique(TypeNodeB* n)
+{
+    //primitive nodes are always unique
+    if (dynamic_cast<PrimitiveNode*>(n))
+        return n;
+
+    for (auto it : nodes)
     {
-        if (*it == cod::named) //fill in named types
+        if (it->insertCompare(n))
         {
-            ++it;
-            ast::Ident id = readNum(it);
-            ++it; //remove 'n'
-            ast::TypeDef *td = s->getTypeDef(id);
-
-            std::map<ast::Ident, std::string> paramSubs;
-            if (*it == cod::arg) //type arguments are specified, sub them in
-            {
-                ++it;
-                int i = 0;
-                while (*it != cod::endOf(cod::arg))
-                    paramSubs[td->params[i]] = readType(it);
-            }
-
-            //copy in type.
-            //alias type parameters which are not specified or aliased
-
-            std::string::iterator it2 = td->mapped.expanded.begin();
-            while (it2 != td->mapped.expanded.end())
-            {
-                if (*it2 == cod::param)
-                {
-                    ++it2;
-                    ast::Ident paramName = readNum(it2);
-                    if (paramSubs.count(paramName)) //param is specified
-                        expanded += paramSubs[paramName]; //replace it
-                    else
-                    {
-                        if (paramName >> 16 == 0) //param is not aliased
-                            paramName |= (id + 1) << 16; //alias it
-                        expanded += cod::param + utl::to_str(paramName) + cod::endOf(cod::param); //put it in
-                    }
-                    ++it2; //skip over param end
-                }
-                else
-                {
-                    expanded += *it2;
-                    ++it2;
-                }
-            }
-        }
-        else if (*it == cod::tupname) //strip out tuple element names
-        {
-            ++it;
-            readNum(it);
-        }
-
-        else if (*it == cod::dim) //strip out list dimensions
-        {
-            ++it;
-            readNum(it);
-        }
-        else
-        {
-            expanded += *it;
-            ++it;
+            if (it != n) //don't delete things we already own
+                delete n;
+            return it;
         }
     }
+
+    nodes.push_back(n);
+    return n;
 }
 
-TypeIter Type::begin(bool arg)
+//ok here's how this works. whenever a named type is used, we run this fuction
+//on its contents, which creates (if neccesary) a new node which represents the type with
+//exactly these arguments. we do this by temporarily replacing parameter nodes
+//with the values that they represent, then making a copy of and re-uniqing
+//all nodes below it. we can do this without interfering with other types because
+//we will at this point already have nodes for any contained types.
+//note that we have to be careful with the old node, because things are pointing to it
+Type TypeManager::substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs)
 {
-    //beginning of argument type corresponds to end of return type + 1
-    //will return invalid iterator if called on non-function type
-    return arg ? end(false) + 1: code.begin();
+    //first set parameter subs
+    for (auto node : nodes)
+        if (ParamNode* pn = dynamic_cast<ParamNode*>(node))
+            if (subs.count(pn->name))
+                pn->sub = subs[pn->name];
+
+
+    TypeNodeB* newNode = clone(old);
+
+    //finally clear parameter subs
+    for (auto node : nodes)
+        if (ParamNode* pn = dynamic_cast<ParamNode*>(node))
+            pn->sub = 0;
+        
+    return newNode;
 }
 
-TypeIter Type::end(bool arg)
+TypeNodeB* TypeManager::clone(TypeNodeB* n)
 {
-    return arg ? code.end() : std::find(code.begin(), code.end(), cod::function); //returns end if not function
+    return unique(n->clone(this));
 }
 
-TypeIter Type::exbegin(bool arg)
-{
-    return arg ? end(false) + 1: expanded.begin();
-}
-
-TypeIter Type::exend(bool arg)
-{
-    return arg ? expanded.end() : std::find(expanded.begin(), expanded.end(), cod::function); //returns end if not function
-}
-
-bool Type::isFunc()
-{
-    return code.find(cod::function) != std::string::npos;
-}
-
-bool Type::isTempl()
-{
-    return code.find(cod::any) != std::string::npos || code.find(cod::param) != std::string::npos;
-}
-
-utl::weak_string Type::ex_w_str()
-{
-    return utl::weak_string(&*expanded.begin(), &*(expanded.end()-1) + 1);
-}
-
-utl::weak_string Type::w_str()
-{
-    return utl::weak_string(&*code.begin(), &*(code.end()-1) + 1);
-}
-
-TypeIter TypeIter::operator+(size_t offset)
-{
-    TypeIter ret(*this);
-    return ret += offset;
-}
-
-TypeIter& TypeIter::operator+=(size_t offset)
-{
-    pos += offset;
-    return *this;
-}
-
-TypeIter& TypeIter::operator++()
-{
-    //go to next type
-    while(!isType(*pos) && *pos != cod::function && *pos != '\0')
-        ++pos;
-
-    return *this;
-}
-
-void TypeIter::descend()
-{
-    ++pos;
-}
-
-bool TypeIter::atBottom()
-{
-    return !isType(*(pos + 1));
-}
-
-void TypeIter::advance()
-{
-    pos = endOfType(pos);
-}
-
-bool TypeIter::atEnd()
-{
-    return !isType(*(endOfType(pos)));
-}
-
-void TypeIter::ascend()
-{
-    operator++();
-}
-
-bool TypeIter::atTop()
-{
-    return *this != ++TypeIter(*this);
-}
-
-ast::Ident TypeIter::getName()
-{
-    std::string::iterator it = pos;
-    switch (*pos)
-    {
-    case cod::arg:
-    case cod::named:
-    case cod::param:
-        return readNum(it);
-    default:
-        return -1;
-    }
-}
-
-ast::Ident TypeIter::getTupName()
-{
-    std::string::iterator it = endOfType(pos, false);
-    if (*++it == cod::tupname)
-        return readNum(it);
-    else
-        return -1;
-}
-
-utl::weak_string TypeIter::w_str()
-{
-    return utl::weak_string(&*pos, &*endOfType(pos, false));
 }

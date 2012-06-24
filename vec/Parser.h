@@ -64,10 +64,7 @@ namespace par
         void parseParam();
         void parseRef();
         void parseNamed();
-        void parseIdent();
-        size_t checkArgs();
 
-        friend class TypeListParser;
         friend class typ::Type;
     };
 }

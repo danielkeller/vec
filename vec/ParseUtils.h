@@ -13,12 +13,12 @@ namespace par
     //should return a , or end of list, where it is expected.
     //contsName is used in error messages ie "list of X"
     template<class Predicate, class Action>
-    void parseListOf(lex::Lexer *l, Predicate P, Action &A, tok::TokenType endTok, const char * contsName)
+    void parseListOf(lex::Lexer *l, Predicate P, tok::TokenType endTok, const char * contsName, Action A)
     {
         tok::Location beginLoc = l->Peek().loc;
         while(P(l->Peek()))
         {
-            A(l);
+            A();
             if (!l->Expect(tok::comma))
             {
                 if (P(l->Peek()))

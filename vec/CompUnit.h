@@ -29,6 +29,8 @@ namespace ast
         std::list<Scope> scopes;
         Stmt* treeHead;
 
+        typ::TypeManager tm;
+
         std::string & getStr(Str idx) {return stringTbl[idx];}
         std::string & getIdent(Ident idx) {return identTbl[idx];}
 
@@ -36,6 +38,7 @@ namespace ast
         //for ease of parsing. the struct is syntactic sugar
         struct
         {
+            Ident null;
             Ident arg;
         } reserved;
     };

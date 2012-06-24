@@ -47,7 +47,7 @@ namespace ast
         Scope* owner; //to look up typedefs
         Ident name; //for errors
         DeclExpr(Ident n, typ::Type const &t, Scope* o, tok::Location const &l) : VarExpr(this, l), owner(o), name(n) {type = t;}
-        std::string myLbl() {return std::string(type.w_str()) + " " + utl::to_str(name);}
+        std::string myLbl() {return "def " + utl::to_str(name);}
     };
 
     //put this here so it knows what a DeclExpr is

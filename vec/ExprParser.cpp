@@ -42,8 +42,8 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
         //precidence can be the same if it is right associative
 
         //special case for functions
-        DeclExpr* de = dynamic_cast<DeclExpr*>(lhs);
-        if (op == tok::equals && de && de->type.isFunc())
+        FuncDeclExpr* de = dynamic_cast<FuncDeclExpr*>(lhs);
+        if (op == tok::equals && de)
             curScope = curScope->getParent(); //pop scope stack
 
         //reduce
@@ -186,7 +186,6 @@ Expr* Parser::parsePrimaryExpr()
         return parseBlock();
 
     case listBegin:
-        type.clear(); //-orIfy doesn't clear type so do it here
         ret = parseListOrIfy();
         if (!ret) //it's a type
         {
@@ -196,7 +195,6 @@ Expr* Parser::parsePrimaryExpr()
         return ret;
 
     case tupleBegin:
-        type.clear(); //-orIfy doesn't clear type so do it here
         ret = parseTupleOrIfy();
         if (!ret) //it's a type
         {
@@ -228,8 +226,6 @@ primary-expr
 */
 Expr* Parser::parseListOrIfy()
 {
-    //go ahead and insert into the type, if we're wrong it'll get cleared anyway
-    type.code += typ::cod::list;
     tok::Token brace = lexer->Next();
 
     //now see what's inside it...
@@ -284,7 +280,7 @@ Expr* Parser::parseListOrIfy()
 
 /*
 type
-    : '[' type ']'
+    : '[' type-list ']'
     ;
 
 primary-expr
@@ -293,8 +289,6 @@ primary-expr
 */
 Expr* Parser::parseTupleOrIfy()
 {
-    //go ahead and insert into the type, if we're wrong it'll get cleared anyway
-    type.code += typ::cod::tuple;
     tok::Token brace = lexer->Next();
 
     //now see what's inside it...
@@ -303,7 +297,6 @@ Expr* Parser::parseTupleOrIfy()
     {
         if (curScope->getTypeDef(to.value.ident_v)) //it's a type
         {
-            lexer->Expect(tok::comma); //get rid of the comma if it's there
             parseTypeList();
             parseTupleEnd();
             return NULL;
@@ -335,8 +328,7 @@ Expr* Parser::parseTupleOrIfy()
         //or a tuple element name
         if (lexer->Peek() == tok::identifier)
         {
-            type.code += typ::cod::tupname;
-            parseIdent();
+            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
         }
         lexer->Expect(tok::comma); //get rid of the comma if it's there
         parseTypeList();
@@ -345,7 +337,6 @@ Expr* Parser::parseTupleOrIfy()
     }
     else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
     {
-        lexer->Expect(tok::comma); //get rid of the comma if it's there
         parseTypeList();
         parseTupleEnd();
         return NULL;

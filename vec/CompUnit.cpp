@@ -26,5 +26,6 @@ Ident CompUnit::addIdent(const std::string &str)
 CompUnit::CompUnit()
 {
     //add reserved identifiers
+    reserved.null = addIdent("");
     reserved.arg = addIdent("arg");
 }
