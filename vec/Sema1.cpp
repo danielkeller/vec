@@ -29,6 +29,7 @@ void Sema::Phase1()
         }
     });
 
+    //FIXME: memory leak when functions are declared & not defined
     CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
     {
         FuncDeclExpr* fde = dynamic_cast<FuncDeclExpr*>(ae->getChildA());

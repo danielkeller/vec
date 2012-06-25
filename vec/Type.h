@@ -23,8 +23,6 @@ namespace par
 
 namespace typ
 {
-    class TypeIter;
-
     struct TypeNodeB;
 
     class FuncType;
@@ -43,11 +41,8 @@ namespace typ
 
     public:
         Type();
-        Type(TypeIter const &ti);
         Type(TypeNodeB& n) : node(&n) {}
         Type(TypeNodeB* n) : node(n) {}
-
-        TypeIter begin();
 
         int compare(Type& other);
         bool operator==(const Type& other) const {return node == other.node;}
@@ -224,35 +219,6 @@ namespace typ
         static TypeCompareResult valid;
         static TypeCompareResult invalid;
     };
-
-    /*
-    class TypeIter
-    {
-        TypeNode* node;
-
-    public:
-        //repeatedly calling ++ will depth first search the type
-        TypeIter& operator++();
-        TypeIter operator+(size_t offset);
-        TypeIter& operator+=(size_t offset);
-        const char operator*() {return *pos;};
-        bool operator==(TypeIter& other) {return pos == other.pos;};
-        bool operator!=(TypeIter& other) {return pos != other.pos;};
-
-        void descend();
-        bool atBottom(); //the current type has no contents
-        void advance();
-        bool atEnd(); //the thing after the current type is not a type
-        void ascend();
-        bool atTop(); //there is not another type somewhere ahead
-
-        ast::Ident getName(); //get name of any type with a name, -1 otherwise
-        ast::Ident getTupName(); //get name of tuple element
-
-        utl::weak_string w_str();
-
-        friend class Type;
-    };*/
 }
 
 #endif

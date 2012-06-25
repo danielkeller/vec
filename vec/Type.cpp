@@ -358,7 +358,7 @@ int Type::compare(Type& other)
 T ## Type Type::get ## T() \
 { \
     T ## Type ret; \
-    ret.und_node = underlying_node<T ## Node>(node); \
+    ret.node = ret.und_node = underlying_node<T ## Node>(node); \
     return ret; \
 }
 

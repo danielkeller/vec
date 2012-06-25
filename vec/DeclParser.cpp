@@ -134,6 +134,7 @@ Expr* Parser::parseDeclRHS()
         curScope = &cu->scopes.back(); //create scope for function args
 
         //leave the decl expr hanging, it will get attached later
+        //FIXME: memory leak when functions are declared & not defined
         curScope->addVarDef(cu->reserved.arg,
             new DeclExpr(cu->reserved.arg, type.getFunc().arg(), curScope, to.loc));
 
