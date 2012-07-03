@@ -328,6 +328,11 @@ void Parser::parseNamed()
             td->params.size() << ", got " << nargs << err::underline;
 
     //recover as best we can. also do "aliasing" (ie replacing ?T with ? when not spec'd) here.
+    //FIXME: Thats not aliasing. For example, cosider
+    // type foo = [?T, ?T];
+    // type bar = foo;
+    // bar would become [?, ?] which is wrong.
+    // possibly get the name of the param and replace '?T' with '?T in foo'
     while (nargs < td->params.size())
         cu->tm.addNamedArg(td->params[nargs++], typ::any);
 

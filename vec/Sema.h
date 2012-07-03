@@ -2,7 +2,7 @@
 #define SEMA_H
 
 #include "CompUnit.h"
-#include "AstNode.h"
+#include "Expr.h"
 
 #include <functional>
 
@@ -20,7 +20,7 @@ namespace sa
         void CachedAstWalk(std::function<void(T*)> action);
 
         void validateTree();
-
+        
     public:
         Sema(ast::CompUnit* c) : cu(c) {};
 
@@ -54,6 +54,9 @@ namespace sa
     {
         CachedAstWalker<T> aw(cu->treeHead, action);
     }
+
+    //finds the last non-block expression in a list of them
+    ast::Expr* findEndExpr(ast::AstNodeB* srch);
 }
 
 #endif

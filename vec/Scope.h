@@ -37,6 +37,8 @@ namespace ast
         TypeDef * getTypeDef(ast::Ident name);
 
         Scope* getParent() {return parent;};
+
+        bool canSee(Scope* other);
     };
 }
 

@@ -7,6 +7,23 @@
 using namespace ast;
 using namespace sa;
 
+Expr* sa::findEndExpr(AstNodeB* srch)
+{
+    while (true)
+    {
+        if (Block *b = dynamic_cast<Block*>(srch))
+            srch = b->getChildA();
+        else if (StmtPair* sp = dynamic_cast<StmtPair*>(srch))
+            srch = sp->getChildB();
+        else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
+            srch = es->getChildA();
+        else if (Expr* e = dynamic_cast<Expr*>(srch))
+            return e;
+        else //it's a stmt
+            return 0;
+    }
+}
+
 //Phase one is for insertion / modification of nodes in a way which
 //generally preserves the structure of the AST, and/or which need that
 //structure to not be compacted into basic blocks
@@ -15,6 +32,11 @@ void Sema::Phase1()
     //if there's a lot of dynamic casting going on, try adding new ast walker
     //types that select child and descendent nodes for example.
     //if only a few steps need that, let them implement it
+
+    //insert overload group declarations into the tree so they get cleaned up
+    for(auto it : cu->global.varDefs)
+        if (OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(it.second))
+            cu->treeHead = new StmtPair(new ExprStmt(oGroup), cu->treeHead);
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
@@ -29,10 +51,13 @@ void Sema::Phase1()
         }
     });
 
+    Package* pkg = new Package();
+
     //FIXME: memory leak when functions are declared & not defined
-    CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
+    CachedAstWalk<AssignExpr>([this, pkg] (AssignExpr* ae)
     {
         FuncDeclExpr* fde = dynamic_cast<FuncDeclExpr*>(ae->getChildA());
+        //TODO: or varexpr?
         if (fde == 0)
             return;
 
@@ -54,14 +79,45 @@ void Sema::Phase1()
         }
 
         //create and insert function definition
-        es->parent->replaceChild(es, new FunctionDef(fde, conts));
+        //TODO: make it assign the definition to the variable when the function is defined
+        FunctionDef* fd = new FunctionDef(fde, conts);
+        if (fde->name == cu->reserved.main)
+        {
+            if (cu->entryPt == 0)
+                cu->entryPt = fd;
+            else
+                err::Error(fde->loc) << "redefinition of main function" << err::underline
+                    << err::note << cu->entryPt->decl->loc << "see previous definition"
+                    << err::underline;
+        }
+        es->parent->replaceChild(es, new NullStmt(es->loc));
+        pkg->appendChild(fd);
+
+        //find expression in tail position
+        Expr* end = findEndExpr(fd->getChildA());
+        if (end) //if it's really there
+        {
+            //we know its an expr stmt
+            ExprStmt* endParent = dynamic_cast<ExprStmt*>(end->parent);
+            ReturnStmt* impliedRet = new ReturnStmt(end);
+            endParent->parent->replaceChild(endParent, impliedRet); //put in the implied return
+            endParent->nullChildA();
+            delete endParent;
+        }
 
         ae->nullChildA();
         ae->nullChildB();
         delete es; //delete expr stmt and assign expr
-
-        validateTree();
     });
+
+    //after we do this, anything under root is global initialization code
+    //so make the __init function for it
+    //TODO: does this run at compile time or run time?
+    typ::Type void_void = cu->tm.makeFunc(typ::null, cu->tm.finishTuple()); //empty tuple
+    FuncDeclExpr* fde = new FuncDeclExpr(cu->reserved.init, void_void, &(cu->global), cu->treeHead->loc);
+    FunctionDef* init = new FunctionDef(fde, cu->treeHead); //stick everything in there
+    pkg->appendChild(init);
+    cu->treeHead = pkg;
 
     //do this after types in case of ref types
 /*
@@ -101,6 +157,19 @@ void Sema::Phase1()
         }
         
         il->targets.push_back(ie);
+    });
+
+    //replace variables that represent overloaded functions with the function that they
+    //must represent, if there is only one such function
+    //this makes function pointers & stuff easier
+    AstWalk<VarExpr>([] (VarExpr* ve)
+    {
+        OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(ve->var);
+        if (oGroup == 0)
+            return;
+
+        if (oGroup->functions.size() == 1)
+            ve->var = oGroup->functions.front();
     });
 
     //remove null stmts under StmtPairs

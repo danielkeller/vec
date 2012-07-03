@@ -33,19 +33,38 @@ namespace typ
     class ParamType;
     class PrimitiveType;
 
+    class TypeCompareResult;
+
     class Type
     {
+        //these are for visual studio's debugger
+#ifdef _DEBUG
+        std::string name;
+#endif
+
     protected:
         TypeNodeB* node;
         operator TypeNodeB*() {return node;}
 
     public:
         Type();
-        Type(TypeNodeB& n) : node(&n) {}
-        Type(TypeNodeB* n) : node(n) {}
+        Type(TypeNodeB& n) : node(&n)
+        {
+#ifdef _DEBUG
+            name = to_str();
+#endif
+        }
+        Type(TypeNodeB* n) : node(n)
+        {
+#ifdef _DEBUG
+            name = to_str();
+#endif
+        }
 
-        int compare(Type& other);
+        TypeCompareResult compare(const Type& other);
         bool operator==(const Type& other) const {return node == other.node;}
+
+        std::string to_str();
 
         //factory functions for derived types
         FuncType getFunc();
@@ -138,6 +157,8 @@ namespace typ
 
     extern Type any;
     extern Type null;
+    extern Type overload;
+    extern Type error;
 
     class TypeManager
     {
@@ -211,7 +232,7 @@ namespace typ
         }
 
         //invalid if either are -1
-        bool operator< (TypeCompareResult& other) {return score < other.score;}
+        bool operator< (TypeCompareResult const & other) const {return score < other.score;}
 
         bool operator== (TypeCompareResult& other) {return score == other.score;}
         bool operator!= (TypeCompareResult& other) {return !(*this == other);}

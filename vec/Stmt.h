@@ -115,6 +115,10 @@ namespace ast
             : CondStmt(o.loc + arg->loc),
             AstNode1<Expr>(arg)
         {};
+        ReturnStmt(Expr* arg)
+            : CondStmt(arg->loc),
+            AstNode1<Expr>(arg)
+        {};
         std::string myLbl() {return "return";}
         Expr* getExpr() {return getChildA();};
     };

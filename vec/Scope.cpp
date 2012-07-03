@@ -39,3 +39,11 @@ DeclExpr* Scope::getVarDef(Ident name)
     else
         return it->second;
 }
+
+bool Scope::canSee(Scope* other)
+{
+    Scope * search;
+    for (search = this; search && search != other; search = search->parent)
+        ;
+    return search == other;
+}

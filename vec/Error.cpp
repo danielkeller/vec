@@ -58,7 +58,7 @@ Error::~Error()
     std::cerr << std::endl << std::endl;
 }
 
-Error & Error::operator<< (tok::Location &&l)
+Error & Error::operator<< (const tok::Location &l)
 {
     if (l.line != loc.line) //if its not on the same line, we need to print the new line
         posn = 0;

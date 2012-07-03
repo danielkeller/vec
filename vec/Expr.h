@@ -13,20 +13,28 @@ namespace ast
     //abstract expression type
     struct Expr : public virtual AstNodeB
     {
+    protected:
+        //type is private, and has a virtual "sgetter" so we can override its behavior
+        //when a derived Expr has some sort of deterministic type. wasted space isn't
+        //a big deal since it's only sizeof(void*) bytes
         typ::Type type;
-        virtual bool isLval() {return false;};
+
+    public:
         //Expr() = default;
         //Expr(tok::Location &&l) : AstNodeB(l) {};
         Expr(tok::Location const &l) {loc = l;}
+        virtual bool isLval() {return false;};
+        virtual typ::Type& Type() {return type;} //sgetter. sget it?
         const char *myColor() {return "4";};
     };
 
     //leaf expression type
     struct NullExpr : public Expr, public AstNode0
     {
-        NullExpr(tok::Location &&l) : Expr(l) {};
+        NullExpr(tok::Location const &l) : Expr(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
+        typ::Type& Type() {return typ::null;}
     };
 
     struct DeclExpr;
@@ -39,6 +47,7 @@ namespace ast
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
+        inline typ::Type& Type();
     };
 
     //could possible have a weak_string of its name?
@@ -46,8 +55,10 @@ namespace ast
     {
         Scope* owner; //to look up typedefs
         Ident name; //for errors
-        DeclExpr(Ident n, typ::Type const &t, Scope* o, tok::Location const &l) : VarExpr(this, l), owner(o), name(n) {type = t;}
-        std::string myLbl() {return type.to_str() + " " + utl::to_str(name);}
+        DeclExpr(Ident n, typ::Type t, Scope* o, tok::Location const &l)
+            : VarExpr(this, l), owner(o), name(n) {type = t;}
+        std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
+        typ::Type& Type() {return type;} //have to re-override it back to the original
     };
 
     //put this here so it knows what a DeclExpr is
@@ -56,10 +67,25 @@ namespace ast
         return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
     }
 
+    typ::Type& VarExpr::Type()
+    {
+        return var->Type();
+    }
+
     struct FuncDeclExpr : public DeclExpr
     {
         Scope* funcScope;
-        FuncDeclExpr(Ident n, typ::Type& t, Scope* s, tok::Location &l) : DeclExpr(n, t, s->getParent(), l), funcScope(s) {}
+        FuncDeclExpr(Ident n, typ::Type t, Scope* s, tok::Location const &l)
+            : DeclExpr(n, t, s->getParent(), l), funcScope(s) {}
+    };
+
+    //declaration of an entire function overload group
+    struct OverloadGroupDeclExpr : public DeclExpr
+    {
+        typ::Type& Type() {return typ::overload;}
+        std::list<FuncDeclExpr*> functions;
+        OverloadGroupDeclExpr(Ident n, Scope* global, tok::Location const &firstLoc)
+            : DeclExpr(n, typ::error, global, firstLoc) {}
     };
 
     struct ConstExpr : public Expr, public AstNode0
@@ -109,6 +135,7 @@ namespace ast
     {
         AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o) {};
         std::string myLbl() {return "'='";}
+        typ::Type& Type() {return getChildA()->Type();}
     };
 
     struct OpAssignExpr : public AssignExpr

@@ -47,7 +47,13 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
             curScope = curScope->getParent(); //pop scope stack
 
         //reduce
-        lhs = makeBinExpr(lhs, rhs, op);
+
+        //special case for function calls. They need to know their scope
+        VarExpr* func = dynamic_cast<VarExpr*>(lhs);
+        if (op == tok::colon && func)
+            lhs = new OverloadCallExpr(func, rhs, curScope, op.loc);
+        else
+            lhs = makeBinExpr(lhs, rhs, op);
         //fall through and "tail recurse"
     }
     return lhs; //cave johnson, we're done here

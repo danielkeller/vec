@@ -44,28 +44,17 @@ void Sema::Phase2()
 
             if (Block* b = dynamic_cast<Block*>(ex)) //if it's a block, point to correct expr
             {
-                AstNodeB* srch = b->getChildA();
-                while (true)
+                TmpExpr* end = dynamic_cast<TmpExpr*>(findEndExpr(b->getChildA()));
+                if (end)
                 {
-                    if ((b = dynamic_cast<Block*>(srch)) != 0)
-                        srch = b->getChildA();
-                    else if (StmtPair* sp = dynamic_cast<StmtPair*>(srch))
-                        srch = sp->getChildB();
-                    else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
-                        srch = es->getChildA();
-                    else if (TmpExpr* e = dynamic_cast<TmpExpr*>(srch))
-                    {
-                        //conveniently, the temp expr is already there
-                        te = new TmpExpr(e->setBy); //copy it so it doesn't get deleted
-                        break;
-                    }
-                    else //it's a stmt of some sort
-                    {
-                        NullExpr* ne = new NullExpr(std::move(ex->loc));
-                        te = new TmpExpr(ne);
-                        curBB->appendChild(ne);
-                        break;
-                    }
+                    //conveniently, the temp expr is already there
+                    te = new TmpExpr(end->setBy); //copy it so it doesn't get deleted
+                }
+                else //it's a stmt of some sort (i think this isn't really needed)
+                {
+                    NullExpr* ne = new NullExpr(std::move(ex->loc));
+                    te = new TmpExpr(ne);
+                    curBB->appendChild(ne);
                 }
             }
             else //create temporary "set by" current expression
@@ -96,7 +85,7 @@ void Sema::Phase2()
         {
             auto blkit = std::find_if(bb->chld.begin(),
                                       bb->chld.end(),
-                                      [](AstNodeB*& a){return dynamic_cast<Block*>(a) != 0;});
+                                      [](Expr*& a){return dynamic_cast<Block*>(a) != 0;});
 
             if (blkit == bb->chld.end())
                 return;

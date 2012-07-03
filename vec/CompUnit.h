@@ -2,7 +2,7 @@
 #define COMPUNIT_H
 
 #include "Type.h"
-#include "Stmt.h"
+#include "SemaNodes.h"
 
 #include <map>
 #include <list>
@@ -29,6 +29,8 @@ namespace ast
         std::list<Scope> scopes;
         Stmt* treeHead;
 
+        FunctionDef* entryPt;
+
         typ::TypeManager tm;
 
         std::string & getStr(Str idx) {return stringTbl[idx];}
@@ -40,6 +42,11 @@ namespace ast
         {
             Ident null;
             Ident arg;
+            Ident main;
+            Ident init; //really __init but __names are reserved
+            Ident string;
+            typ::Type string_t;
+            //use some sort of hungarian notation here for clarity
         } reserved;
     };
 }

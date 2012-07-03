@@ -1,31 +1,36 @@
+type test?T = {?T};
+
+type test2?(T, U) = [test!int, test!?T, test!?U, test];
+
 
 int foo = 7;
 
-float:int baf = 7.7;
+float:int qwer;
+int:float qwer;
 
-int:int baz = 
+float:int baf = qwer:arg;
+int:float baf = qwer:arg;
+
+float:int qwer = baf:arg;
+int:float qwer = baf:arg;
+
+int:int main = 
 (
-	float:int qwer = baf:arg;
-
 	int bar = foo;
 
-	if (baz:foo)
+	if (qwer:foo)
 	(
 		float asdf = 7.7;
 	)
 	int a = (15; 16; 17);
 );
 
-
-//TODO: don't expand types until sema phase.
-//then, recursively expand along with everything else
+int:float main = 4; //ohhh noes
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];
 //or whatever
 //or have something that expands tuples into others like [a,b,?...]
-
-//lambda syntax could be double parens (( a+b ))
 
 //add storage duration specifier agg
 //acts like static except initializer is run on first call to agg function

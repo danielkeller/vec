@@ -118,31 +118,72 @@ Expr* Parser::parseDeclRHS()
     Ident id = to.value.ident_v;
     DeclExpr* ret;
 
-    if (curScope->getVarDef(id))
-    {
-        //variables cannot be defined twice
-        if (!type.getFunc().isValid())
-            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
-            << '\'' << err::underline;
 
-        return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
-    }
-    else if (type.getFunc().isValid())
+    if (type.getFunc().isValid())
     {
         //TODO: insert type params into this scope
         cu->scopes.emplace_back(curScope);
         curScope = &cu->scopes.back(); //create scope for function args
 
+        OverloadGroupDeclExpr* oGroup;
+        if (DeclExpr* previousDecl = curScope->getVarDef(id))
+        {
+            oGroup = dynamic_cast<OverloadGroupDeclExpr*>(previousDecl);
+            if (!oGroup)
+            {
+                err::Error(to.loc) << "redeclaration of non-function as function" << err::underline
+                    << err::note << "see previous declaration" << previousDecl->loc << err::underline;
+                return new VarExpr(previousDecl, to.loc); //recover gracefully
+            }
+        }
+        else //we have to create the overload group
+        {
+            oGroup = new OverloadGroupDeclExpr(id, &(cu->global), to.loc);
+            cu->global.addVarDef(id, oGroup);
+        }
+
+        FuncDeclExpr* fde = new FuncDeclExpr(id, type, curScope, to.loc);
+
+        bool declared = false;
+
+        for (auto func : oGroup->functions)
+        {
+            if (func->Type().getFunc().arg().compare(type.getFunc().arg())
+                == typ::TypeCompareResult::valid)
+            {
+                if (func->Type().getFunc().ret().compare(type.getFunc().ret())
+                    != typ::TypeCompareResult::valid)
+                {
+                    err::Error(to.loc) << "overloaded function differs only in return type"
+                        << err::underline << err::note << "see previous declaration" << func->loc
+                        << err::underline;
+                }
+                declared = true;
+            }
+        }
+        
+        if (!declared)
+            oGroup->functions.push_back(fde);
+
         //leave the decl expr hanging, it will get attached later
         //FIXME: memory leak when functions are declared & not defined
+        //add argument definition to function's scope
         curScope->addVarDef(cu->reserved.arg,
             new DeclExpr(cu->reserved.arg, type.getFunc().arg(), curScope, to.loc));
 
-        ret = new FuncDeclExpr(id, type, curScope, to.loc);
-        curScope->parent->addVarDef(id, ret);
+        return fde;
     }
     else //variable
     {
+        if (curScope->getVarDef(id))
+        {
+            //variables cannot be defined twice
+            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
+                << '\'' << err::underline;
+
+            return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
+        }
+
         ret = new DeclExpr(id, type, curScope, to.loc);
         curScope->addVarDef(id, ret);
     }

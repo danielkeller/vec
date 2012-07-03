@@ -24,8 +24,20 @@ Ident CompUnit::addIdent(const std::string &str)
 }
 
 CompUnit::CompUnit()
+    : entryPt(0)
 {
     //add reserved identifiers
     reserved.null = addIdent("");
     reserved.arg = addIdent("arg");
+    reserved.main = addIdent("main");
+    reserved.init = addIdent("__init");
+    reserved.string = addIdent("String");
+
+    //add pre defined stuff
+    //once we add the operators, this should really be in a source file because
+    //it'll get huge and cumbersome here
+    TypeDef td;
+    td.mapped = tm.makeList(typ::int8);
+    global.addTypeDef(reserved.string, td);
+    reserved.string_t = tm.finishNamed(td.mapped, reserved.string);
 }

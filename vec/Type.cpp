@@ -26,6 +26,8 @@ struct TypeNodeB
 
     virtual TypeNodeB* clone(TypeManager*) = 0;
 
+    virtual void print(std::ostream&) = 0;
+
     virtual ~TypeNodeB() {};
 };
 
@@ -43,6 +45,7 @@ struct FuncNode : public TypeNode<FuncNode>
     TypeCompareResult compareTo(FuncNode* other);
     bool insertCompareTo(FuncNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
 };
 
 struct ListNode : public TypeNode<ListNode>
@@ -52,6 +55,7 @@ struct ListNode : public TypeNode<ListNode>
     TypeCompareResult compareTo(ListNode* other);
     bool insertCompareTo(ListNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
 };
 
 struct TupleNode : public TypeNode<TupleNode>
@@ -60,6 +64,7 @@ struct TupleNode : public TypeNode<TupleNode>
     TypeCompareResult compareTo(TupleNode* other);
     bool insertCompareTo(TupleNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
 };
 
 struct RefNode : public TypeNode<RefNode>
@@ -68,6 +73,7 @@ struct RefNode : public TypeNode<RefNode>
     TypeCompareResult compareTo(RefNode* other);
     bool insertCompareTo(RefNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
 };
 
 //this represents the USE of a named type
@@ -81,6 +87,7 @@ struct NamedNode : public TypeNode<NamedNode>
     TypeCompareResult compareTo(NamedNode*);
     bool insertCompareTo(NamedNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
 };
 
 struct ParamNode : public TypeNode<ParamNode>
@@ -90,6 +97,7 @@ struct ParamNode : public TypeNode<ParamNode>
     TypeCompareResult compareTo(ParamNode* other);
     bool insertCompareTo(ParamNode* other);
     TypeNodeB* clone(TypeManager*);
+    void print(std::ostream&);
     ParamNode() : sub(0) {}
 };
 
@@ -100,6 +108,7 @@ struct PrimitiveNode : public TypeNode<PrimitiveNode>
     TypeCompareResult compareTo(PrimitiveNode* other) {return this == other;}
     bool insertCompareTo(PrimitiveNode* other) {return this == other;}
     TypeNodeB* clone(TypeManager*) {return this;}
+    void print(std::ostream& os) {os << name;}
 };
 
 //get a version of this with temporary param subs
@@ -149,19 +158,17 @@ TypeCompareResult TypeNode<T>::compare (TypeNodeB* other)
 template<class T>
 bool TypeNode<T>::insertCompare (TypeNodeB* toAdd)
 {
-    //only call compare again if either function did something, otherwise fall through
+    //don't call insertCompare again, in case type is self referential ie
+    // type foo?T = ?T;
+    // type bar?T = foo!T;
+    // ?T is set to sub for itself which is entirely valid, but it should stop there
     //only sub in toAdd because we don't want to mess with this
     //sub before doing equality comparison otherwise params will not work
-    if (sub(toAdd))
-        return insertCompare(toAdd);
+    sub(toAdd);
 
     //don't early out
-    //name expand both?? i'm not sure
     //only call compare again if either function did something, otherwise fall through
     TypeNodeB* realThis = this;
-    //TypeCompareResult penalty = dename(realThis) + dename(toAdd);
-    //if (penalty != TypeCompareResult::valid)
-    //    return realThis->compare(toAdd);
 
     if (T* toAddT = dynamic_cast<T*>(toAdd)) //see if it's one of us
         return static_cast<T*>(realThis)->insertCompareTo(toAddT); //keep comparing
@@ -187,6 +194,13 @@ TypeNodeB* FuncNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void FuncNode::print(std::ostream &out)
+{
+    ret->print(out);
+    out << ':';
+    arg->print(out);
+}
+
 TypeCompareResult ListNode::compareTo(ListNode* other)
 {
     return contents->compare(other);
@@ -202,6 +216,13 @@ TypeNodeB* ListNode::clone(TypeManager* mgr)
     ListNode* copy = new ListNode(*this);
     copy->contents = mgr->clone(contents);
     return copy;
+}
+
+void ListNode::print(std::ostream &out)
+{
+    out << "{ ";
+    contents->print(out);
+    out << " }";
 }
 
 TypeCompareResult TupleNode::compareTo(TupleNode* other)
@@ -246,6 +267,18 @@ TypeNodeB* TupleNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void TupleNode::print(std::ostream &out)
+{
+    out << '[';
+    for (auto it = conts.begin(); it != conts.end();)
+    {
+        it->first->print(out);
+        if (++it != conts.end())
+            out << ", ";
+    }
+    out << ']';
+}
+
 TypeCompareResult RefNode::compareTo(RefNode* other)
 {
     return contents->compare(other);
@@ -261,6 +294,12 @@ TypeNodeB* RefNode::clone(TypeManager* mgr)
     RefNode* copy = new RefNode();
     copy->contents = mgr->clone(contents);
     return copy;
+}
+
+void RefNode::print(std::ostream &out)
+{
+    out << '@';
+    contents->print(out);
 }
 
 TypeCompareResult NamedNode::compareTo(NamedNode* other)
@@ -287,6 +326,22 @@ TypeNodeB* NamedNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void NamedNode::print(std::ostream &out)
+{
+    out << name;
+    if (!args.size())
+        return;
+
+    out << "!(";
+    for (auto it = args.begin(); it != args.end();)
+    {
+        it->second->print(out);
+        if (++it != args.end())
+            out << ", ";
+    }
+    out << ')';
+}
+
 TypeCompareResult ParamNode::compareTo(ParamNode* other)
 {
     return name == other->name;
@@ -301,6 +356,11 @@ TypeNodeB* ParamNode::clone(TypeManager*)
 {
     assert(sub && "sub should be set here");
     return sub;
+}
+
+void ParamNode::print(std::ostream &out)
+{
+    out << '?' << name;
 }
 
 //get the node of this type (if it is that type) behind any typedefs
@@ -330,6 +390,8 @@ PrimitiveNode nfloat80("float!80");
 
 PrimitiveNode nany("?");
 PrimitiveNode nnull("void");
+PrimitiveNode noverload("<overload group>");
+PrimitiveNode nerror("<error type>");
 
 Type int8(nint8);
 Type int16(nint16);
@@ -343,14 +405,23 @@ Type float80(nfloat80);
 
 Type any(nany);
 Type null(nnull);
+Type overload(noverload);
+Type error(nerror);
 
 Type::Type()
     : node(&nnull)
 {}
 
-int Type::compare(Type& other)
+TypeCompareResult Type::compare(const Type& other)
 {
     return node->compare(other.node);
+}
+
+std::string Type::to_str()
+{
+    std::stringstream strstr;
+    node->print(strstr);
+    return strstr.str();
 }
 
 //make our lives a little easer with a macro

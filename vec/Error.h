@@ -44,11 +44,9 @@ namespace err
         void init(Level lvl);
 
     public:
-        Error(Level lvl, tok::Location &&loc) : loc(loc) {init(lvl);}
-        Error(Level lvl, tok::Location &loc) : loc(loc) {init(lvl);}
+        Error(Level lvl, const tok::Location &loc) : loc(loc) {init(lvl);}
 
-        Error(tok::Location &&loc) : loc(loc) {init(err::error);}
-        Error(tok::Location &loc) : loc(loc) {init(err::error);}
+        Error(const tok::Location &loc) : loc(loc) {init(err::error);}
 
         ~Error();
 
@@ -57,8 +55,7 @@ namespace err
         
         Error & operator<< (Special toPrint);
         
-        Error & operator<< (tok::Location &&l); //set new location
-        Error & operator<< (tok::Location &l) {return *this << std::move(l);};
+        Error & operator<< (const tok::Location &l); //set new location
     };
 
     template<class T>

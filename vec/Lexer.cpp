@@ -8,6 +8,8 @@
 #include <cerrno>
 #include <algorithm>
 
+//TODO: have keyword 'operator' that behaves like x=, ie operator+ is one token
+
 //MSVC doesn't have strtoll / strtold
 #ifdef _WIN32
 #define strtoll _strtoi64
