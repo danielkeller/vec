@@ -10,8 +10,11 @@ using namespace sa;
 
 //convenience for overload resolution
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
-bool operator<(const ovr_result& lhs, const ovr_result& rhs) {return lhs.first < rhs.first;}
-typedef std::priority_queue<ovr_result> ovr_queue;
+struct pairComp
+{
+    bool operator()(const ovr_result& lhs, const ovr_result& rhs) {return !(lhs.first < rhs.first);}
+};
+typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
 
 //Phase 3 is type inference, overload resolution, and template instantiation
@@ -49,71 +52,91 @@ void Sema::Phase3()
             {
                 //may need to be adjusted because of overloading
                 
-                OverloadGroupDeclExpr* oGroup;
-                if ((oGroup = dynamic_cast<OverloadGroupDeclExpr*>(call->func->var)) != 0)
+                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(call->func->var);
+                if (oGroup == 0)
                 {
-                    ovr_queue result;
-                    for (auto func : oGroup->functions)
-                    {
-                        if (!call->owner->canSee(func->owner))
-                            continue; //not visible in this scope
+                    err::Error(call->getChildA()->loc) << "cannot call object of non-function type '"
+                        << call->func->Type().to_str() << '\'' << err::underline;
+                    call->Type() = call->func->Type(); //sorta recover
+                    continue; //break out
+                }
 
-                        result.push(
-                            std::make_pair(
-                                call->getChildA()->Type().compare(func->Type().getFunc().arg()),
-                                func)
-                            );
-                    }
+                ovr_queue result;
+                for (auto func : oGroup->functions)
+                {
+                    if (!call->owner->canSee(func->owner))
+                        continue; //not visible in this scope
 
-                    ovr_result firstChoice = result.top();
-                    result.pop(); //WRONG
+                    result.push(
+                        std::make_pair(
+                            call->getChildA()->Type().compare(func->Type().getFunc().arg()),
+                            func)
+                        );
+                }
 
-                    //TODO: now try template functions
-                    if (result.size() == 0)
-                    {
-                        err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name)
-                            << "' is not defined in this scope" << err::underline;
-                        call->Type() = typ::error;
-                    }
-                    else if (!firstChoice.first)
-                    {
-                        err::Error(call->loc) << "no accessible instance of overloaded function '"
-                            << cu->getIdent(oGroup->name) << "' matches the argument list of type "
-                            << call->getChildA()->Type().to_str() << err::underline;
-                        call->Type() = typ::error;
-                    }
-                    else if (result.size() > 1 && firstChoice.first == result.top().first)
-                    {
-                        err::Error ambigErr(call->loc);
-                        ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name)
-                            << "' is ambiguous" << err::underline << err::note << "could be"
-                            << firstChoice.second->loc << err::underline;
+                ovr_result firstChoice = result.top();
 
-                        while (result.size() && firstChoice.first == result.top().first)
-                        {
-                            ambigErr << err::note << "or" << result.top().second->loc << err::underline;
-                            result.pop();
-                        }
-                        call->ovrResult = firstChoice.second; //recover
-                        call->Type() = call->ovrResult->Type().getFunc().ret();
-                    }
-                    else //success
+                //TODO: now try template functions
+                if (result.size() == 0)
+                {
+                    err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name)
+                        << "' is not defined in this scope" << err::underline;
+                    call->Type() = typ::error;
+                }
+                else if (!firstChoice.first)
+                {
+                    err::Error(call->loc) << "no accessible instance of overloaded function '"
+                        << cu->getIdent(oGroup->name) << "' matches arguments of type "
+                        << call->getChildA()->Type().to_str() << err::underline;
+                    call->Type() = typ::error;
+                } //silly hack with , to keep this tidy
+                else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
+                {
+                    err::Error ambigErr(call->loc);
+                    ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name)
+                        << "' is ambiguous" << err::underline << err::note << "could be"
+                        << firstChoice.second->loc << err::underline;
+
+                    while (result.size() && firstChoice.first == result.top().first)
                     {
-                        call->ovrResult = firstChoice.second;
-                        call->Type() = call->ovrResult->Type().getFunc().ret();
+                        ambigErr << err::note << "or" << result.top().second->loc << err::underline;
+                        result.pop();
+                    }
+                    call->ovrResult = firstChoice.second; //recover
+                    call->Type() = call->ovrResult->Type().getFunc().ret();
+                }
+                else //success
+                {
+                    call->ovrResult = firstChoice.second;
+                    call->Type() = call->ovrResult->Type().getFunc().ret();
+                }
+            }
+            else if (BinExpr* be = dynamic_cast<BinExpr*>(node))
+            {
+                if (be->op == tok::colon) //"normal" function call
+                {
+                    Expr* lhs = be->getChildA();
+                    typ::FuncType ft = lhs->Type().getFunc();
+                    if (!ft.isValid())
+                    {
+                        err::Error(be->getChildA()->loc) << "cannot call object of non-function type '"
+                            << lhs->Type().to_str() << '\'' << err::underline
+                            << be->opLoc << err::caret;
+                        be->Type() = lhs->Type(); //sorta recover
+                    }
+                    else
+                    {
+                        be->Type() = ft.ret();
+                        if (!ft.arg().compare(be->getChildB()->Type()))
+                            err::Error(be->getChildA()->loc)
+                                << "function arguments are inappropriate for function"
+                                << ft.arg().to_str() << " != " << be->getChildB()->Type().to_str()
+                                << err::underline << be->opLoc << err::caret
+                                << be->getChildB()->loc << err::underline;
                     }
                 }
-                else
-                    ; //no overload group? just type check then
-
-            } //remember that there are also "regular" call exprs
-                    /*
-    if (!func->var->Type().getFunc().isValid())
-        err::Error(func->loc) << "cannot call object of non-function type '"
-            << func->var->Type().to_str() << '\'' << err::underline
-            << expr->loc << err::caret;
-            */ //this goes here somewhere
-            err::Error(node->loc) << node->Type().to_str() << err::underline;
+            }
+            err::Error(err::warning, node->loc) << node->Type().to_str() << err::underline;
         }
         //types of exprs, for reference
         //VarExpr -> DeclExpr -> FuncDeclExpr

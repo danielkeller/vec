@@ -38,6 +38,7 @@ namespace ast
         OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
             : func(lhs), owner(o), Expr(l), AstNode1<Expr>(rhs) {}
         ~OverloadCallExpr() {delete func;} //has to be deleted manually
+        std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
     };
 
     struct ImpliedLoopStmt : public SemaStmt, public AstNode1<Stmt>
@@ -57,12 +58,10 @@ namespace ast
         };
     };
 
-    struct FunctionDef : public SemaStmt, public AstNode1<Stmt>
+    struct FunctionDef : public Expr, public AstNode1<Stmt>
     {
-        FuncDeclExpr* decl; //store it here so the walker can't find it
-        FunctionDef(FuncDeclExpr* fde, Stmt* s) : AstNode1<Stmt>(s), decl(fde) {}
-        std::string myLbl() {return decl->myLbl();}
-        ~FunctionDef() {delete decl;} //its not in the tree, we have to delete it manually
+        FunctionDef(typ::Type t, Stmt* s) : AstNode1<Stmt>(s), Expr(s->loc) {Type() = t;}
+        std::string myLbl() {return Type().to_str();}
     };
 
     //node with any number of children

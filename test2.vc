@@ -1,18 +1,11 @@
-type test?T = {?T};
+type int32 = int;
 
-type test2?(T, U) = [test!int, test!?T, test!?U, test];
+int:int one = 6;
 
+int:int32 one = 7;
 
-int foo = 7;
-
-float:int qwer;
-int:float qwer;
-
-float:int baf = qwer:arg;
-int:float baf = qwer:arg;
-
-float:int qwer = baf:arg;
-int:float qwer = baf:arg;
+int:int test = one:arg;
+int:int32 test = one:arg;
 
 int:int main = 
 (
@@ -22,10 +15,12 @@ int:int main =
 	(
 		float asdf = 7.7;
 	)
-	int a = (15; 16; 17);
+    else if (2)
+        bar = 6;
+    else
+	    int a = (15; 16; 17);
 );
 
-int:float main = 4; //ohhh noes
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

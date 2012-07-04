@@ -162,7 +162,7 @@ void Sema::Phase2()
     });
 
     //combine adjacent BasicBlocks
-    AstWalk<StmtPair>([] (StmtPair* sp)
+    AstWalk<StmtPair>([this] (StmtPair* sp)
     {
         BasicBlock* lhs = dynamic_cast<BasicBlock*>(sp->getChildA());
         if (lhs == 0)
@@ -191,7 +191,10 @@ void Sema::Phase2()
         else
         {
             //only one stmt, don't need stmt pair
-            sp->parent->replaceChild(sp, lhs);
+            if (sp->parent) //do we only need this here?
+                sp->parent->replaceChild(sp, lhs);
+            else
+                cu->treeHead = lhs;
             sp->nullChildA();
             delete sp;
         }

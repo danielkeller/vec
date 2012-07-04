@@ -51,10 +51,10 @@ void Sema::Phase1()
         }
     });
 
-    Package* pkg = new Package();
+    //Package* pkg = new Package();
 
     //FIXME: memory leak when functions are declared & not defined
-    CachedAstWalk<AssignExpr>([this, pkg] (AssignExpr* ae)
+    CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
     {
         FuncDeclExpr* fde = dynamic_cast<FuncDeclExpr*>(ae->getChildA());
         //TODO: or varexpr?
@@ -63,12 +63,14 @@ void Sema::Phase1()
 
         //a function definition is really a statement masquerading as an expression
         //doing it this way is a. easier (less ambiguity), and b. gives better errors
+        /*
         ExprStmt* es = dynamic_cast<ExprStmt*>(ae->parent);
         if (!es)
         {
             err::Error(ae->parent->loc) << "a function definition may not be part of an expression" << err::underline;
             return; //can't deal with it
         }
+        */
 
         Stmt* conts = new ExprStmt(ae->getChildB());
 
@@ -79,19 +81,13 @@ void Sema::Phase1()
         }
 
         //create and insert function definition
-        //TODO: make it assign the definition to the variable when the function is defined
-        FunctionDef* fd = new FunctionDef(fde, conts);
-        if (fde->name == cu->reserved.main)
-        {
-            if (cu->entryPt == 0)
-                cu->entryPt = fd;
-            else
-                err::Error(fde->loc) << "redefinition of main function" << err::underline
-                    << err::note << cu->entryPt->decl->loc << "see previous definition"
-                    << err::underline;
-        }
-        es->parent->replaceChild(es, new NullStmt(es->loc));
-        pkg->appendChild(fd);
+        FunctionDef* fd = new FunctionDef(fde->Type(), conts);
+        if (fde->name == cu->reserved.main
+            && fde->Type().compare(cu->tm.makeList(cu->reserved.string_t))
+                == typ::TypeCompareResult::valid)
+            cu->entryPt = fd; //just reassign it if it's defined twice, there will already be an error
+
+        ae->setChildB(fd);
 
         //find expression in tail position
         Expr* end = findEndExpr(fd->getChildA());
@@ -104,20 +100,16 @@ void Sema::Phase1()
             endParent->nullChildA();
             delete endParent;
         }
-
-        ae->nullChildA();
-        ae->nullChildB();
-        delete es; //delete expr stmt and assign expr
     });
 
     //after we do this, anything under root is global initialization code
     //so make the __init function for it
     //TODO: does this run at compile time or run time?
-    typ::Type void_void = cu->tm.makeFunc(typ::null, cu->tm.finishTuple()); //empty tuple
-    FuncDeclExpr* fde = new FuncDeclExpr(cu->reserved.init, void_void, &(cu->global), cu->treeHead->loc);
-    FunctionDef* init = new FunctionDef(fde, cu->treeHead); //stick everything in there
-    pkg->appendChild(init);
-    cu->treeHead = pkg;
+    //typ::Type void_void = cu->tm.makeFunc(typ::null, cu->tm.finishTuple()); //empty tuple
+    //FuncDeclExpr* fde = new FuncDeclExpr(cu->reserved.init, void_void, &(cu->global), cu->treeHead->loc);
+    //FunctionDef* init = new FunctionDef(fde, cu->treeHead); //stick everything in there
+    //pkg->appendChild(init);
+    //cu->treeHead = pkg;
 
     //do this after types in case of ref types
 /*
@@ -165,7 +157,7 @@ void Sema::Phase1()
     AstWalk<VarExpr>([] (VarExpr* ve)
     {
         OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(ve->var);
-        if (oGroup == 0)
+        if (oGroup == 0 || dynamic_cast<DeclExpr*>(ve) != 0)
             return;
 
         if (oGroup->functions.size() == 1)

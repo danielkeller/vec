@@ -174,7 +174,10 @@ Expr* Parser::parsePrimaryExpr()
 
         DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
         if (decl == 0) //didn't find decl
+        {
             err::Error(to.loc) << "variable '" << cu->getIdent(to.value.ident_v) << "' is undefined" << err::underline;
+            decl = cu->reserved.undeclared_v;
+        }
         return new VarExpr(decl, to.loc);
     }
     case tok::integer:

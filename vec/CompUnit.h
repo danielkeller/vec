@@ -21,6 +21,7 @@ namespace ast
 
     public:
         CompUnit();
+        ~CompUnit();
 
         Str addString(const std::string &str);
         Ident addIdent(const std::string &str);
@@ -45,7 +46,9 @@ namespace ast
             Ident main;
             Ident init; //really __init but __names are reserved
             Ident string;
+            Ident undeclared;
             typ::Type string_t;
+            DeclExpr* undeclared_v;
             //use some sort of hungarian notation here for clarity
         } reserved;
     };
