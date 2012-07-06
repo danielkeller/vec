@@ -72,6 +72,21 @@ void Sema::Phase1()
         }
         */
 
+        //insert intrinsic declaration if that's what this is
+        if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(ae->getChildB()))
+        {
+            VarExpr* ve = call->func;
+            if (ve->var == cu->reserved.intrin_v)
+            {
+                IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChildA());
+                assert(ice && "improper use of __intrin");
+                IntrinDeclExpr* ide = new IntrinDeclExpr(fde, ice->value);
+                ae->parent->replaceChild(ae, ide);
+                delete ae;
+                return;
+            }
+        }
+
         Stmt* conts = new ExprStmt(ae->getChildB());
 
         //add decl exprs generated earlier to the AST

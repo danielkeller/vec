@@ -1,6 +1,8 @@
 type int32 = int;
 
-int:int one = 6;
+int foo = 6;
+
+int:int one = __intrin:6;
 
 int:int32 one = 7;
 
@@ -10,6 +12,8 @@ int:int32 test = one:arg;
 int:int main = 
 (
 	int bar = foo;
+
+    int:int qwer = foo = test:arg;
 
 	if (qwer:foo)
 	(

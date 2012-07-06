@@ -55,7 +55,7 @@ void Sema::Phase3()
                 OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(call->func->var);
                 if (oGroup == 0)
                 {
-                    err::Error(call->getChildA()->loc) << "cannot call object of non-function type '"
+                    err::Error(call->func->loc) << "cannot call object of non-function type '"
                         << call->func->Type().to_str() << '\'' << err::underline;
                     call->Type() = call->func->Type(); //sorta recover
                     continue; //break out
@@ -140,8 +140,8 @@ void Sema::Phase3()
         }
         //types of exprs, for reference
         //VarExpr -> DeclExpr -> FuncDeclExpr
-        //ConstExpr -> [IntConstExpr, FloatConstExpr, StringConstExpr]
-        //BinExpr -> AssignExpr -> OpAssignExpr
+        //ConstExpr -> [IntConstExpr, FloatConstExpr, StringConstExpr] *
+        //BinExpr -> AssignExpr * -> OpAssignExpr
         //UnExpr
         //IterExpr, AggExpr
         //TuplifyExpr, ListifyExpr

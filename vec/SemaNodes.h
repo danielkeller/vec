@@ -36,7 +36,7 @@ namespace ast
         Scope* owner;
         FuncDeclExpr* ovrResult;
         OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
-            : func(lhs), owner(o), Expr(l), AstNode1<Expr>(rhs) {}
+            : Expr(l), AstNode1<Expr>(rhs), func(lhs), owner(o) {}
         ~OverloadCallExpr() {delete func;} //has to be deleted manually
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
     };
@@ -58,9 +58,17 @@ namespace ast
         };
     };
 
+    struct IntrinDeclExpr : public DeclExpr
+    {
+        int intrin_id;
+        IntrinDeclExpr(FuncDeclExpr* func, int id)
+            : DeclExpr(func->name, func->Type(), func->owner, func->loc), intrin_id(id) {}
+        const char *myColor() {return "8";};
+    };
+
     struct FunctionDef : public Expr, public AstNode1<Stmt>
     {
-        FunctionDef(typ::Type t, Stmt* s) : AstNode1<Stmt>(s), Expr(s->loc) {Type() = t;}
+        FunctionDef(typ::Type t, Stmt* s) : Expr(s->loc), AstNode1<Stmt>(s) {Type() = t;}
         std::string myLbl() {return Type().to_str();}
     };
 

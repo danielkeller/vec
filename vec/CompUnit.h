@@ -47,8 +47,10 @@ namespace ast
             Ident init; //really __init but __names are reserved
             Ident string;
             Ident undeclared;
+            Ident intrin;
             typ::Type string_t;
             DeclExpr* undeclared_v;
+            DeclExpr* intrin_v;
             //use some sort of hungarian notation here for clarity
         } reserved;
     };

@@ -33,6 +33,7 @@ CompUnit::CompUnit()
     reserved.init = addIdent("__init");
     reserved.string = addIdent("String");
     reserved.undeclared = addIdent("undeclared");
+    reserved.intrin = addIdent("__intrin");
 
     //add pre defined stuff
     //once we add the operators, this should really be in a source file because
@@ -44,6 +45,9 @@ CompUnit::CompUnit()
 
     reserved.undeclared_v = new DeclExpr(reserved.undeclared, typ::error, &global, tok::Location());
     global.addVarDef(reserved.undeclared, reserved.undeclared_v);
+
+    reserved.intrin_v = new DeclExpr(reserved.intrin, typ::error, &global, tok::Location());
+    global.addVarDef(reserved.intrin, reserved.intrin_v);
 }
 
 CompUnit::~CompUnit()
