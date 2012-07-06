@@ -234,8 +234,8 @@ namespace typ
         //invalid if either are -1
         bool operator< (TypeCompareResult const & other) const {return score < other.score;}
 
-        bool operator== (TypeCompareResult& other) {return score == other.score;}
-        bool operator!= (TypeCompareResult& other) {return !(*this == other);}
+        bool operator== (const TypeCompareResult& other) const {return score == other.score;}
+        bool operator!= (const TypeCompareResult& other) const {return !(*this == other);}
 
         static TypeCompareResult valid;
         static TypeCompareResult invalid;
