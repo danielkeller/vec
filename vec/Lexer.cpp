@@ -151,7 +151,8 @@ namespace
 
         while ((*end >= 'A' && *end <= 'Z') ||
                 (*end >= 'a' && *end <= 'z') ||
-                (*end >= '0' && *end <= '9'))
+                (*end >= '0' && *end <= '9') ||
+                *end == '_')
             ++end;
 
         return end;
@@ -177,6 +178,7 @@ inline void Lexer::lexIdent()
 {
     const char * end = getEndOfWord(curChr);
     nextTok.type = tok::identifier;
+    //TODO: construct string in place
     std::string idname(curChr, end);
     nextTok.value.ident_v = compUnit->addIdent(idname);
     nextTok.loc.setLength(end - curChr);
