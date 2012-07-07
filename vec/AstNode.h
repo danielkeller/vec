@@ -5,6 +5,7 @@
 #include <ostream>
 #include <cassert>
 #include <list>
+#include <vector>
 
 #ifdef _WIN32
 #pragma warning (disable: 4250 4127) //inherits via dominance, cond expr is constant
@@ -238,6 +239,77 @@ namespace ast
             os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(c) << ";\n";
             c->emitDot(os);
             AstNode2<A, B>::emitDot(os);
+        }
+    };
+
+    //node with any number of children
+    template<class T>
+    struct AstNodeN : public virtual AstNodeB
+    {
+        typedef std::vector<T*> conts_t;
+
+        conts_t chld;
+
+        ~AstNodeN()
+        {
+            for (auto n : chld)
+                delete n;
+        };
+
+        void eachChild(sa::AstWalker0 *w)
+        {
+            for (auto n : chld)
+                w->call(n);
+        }
+
+        void replaceChild(AstNodeB* old, AstNodeB* nw)
+        {
+            for (T*& n : chld) //specify ref type to be able to modify it
+                if (n == old)
+                {
+                    n = dynamic_cast<T*>(nw);
+                    return;
+                }
+            assert(false && "didn't find child");
+        }
+
+        T*& getChild(int n)
+        {
+            return chld[n];
+        }
+
+        void setChild(int n, T* c)
+        {
+            c->parent = this;
+            chld[n] = c;
+        }
+
+        void appendChild(T* c)
+        {
+            c->parent = this;
+            chld.push_back(c);
+        }
+
+        void emitDot(std::ostream &os)
+        {
+            int p = 0;
+            for (auto n : chld)
+            {
+                os << 'n' << static_cast<AstNodeB*>(this) << ":p" << p <<  " -> n" << static_cast<AstNodeB*>(n) << ";\n";
+                ++p;
+                n->emitDot(os);
+            }
+            os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"" << myLbl();
+            for (unsigned int p = 0; p < chld.size(); ++p)
+                os << "|<p" << p << ">     ";
+            os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
+        }
+
+        void consume(AstNodeN<T>* bb)
+        {
+            chld.insert(chld.end(), bb->chld.begin(), bb->chld.end());
+            bb->chld.clear();
+            delete bb;
         }
     };
 }

@@ -72,84 +72,13 @@ namespace ast
         std::string myLbl() {return Type().to_str();}
     };
 
-    //node with any number of children
-    template<class T>
-    struct ListNode : public Stmt
-    {
-        typedef std::vector<T*> conts_t;
-
-        conts_t chld;
-
-        ~ListNode()
-        {
-            for (auto n : chld)
-                delete n;
-        };
-
-        void eachChild(sa::AstWalker0 *w)
-        {
-            for (auto n : chld)
-                w->call(n);
-        }
-
-        void replaceChild(AstNodeB* old, AstNodeB* nw)
-        {
-            for (T*& n : chld) //specify ref type to be able to modify it
-                if (n == old)
-                {
-                    n = dynamic_cast<T*>(nw);
-                    return;
-                }
-            assert(false && "didn't find child");
-        }
-
-        T*& getChild(int n)
-        {
-            return chld[n];
-        }
-
-        void setChild(int n, T* c)
-        {
-            c->parent = this;
-            chld[n] = c;
-        }
-
-        void appendChild(T* c)
-        {
-            c->parent = this;
-            chld.push_back(c);
-        }
-
-        void emitDot(std::ostream &os)
-        {
-            int p = 0;
-            for (auto n : chld)
-            {
-                os << 'n' << static_cast<AstNodeB*>(this) << ":p" << p <<  " -> n" << static_cast<AstNodeB*>(n) << ";\n";
-                ++p;
-                n->emitDot(os);
-            }
-            os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"" << myLbl();
-            for (unsigned int p = 0; p < chld.size(); ++p)
-                os << "|<p" << p << ">     ";
-            os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
-        }
-
-        void consume(ListNode<T>* bb)
-        {
-            chld.insert(chld.end(), bb->chld.begin(), bb->chld.end());
-            bb->chld.clear();
-            delete bb;
-        }
-    };
-
     //basic block class that holds any number of instructions
-    struct BasicBlock : public ListNode<Expr>
+    struct BasicBlock : public AstNodeN<Expr>, public Stmt
     {
         std::string myLbl() {return "Block";}
     };
 
-    struct Package : public ListNode<FunctionDef>
+    struct Package : public AstNodeN<FunctionDef>, public Stmt
     {
         std::string myLbl() {return "Package";}
     };
