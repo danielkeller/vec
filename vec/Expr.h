@@ -22,7 +22,7 @@ namespace ast
     public:
         //Expr() = default;
         //Expr(tok::Location &&l) : AstNodeB(l) {};
-        Expr(tok::Location const &l) {loc = l;}
+        Expr(tok::Location const &l) : type(typ::error) {loc = l;}
         virtual bool isLval() {return false;};
         virtual typ::Type& Type() {return type;} //sgetter. sget it?
         const char *myColor() {return "4";};
@@ -50,7 +50,7 @@ namespace ast
         inline typ::Type& Type();
     };
 
-    //could possible have a weak_string of its name?
+    //could possibly have a weak_string of its name?
     struct DeclExpr : public VarExpr
     {
         Scope* owner; //to look up typedefs
@@ -187,18 +187,19 @@ namespace ast
         std::string myLbl() {return tok::Name(op) + std::string("=");}
     };
 
-    struct ListifyExpr : public UnExpr
+    //TODO: more accurate location
+    struct ListifyExpr : public Expr, public AstNodeN<Expr>
     {
-        ListifyExpr(Expr* arg, tok::Token &o)
-            : UnExpr(arg, o)
+        ListifyExpr(Expr* arg)
+            : Expr(arg->loc), AstNodeN<Expr>(arg)
         {};
         std::string myLbl() {return "{...}";}
     };
 
-    struct TuplifyExpr : public UnExpr
+    struct TuplifyExpr : public Expr, public AstNodeN<Expr>
     {
-        TuplifyExpr(Expr* arg, tok::Token &o)
-            : UnExpr(arg, o)
+        TuplifyExpr(Expr* arg)
+            : Expr(arg->loc), AstNodeN<Expr>(arg)
         {};
         std::string myLbl() {return "[...]";}
     };

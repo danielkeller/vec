@@ -36,7 +36,7 @@ void Sema::Phase1()
     //insert overload group declarations into the tree so they get cleaned up
     for(auto it : cu->global.varDefs)
         if (OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(it.second))
-            cu->treeHead = new StmtPair(new ExprStmt(oGroup), cu->treeHead);
+            cu->TreeHead(new StmtPair(new ExprStmt(oGroup), cu->TreeHead()));
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
@@ -50,6 +50,23 @@ void Sema::Phase1()
             delete b;
         }
     });
+
+    //flatten out listify and tuplify expressions
+    auto ifyFlatten = [] (AstNodeN<Expr>* ify)
+    {
+        BinExpr* comma = dynamic_cast<BinExpr*>(ify->chld.back());
+        while (comma != 0 && comma->op == tok::comma)
+        {
+            ify->chld.pop_back(); //remove comma
+            ify->appendChild(comma->getChildA()); //add the left child
+            ify->appendChild(comma->getChildB()); //add the (potetially comma) right child
+            comma->nullChildA(), comma->nullChildB();
+            delete comma;
+            comma = dynamic_cast<BinExpr*>(ify->chld.back());
+        }
+    };
+    AstWalk<ListifyExpr>(ifyFlatten);
+    AstWalk<TuplifyExpr>(ifyFlatten);
 
     //Package* pkg = new Package();
 
@@ -80,7 +97,7 @@ void Sema::Phase1()
             {
                 IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChildA());
                 assert(ice && "improper use of __intrin");
-                IntrinDeclExpr* ide = new IntrinDeclExpr(fde, ice->value);
+                IntrinDeclExpr* ide = new IntrinDeclExpr(fde, (int)ice->value);
                 ae->parent->replaceChild(ae, ide);
                 delete ae;
                 return;

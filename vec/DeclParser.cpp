@@ -16,7 +16,7 @@ Parser::Parser(lex::Lexer *l)
 {
     curScope = &cu->global;
 
-    cu->treeHead = parseStmtList();
+    cu->TreeHead(parseStmtList());
 }
 
 namespace

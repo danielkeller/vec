@@ -30,7 +30,7 @@ int main ()
     {
         std::ofstream dot(fileName + std::string(".1.dot"));
         dot << "digraph G {\n";
-        cu.treeHead->emitDot(dot);
+        cu.emitDot(dot);
         dot << '}';
         dot.close();
 
@@ -40,7 +40,7 @@ int main ()
 
         std::ofstream dot2(fileName + std::string(".2.dot"));
         dot2 << "digraph G {\n";
-        cu.treeHead->emitDot(dot2);
+        cu.emitDot(dot2);
         dot2 << '}';
         dot2.close();
 
@@ -48,7 +48,7 @@ int main ()
 
         std::ofstream dot3(fileName + std::string(".3.dot"));
         dot3 << "digraph G {\n";
-        cu.treeHead->emitDot(dot3);
+        cu.emitDot(dot3);
         dot3 << '}';
         dot3.close();
 
@@ -56,6 +56,4 @@ int main ()
     } //sema goes out of scope & is destroyed
 
     getchar();
-
-    delete cu.treeHead;
 }

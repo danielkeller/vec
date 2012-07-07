@@ -40,19 +40,19 @@ namespace sa
     template<class T>
     void Sema::AstWalk(std::function<void(T*)> action)
     {
-        AstWalker<T> aw(cu->treeHead, action);
+        AstWalker<T> aw(cu, action);
     }
 
     template<class T>
     void Sema::ReverseAstWalk(std::function<void(T*)> action)
     {
-        ReverseAstWalker<T> aw(cu->treeHead, action);
+        ReverseAstWalker<T> aw(cu, action);
     }
 
     template<class T>
     void Sema::CachedAstWalk(std::function<void(T*)> action)
     {
-        CachedAstWalker<T> aw(cu->treeHead, action);
+        CachedAstWalker<T> aw(cu, action);
     }
 
     //finds the last non-block expression in a list of them

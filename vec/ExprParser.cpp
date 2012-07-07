@@ -252,7 +252,7 @@ Expr* Parser::parseListOrIfy()
         Expr* ret = parseExpression();
         if (!lexer->Expect(listEnd))
             err::ExpectedAfter(lexer, "'}'", "expression list");
-        return new ListifyExpr(ret, brace);
+        return new ListifyExpr(ret);
     }
     else if (to == listBegin || to == tupleBegin) //ambiguous case #2
     {
@@ -266,7 +266,7 @@ Expr* Parser::parseListOrIfy()
         {
             if (!lexer->Expect(listEnd))
                 err::ExpectedAfter(lexer, "'}'", "expression list");
-            return new ListifyExpr(ret, brace);
+            return new ListifyExpr(ret);
         }
 
         //it's a type
@@ -284,7 +284,7 @@ Expr* Parser::parseListOrIfy()
     Expr* ret = parseExpression();
     if (!lexer->Expect(listEnd))
         err::ExpectedAfter(lexer, "'}'", "expression list");
-    return new ListifyExpr(ret, brace);
+    return new ListifyExpr(ret);
 }
 
 /*
@@ -315,7 +315,7 @@ Expr* Parser::parseTupleOrIfy()
         Expr* ret = parseExpression();
         if (!lexer->Expect(tupleEnd))
             err::ExpectedAfter(lexer, "']'", "expression list");
-        return new TuplifyExpr(ret, brace);
+        return new TuplifyExpr(ret);
     }
     else if (to == listBegin || to == tupleBegin) //ambiguous case #2
     {
@@ -329,7 +329,7 @@ Expr* Parser::parseTupleOrIfy()
         {
             if (!lexer->Expect(tupleEnd))
                 err::ExpectedAfter(lexer, "']'", "expression list");
-            return new TuplifyExpr(ret, brace);
+            return new TuplifyExpr(ret);
         }
 
         //it's a type
@@ -354,5 +354,5 @@ Expr* Parser::parseTupleOrIfy()
     Expr* ret = parseExpression();
     if (!lexer->Expect(tupleEnd))
         err::ExpectedAfter(lexer, "']'", "expression list");
-    return new TuplifyExpr(ret, brace);
+    return new TuplifyExpr(ret);
 }

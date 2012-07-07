@@ -53,4 +53,6 @@ CompUnit::CompUnit()
 CompUnit::~CompUnit()
 {
     delete reserved.undeclared_v;
+    delete reserved.intrin_v;
+    delete treeHead;
 }

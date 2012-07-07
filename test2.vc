@@ -1,3 +1,4 @@
+/*
 type int32 = int;
 
 int foo = 6;
@@ -10,9 +11,9 @@ int:int test = one:arg;
 int:int32 test = one:arg;
 
 int:int main = 
-(
-	int bar = foo;
-
+(*/
+	int bar = [foo, 6, 7.8, one];
+    /*
     int:int qwer = foo = test:arg;
 
 	if (qwer:foo)
@@ -24,7 +25,7 @@ int:int main =
     else
 	    int a = (15; 16; 17);
 );
-
+*/
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

@@ -249,6 +249,12 @@ namespace ast
         typedef std::vector<T*> conts_t;
 
         conts_t chld;
+        
+        AstNodeN() {}
+        AstNodeN(T* first)
+        {
+            chld.push_back(first);
+        }
 
         ~AstNodeN()
         {

@@ -191,10 +191,7 @@ void Sema::Phase2()
         else
         {
             //only one stmt, don't need stmt pair
-            if (sp->parent) //do we only need this here?
-                sp->parent->replaceChild(sp, lhs);
-            else
-                cu->treeHead = lhs;
+            sp->parent->replaceChild(sp, lhs);
             sp->nullChildA();
             delete sp;
         }
