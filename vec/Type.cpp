@@ -149,6 +149,8 @@ TypeCompareResult dename(TypeNodeB*& node)
 template<class T>
 TypeCompareResult TypeNode<T>::compare (TypeNodeB* other)
 {
+    //it is important that this happens before denaming, if they have the same name or are both [x]
+    //it should not incur a penalty
     if (this == other) //early out!
         return TypeCompareResult::valid;
         
