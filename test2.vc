@@ -1,20 +1,18 @@
-type int32 = int;
-
 int foo = 6;
 
+int:int test = 6;
+
 int:int one = __intrin:6;
+int:[int a, float b] one = 7;
 
-int:int32 one = 7;
-
-int:int test = one:arg;
-int:int32 test = one:arg;
+one:[7, 8.8];
 
 int:int main = 
 (
 	int bar = {foo, 6, 7.8, one};
 	int barf = [foo, 6, 7.8, one];
     
-    int:int qwer = foo = test:arg;
+    int:int qwer = foo = arg;
 
 	if (qwer:foo)
 	(

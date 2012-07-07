@@ -28,6 +28,8 @@ Expr* Parser::parseBinaryExprInAgg()
     return parseBinaryExprRHS(lhs, tok::prec::assignment);
 }
 
+//TODO: don't other unary ops have precidence lower than binary ops?
+
 Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
 {
     while(lexer->Peek().Precidence() >= minPrec) //keep shifting?

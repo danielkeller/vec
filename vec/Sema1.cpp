@@ -68,6 +68,16 @@ void Sema::Phase1()
     AstWalk<ListifyExpr>(ifyFlatten);
     AstWalk<TuplifyExpr>(ifyFlatten);
 
+    //push flattened tuplify exprs into func calls
+    AstWalk<OverloadCallExpr>([] (OverloadCallExpr* call)
+    {
+        TuplifyExpr* args = dynamic_cast<TuplifyExpr*>(call->getChild(0));
+        if (args == 0)
+            return;
+        call->chld.pop_back();
+        call->consume(args);
+    });
+
     //Package* pkg = new Package();
 
     //FIXME: memory leak when functions are declared & not defined
@@ -78,24 +88,13 @@ void Sema::Phase1()
         if (fde == 0)
             return;
 
-        //a function definition is really a statement masquerading as an expression
-        //doing it this way is a. easier (less ambiguity), and b. gives better errors
-        /*
-        ExprStmt* es = dynamic_cast<ExprStmt*>(ae->parent);
-        if (!es)
-        {
-            err::Error(ae->parent->loc) << "a function definition may not be part of an expression" << err::underline;
-            return; //can't deal with it
-        }
-        */
-
         //insert intrinsic declaration if that's what this is
         if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(ae->getChildB()))
         {
             VarExpr* ve = call->func;
             if (ve->var == cu->reserved.intrin_v)
             {
-                IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChildA());
+                IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChild(0));
                 assert(ice && "improper use of __intrin");
                 IntrinDeclExpr* ide = new IntrinDeclExpr(fde, (int)ice->value);
                 ae->parent->replaceChild(ae, ide);

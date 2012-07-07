@@ -253,7 +253,7 @@ namespace ast
         AstNodeN() {}
         AstNodeN(T* first)
         {
-            chld.push_back(first);
+            appendChild(first);
         }
 
         ~AstNodeN()
@@ -314,6 +314,8 @@ namespace ast
         void consume(AstNodeN<T>* bb)
         {
             chld.insert(chld.end(), bb->chld.begin(), bb->chld.end());
+            for (auto c : chld)
+                c->parent = this;
             bb->chld.clear();
             delete bb;
         }

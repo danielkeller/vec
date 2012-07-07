@@ -50,8 +50,6 @@ void Sema::Phase3()
             }
             else if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(node))
             {
-                //may need to be adjusted because of overloading
-                
                 OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(call->func->var);
                 if (oGroup == 0)
                 {
@@ -61,6 +59,10 @@ void Sema::Phase3()
                     continue; //break out
                 }
 
+                for (auto arg : call->chld)
+                    cu->tm.addToTuple(arg->Type(), cu->reserved.null);
+                typ::Type argType = cu->tm.finishTuple();
+
                 ovr_queue result;
                 for (auto func : oGroup->functions)
                 {
@@ -69,7 +71,7 @@ void Sema::Phase3()
 
                     result.push(
                         std::make_pair(
-                            call->getChildA()->Type().compare(func->Type().getFunc().arg()),
+                            argType.compare(func->Type().getFunc().arg()),
                             func)
                         );
                 }
@@ -87,9 +89,9 @@ void Sema::Phase3()
                 {
                     err::Error(call->loc) << "no accessible instance of overloaded function '"
                         << cu->getIdent(oGroup->name) << "' matches arguments of type "
-                        << call->getChildA()->Type().to_str() << err::underline;
+                        << argType.to_str() << err::underline;
                     call->Type() = typ::error;
-                } //silly hack with , to keep this tidy
+                }
                 else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
                 {
                     err::Error ambigErr(call->loc);

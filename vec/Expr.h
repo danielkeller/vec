@@ -145,6 +145,17 @@ namespace ast
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 
+    struct OverloadCallExpr : public Expr, public AstNodeN<Expr>
+    {
+        VarExpr* func; //so tree walker won't see it
+        Scope* owner;
+        FuncDeclExpr* ovrResult;
+        OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
+            : Expr(l), AstNodeN<Expr>(rhs), func(lhs), owner(o) {}
+        ~OverloadCallExpr() {delete func;} //has to be deleted manually
+        std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
+    };
+
     inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, tok::Token &op)
     {
         if (op == tok::equals)
@@ -193,7 +204,7 @@ namespace ast
         ListifyExpr(Expr* arg)
             : Expr(arg->loc), AstNodeN<Expr>(arg)
         {};
-        std::string myLbl() {return "{...}";}
+        std::string myLbl() {return "\\{...\\}";}
     };
 
     struct TuplifyExpr : public Expr, public AstNodeN<Expr>

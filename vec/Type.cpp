@@ -133,6 +133,16 @@ TypeCompareResult dename(TypeNodeB*& node)
         node = realNode->type;
         return TypeCompareResult::valid + 1;
     }
+    if (TupleNode* realNode = dynamic_cast<TupleNode*>(node))
+    {
+        //conversion from [x] to x is considered denaming
+        //TODO: should it be "free" or incur a penalty?
+        if (realNode->conts.size() == 1)
+        {
+            node = realNode->conts.front().first;
+            return TypeCompareResult::valid + 1;
+        }
+    }
     return TypeCompareResult::valid;
 }
 
@@ -485,7 +495,14 @@ Type TypeManager::makeFunc(Type ret, Type arg)
 {
     FuncNode* n = new FuncNode();
     n->ret = ret;
-    n->arg = arg;
+    //function args are always tuples
+    if (arg.getTuple().isValid())
+        n->arg = arg;
+    else
+    {
+        addToTuple(arg, 0); //is null ident == 0 a safe assumption?
+        n->arg = finishTuple();
+    }
     return unique(n);
 }
 

@@ -30,17 +30,6 @@ namespace ast
         typ::Type& Type() {return setBy->Type();}
     };
 
-    struct OverloadCallExpr : public Expr, public AstNode1<Expr>
-    {
-        VarExpr* func; //so tree walker won't see it
-        Scope* owner;
-        FuncDeclExpr* ovrResult;
-        OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
-            : Expr(l), AstNode1<Expr>(rhs), func(lhs), owner(o) {}
-        ~OverloadCallExpr() {delete func;} //has to be deleted manually
-        std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
-    };
-
     struct ImpliedLoopStmt : public SemaStmt, public AstNode1<Stmt>
     {
         std::vector<IterExpr*> targets;
