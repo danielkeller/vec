@@ -235,7 +235,7 @@ primary-expr
 */
 Expr* Parser::parseListOrIfy()
 {
-    tok::Token brace = lexer->Next();
+    lexer->Advance();
 
     //now see what's inside it...
     tok::Token to = lexer->Peek();
@@ -298,7 +298,7 @@ primary-expr
 */
 Expr* Parser::parseTupleOrIfy()
 {
-    tok::Token brace = lexer->Next();
+    lexer->Advance();
 
     //now see what's inside it...
     tok::Token to = lexer->Peek();

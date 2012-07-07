@@ -136,6 +136,22 @@ void Sema::Phase3()
                     }
                 }
             }
+            else if (ListifyExpr* le = dynamic_cast<ListifyExpr*>(node))
+            {
+                typ::Type conts_t = le->getChild(0)->Type();
+                le->Type() = cu->tm.makeList(conts_t, le->chld.size());
+                for (auto c : le->chld)
+                    if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
+                        err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
+                            << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
+            }
+            else if (TuplifyExpr* te = dynamic_cast<TuplifyExpr*>(node))
+            {
+                for (auto c : te->chld)
+                    cu->tm.addToTuple(c->Type(), cu->reserved.null);
+                te->Type() = cu->tm.finishTuple();
+            }
+
             err::Error(err::warning, node->loc) << node->Type().to_str() << err::underline;
         }
         //types of exprs, for reference
