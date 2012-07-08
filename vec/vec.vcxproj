@@ -105,6 +105,7 @@
   <ItemGroup>
     <None Include="..\test.vc" />
     <None Include="..\test2.vc" />
+    <None Include="intrinsic" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

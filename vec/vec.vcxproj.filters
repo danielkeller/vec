@@ -118,5 +118,8 @@
     <None Include="..\test2.vc">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="intrinsic">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
