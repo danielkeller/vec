@@ -247,8 +247,7 @@ TypeCompareResult TupleNode::compareTo(TupleNode* other)
     auto otherit = other->conts.begin();
     for (; myit != conts.end(); ++myit, ++otherit) //only need to check one
     {
-        if (myit->second != otherit->second)
-            ret += 1; //this is a de-naming, i guess?
+        //different names on tuples incurs no penalty
         ret += myit->first->compare(otherit->first);
     }
     return ret;
