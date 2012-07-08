@@ -8,8 +8,6 @@
 #include <cerrno>
 #include <algorithm>
 
-//TODO: have keyword 'operator' that behaves like x=, ie operator+ is one token
-
 //MSVC doesn't have strtoll / strtold
 #ifdef _WIN32
 #define strtoll _strtoi64
@@ -189,6 +187,41 @@ inline void Lexer::lexKwOrIdent(const char * kw, tok::TokenType kwtype)
 {
     if (!lexKw(kw, kwtype))
         lexIdent();
+}
+
+//operator+
+inline void Lexer::lexOperator()
+{
+    const char * kw = "operator";
+    const char * end = getEndOfWord(curChr);
+    size_t len = strlen(kw) > size_t(end - curChr) ? strlen(kw) : end - curChr;
+
+    if (strncmp(curChr, kw, len) != 0) //it's not 'operator'
+    {
+        lexIdent();
+        return;
+    }
+
+    nextTok.loc.setLength(end - curChr);
+    tok::Location operLoc = nextTok.loc;
+    curChr = end - 1;
+
+    Advance(); //read the next token
+    if (!nextTok.CanBeOverloaded())
+    {
+        err::Error(nextTok.loc) << nextTok.Name() << " cannot be overloaded" << err::underline;
+        nextTok.type = tok::plus;
+    }
+    else if (nextTok == tok::lbrace) //special case
+    {
+        if (!Expect(tok::rbrace))
+            err::ExpectedAfter(this, "}", "{");
+        nextTok.type = tok::lbrace; //needed because expect reads a token
+    }
+
+    nextTok.value.ident_v = compUnit->reserved.opIdents[nextTok.type];
+    nextTok.type = tok::identifier;
+    nextTok.loc = operLoc + nextTok.loc;
 }
 
 inline void Lexer::lexNumber()
@@ -587,6 +620,9 @@ lexMore: //more elegant, in this case, than a while(true)
         if (lexKw("inline", tok::k_inline))
             return;
         lexKwOrIdent("if", tok::k_if);
+        return;
+    case 'o':
+        lexOperator();
         return;
     case 'r':
         lexKwOrIdent("return", tok::k_return);

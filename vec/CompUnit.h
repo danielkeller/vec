@@ -53,6 +53,7 @@ namespace ast
 
         //reserved identifiers. like keywords, but handled as identifiers
         //for ease of parsing. the struct is syntactic sugar
+        //also, reserved things which aren't identifiers
         struct
         {
             Ident null;
@@ -61,10 +62,12 @@ namespace ast
             Ident init; //really __init but __names are reserved
             Ident string;
             Ident undeclared;
-            Ident intrin;
+            Ident intrin; //__intrin
             typ::Type string_t;
             DeclExpr* undeclared_v;
             DeclExpr* intrin_v;
+
+            std::map<tok::TokenType, Ident> opIdents; //for operator+ etc
             //use some sort of hungarian notation here for clarity
         } reserved;
     };

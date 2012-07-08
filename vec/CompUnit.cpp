@@ -48,6 +48,19 @@ CompUnit::CompUnit()
 
     reserved.intrin_v = new DeclExpr(reserved.intrin, typ::error, &global, tok::Location());
     global.addVarDef(reserved.intrin, reserved.intrin_v);
+
+    //HACK HACK
+    for (tok::TokenType tt = tok::tilde; tt < tok::integer; ++tt)
+    {
+        if (tok::CanBeOverloaded(tt))
+        {
+            if (tt == tok::lbrace) //special case
+                reserved.opIdents[tt] = addIdent("operator{}");
+            else
+                reserved.opIdents[tt] = addIdent(std::string("operator") + tok::Name(tt));
+        }
+    }
+
 }
 
 CompUnit::~CompUnit()

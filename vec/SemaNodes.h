@@ -47,11 +47,12 @@ namespace ast
         };
     };
 
-    struct IntrinDeclExpr : public DeclExpr
+    //do it this way, or with inline assembly?
+    struct IntrinDeclExpr : public FuncDeclExpr
     {
         int intrin_id;
         IntrinDeclExpr(FuncDeclExpr* func, int id)
-            : DeclExpr(func->name, func->Type(), func->owner, func->loc), intrin_id(id) {}
+            : FuncDeclExpr(*func), intrin_id(id) {}
         const char *myColor() {return "8";};
     };
 

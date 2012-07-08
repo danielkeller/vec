@@ -120,6 +120,7 @@ namespace tok
     };
 
     const char* Name(TokenType type);
+    bool CanBeOverloaded(TokenType type);
 
     struct Token
     {
@@ -134,7 +135,8 @@ namespace tok
 
         Location loc;
 
-        const char* Name() {return tok::Name(type);};
+        const char* Name() {return tok::Name(type);}
+        bool CanBeOverloaded() {return tok::CanBeOverloaded(type);}
         prec::precidence Precidence();
         Associativity Asso_ty();
         TokenType Type() {return type;}

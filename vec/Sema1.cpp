@@ -98,6 +98,13 @@ void Sema::Phase1()
                 assert(ice && "improper use of __intrin");
                 IntrinDeclExpr* ide = new IntrinDeclExpr(fde, (int)ice->value);
                 ae->parent->replaceChild(ae, ide);
+
+                //now replace the function decl in the overload group
+                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(cu->global.getVarDef(fde->name));
+                assert(oGroup && "function decl not in group");
+                std::remove(oGroup->functions.begin(), oGroup->functions.end(), fde);
+                oGroup->functions.push_back(ide);
+
                 delete ae;
                 return;
             }

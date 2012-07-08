@@ -56,6 +56,7 @@ namespace lex
 
         inline bool lexKw(const char * kw, tok::TokenType kwtype); //may not lex anything
         inline void lexIdent();
+        inline void lexOperator(); //operator+
         inline void lexKwOrIdent(const char * kw, tok::TokenType kwtype);
         
         inline void lexNumber();

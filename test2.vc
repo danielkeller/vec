@@ -2,6 +2,8 @@ int foo = 6;
 
 int:int test = 6;
 
+int:[int a, int b] operator- = 2;
+
 int:int one = __intrin:6;
 int:[int a, float b] one = 7;
 
@@ -24,6 +26,7 @@ int:int main =
 	    int a = (15; 16; 17);
 );
 
+//HEY: i think "error overloaded function differs only in return type" prints the wrong location
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

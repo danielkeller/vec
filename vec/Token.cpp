@@ -17,95 +17,134 @@ bool tok::operator==(Token &lhs, Token &rhs)
     return lhs.Type() == rhs.Type();
 }
 
+bool tok::CanBeOverloaded(TokenType type)
+{
+    switch (type)
+    {
+        case tilde:
+        case bang:
+        case dollar:
+        case percent:
+        case caret:
+        case amp:
+        case ampamp:
+        case star:
+        case minus:
+        case minusminus:
+        case plus:
+        case plusplus:
+        case equals:
+        case equalsequals:
+        case notequals:
+        //case opequals: //overload indirectly?
+        case lbrace:
+        case bar:
+        case barbar:
+        case colon:
+        case less:
+        case lshift:
+        case notgreater:
+        case greater:
+        case rshift:
+        case notless:
+        case comma:
+        case slash:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 const char* tok::Name(TokenType type)
 {
     switch (type)
     {
         case tilde:
-            return "'~'";
+            return "~";
         case tick:
-            return "'`'";
+            return "`";
         case bang:
-            return "'!'";
+            return "!";
         case at:
-            return "'@'";
+            return "@";
         case pound:
-            return "'#'";
+            return "#";
         case dollar:
-            return "'$'";
+            return "$";
         case percent:
-            return "'%'";
+            return "%";
         case caret:
-            return "'^'";
+            return "^";
         case amp:
-            return "'&'";
+            return "&";
         case ampamp:
-            return "'&&'";
+            return "&&";
         case star:
-            return "'*'";
+            return "*";
         case lparen:
-            return "'('";
+            return "(";
         case rparen:
-            return "')'";
+            return ")";
         case minus:
-            return "'-'";
+            return "-";
         case minusminus:
-            return "'--'";
+            return "--";
         case plus:
-            return "'+'";
+            return "+";
         case plusplus:
-            return "'++'";
+            return "++";
         case equals:
-            return "'='";
+            return "=";
         case equalsequals:
-            return "'=='";
+            return "==";
         case notequals:
-            return "'!='";
+            return "!=";
         case opequals:
             return "assignment";
-//            return "'" + Token(value.op).Name() + "='";
+//            return "" + Token(value.op).Name() + "=";
         case lbrace:
-            return "'{'";
+            return "{";
         case rbrace:
-            return "'}'";
+            return "}";
         case lsquare:
-            return "'['";
+            return "[";
         case rsquare:
-            return "']'";
+            return "]";
         case bar:
-            return "'|'";
+            return "|";
         case barbar:
-            return "'||'";
+            return "||";
         case backslash:
-            return "'\\'";
+            return "\\";
         case colon:
-            return "':'";
+            return ":";
         case semicolon:
-            return "';'";
+            return ";";
         case quote:
-            return "'''";
+            return "'";
         case dquote:
-            return "'\"'";
+            return "\"";
         case less:
-            return "'<'";
+            return "<";
         case lshift:
-            return "'<<'";
+            return "<<";
         case notgreater:
-            return "'<='";
+            return "<=";
         case greater:
-            return "'>'";
+            return ">";
         case rshift:
-            return "'>>'";
+            return ">>";
         case notless:
-            return "'>='";
+            return ">=";
         case comma:
-            return "','";
+            return ",";
         case dot:
-            return "'.'";
+            return ".";
         case slash:
-            return "'/'";
+            return "/";
         case question:
-            return "'?'";
+            return "?";
 
         case integer:
             return "integer literal";
