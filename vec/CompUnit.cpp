@@ -50,7 +50,7 @@ CompUnit::CompUnit()
     global.addVarDef(reserved.intrin, reserved.intrin_v);
 
     //HACK HACK
-    for (tok::TokenType tt = tok::tilde; tt < tok::integer; ++tt)
+    for (tok::TokenType tt = tok::tilde; tt < tok::integer; tt = tok::TokenType(tt + 1))
     {
         if (tok::CanBeOverloaded(tt))
         {
