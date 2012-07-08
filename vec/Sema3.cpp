@@ -16,6 +16,59 @@ struct pairComp
 };
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
+void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, OverloadableExpr* call, typ::Type argType)
+{
+    ovr_queue result;
+    for (auto func : oGroup->functions)
+    {
+        if (!call->owner->canSee(func->owner))
+            continue; //not visible in this scope
+
+        result.push(
+            std::make_pair(
+                argType.compare(func->Type().getFunc().arg()),
+                func)
+            );
+    }
+
+    ovr_result firstChoice = result.top();
+
+    //TODO: now try template functions
+    if (result.size() == 0)
+    {
+        err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name)
+            << "' is not defined in this scope" << err::underline
+            << call->loc << err::caret;
+        call->Type() = typ::error;
+    }
+    else if (!firstChoice.first.isValid())
+    {
+        err::Error(call->loc) << "no accessible instance of overloaded function '"
+            << cu->getIdent(oGroup->name) << "' matches arguments of type "
+            << argType.to_str() << err::underline << call->loc << err::caret;
+        call->Type() = typ::error;
+    }
+    else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
+    {
+        err::Error ambigErr(call->loc);
+        ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name)
+            << "' is ambiguous" << err::underline << call->loc << err::caret
+            << firstChoice.second->loc << err::note << "could be" << err::underline;
+
+        while (result.size() && firstChoice.first == result.top().first)
+        {
+            ambigErr << result.top().second->loc << err::note << "or" << err::underline;
+            result.pop();
+        }
+        call->ovrResult = firstChoice.second; //recover
+        call->Type() = call->ovrResult->Type().getFunc().ret();
+    }
+    else //success
+    {
+        call->ovrResult = firstChoice.second;
+        call->Type() = call->ovrResult->Type().getFunc().ret();
+    }
+}
 
 //Phase 3 is type inference, overload resolution, and template instantiation
 //OR IS IT??
@@ -63,56 +116,8 @@ void Sema::Phase3()
                     cu->tm.addToTuple(arg->Type(), cu->reserved.null);
                 typ::Type argType = cu->tm.finishTuple();
 
-                ovr_queue result;
-                for (auto func : oGroup->functions)
-                {
-                    if (!call->owner->canSee(func->owner))
-                        continue; //not visible in this scope
+                resolveOverload(oGroup, call, argType);
 
-                    result.push(
-                        std::make_pair(
-                            argType.compare(func->Type().getFunc().arg()),
-                            func)
-                        );
-                }
-
-                ovr_result firstChoice = result.top();
-
-                //TODO: now try template functions
-                if (result.size() == 0)
-                {
-                    err::Error(call->func->loc) << "function '" << cu->getIdent(oGroup->name)
-                        << "' is not defined in this scope" << err::underline
-                        << call->loc << err::caret;
-                    call->Type() = typ::error;
-                }
-                else if (!firstChoice.first)
-                {
-                    err::Error(call->func->loc) << "no accessible instance of overloaded function '"
-                        << cu->getIdent(oGroup->name) << "' matches arguments of type "
-                        << argType.to_str() << err::underline << call->loc << err::caret;
-                    call->Type() = typ::error;
-                }
-                else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
-                {
-                    err::Error ambigErr(call->func->loc);
-                    ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name)
-                        << "' is ambiguous" << err::underline << call->loc << err::caret
-                        << firstChoice.second->loc << err::note << "could be" << err::underline;
-
-                    while (result.size() && firstChoice.first == result.top().first)
-                    {
-                        ambigErr << result.top().second->loc << err::note << "or" << err::underline;
-                        result.pop();
-                    }
-                    call->ovrResult = firstChoice.second; //recover
-                    call->Type() = call->ovrResult->Type().getFunc().ret();
-                }
-                else //success
-                {
-                    call->ovrResult = firstChoice.second;
-                    call->Type() = call->ovrResult->Type().getFunc().ret();
-                }
             }
             else if (BinExpr* be = dynamic_cast<BinExpr*>(node))
             {
@@ -130,13 +135,24 @@ void Sema::Phase3()
                     else
                     {
                         be->Type() = ft.ret();
-                        if (!ft.arg().compare(be->getChildB()->Type()))
+                        if (!ft.arg().compare(be->getChildB()->Type()).isValid())
                             err::Error(be->getChildA()->loc)
                                 << "function arguments are inappropriate for function"
                                 << ft.arg().to_str() << " != " << be->getChildB()->Type().to_str()
                                 << err::underline << be->opLoc << err::caret
                                 << be->getChildB()->loc << err::underline;
                     }
+                }
+                else if (tok::CanBeOverloaded(be->op))
+                {
+                    cu->tm.addToTuple(be->getChildA()->Type(), cu->reserved.null);
+                    cu->tm.addToTuple(be->getChildB()->Type(), cu->reserved.null);
+                    typ::Type argType = cu->tm.finishTuple();
+                    DeclExpr* def = cu->global.getVarDef(cu->reserved.opIdents[be->op]);
+                    OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(def);
+                    assert(oGroup && "operator not overloaded properly");
+
+                    resolveOverload(oGroup, be, argType);
                 }
             }
             else if (ListifyExpr* le = dynamic_cast<ListifyExpr*>(node))
@@ -167,6 +183,8 @@ void Sema::Phase3()
         //PostExpr (just ++ and --)
         //TupAccExpr, ListAccExpr
     });
+
+    //now replace intrinsic calls with a special node type
 
     //now check stmts that want a specific type, ie return
 }

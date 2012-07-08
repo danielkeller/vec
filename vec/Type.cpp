@@ -298,7 +298,7 @@ TypeCompareResult RefNode::compareTo(RefNode* other)
 
 bool RefNode::insertCompareTo(RefNode* other)
 {
-    return contents->compare(other);
+    return contents->compare(other).isValid();
 }
 
 TypeNodeB* RefNode::clone(TypeManager* mgr)

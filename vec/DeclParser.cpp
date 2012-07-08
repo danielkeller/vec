@@ -131,7 +131,7 @@ Expr* Parser::parseDeclRHS()
             oGroup = dynamic_cast<OverloadGroupDeclExpr*>(previousDecl);
             if (!oGroup)
             {
-                err::Error(to.loc) << "redeclaration of non-function as function" << err::underline
+                err::Error(to.loc) << "redefinition of non-function as function" << err::underline
                     << previousDecl->loc << err::note << "see previous declaration" << err::underline;
                 return new VarExpr(previousDecl, to.loc); //recover gracefully
             }
@@ -175,13 +175,28 @@ Expr* Parser::parseDeclRHS()
     }
     else //variable
     {
-        if (curScope->getVarDef(id))
+        if (DeclExpr* previousDecl = curScope->getVarDef(id))
         {
             //variables cannot be defined twice
-            err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
-                << '\'' << err::underline;
+            if (dynamic_cast<OverloadGroupDeclExpr*>(previousDecl))
+            {
+                err::Error(to.loc) << "redefinition of function as non-function" << err::underline
+                    << previousDecl->loc << err::note << "see previous definition" << err::underline;
+            }
+            else
+            {
+                err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
+                    << '\'' << err::underline;
+            }
 
             return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
+        }
+
+        //this works because idents are given out sequentially
+        if (id >= cu->reserved.opIdents.begin()->second && id <= cu->reserved.opIdents.rbegin()->second)
+        {
+            err::Error(to.loc) << "'operator' may only be used for functions" << err::underline;
+            return new NullExpr(to.loc);
         }
 
         ret = new DeclExpr(id, type, curScope, to.loc);

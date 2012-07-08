@@ -119,17 +119,25 @@ namespace ast
         std::string myLbl() {return "str: " + utl::to_str(value);}
     };
 
+    struct OverloadableExpr : public Expr
+    {
+        Scope* owner;
+        FuncDeclExpr* ovrResult;
+        OverloadableExpr(Scope* o, const tok::Location & l)
+            : Expr(l), owner(o), ovrResult(0) {}
+    };
+
     //general binary expressions
-    struct BinExpr : public Expr, public AstNode2<Expr, Expr>
+    struct BinExpr : public OverloadableExpr, public AstNode2<Expr, Expr>
     {
         tok::TokenType op;
         tok::Location opLoc;
-        BinExpr(Expr* lhs, Expr* rhs, tok::Token &o)
-            : Expr(lhs->loc + rhs->loc),
+        BinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+            : OverloadableExpr(sc, lhs->loc + rhs->loc),
             AstNode2<Expr, Expr>(lhs, rhs), op(o.type), opLoc(o.loc)
         {};
-        BinExpr(Expr* lhs, Expr* rhs, tok::TokenType o)
-            : Expr(lhs->loc + rhs->loc),
+        BinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::TokenType o)
+            : OverloadableExpr(sc, lhs->loc + rhs->loc),
             AstNode2<Expr, Expr>(lhs, rhs), op(o)
         {};
         std::string myLbl() {return tok::Name(op);}
@@ -137,7 +145,8 @@ namespace ast
 
     struct AssignExpr : public BinExpr
     {
-        AssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : BinExpr(lhs, rhs, o) {};
+        AssignExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+            : BinExpr(lhs, rhs, sc, o) {};
         std::string myLbl() {return "'='";}
         typ::Type& Type() {return getChildA()->Type();}
     };
@@ -145,29 +154,28 @@ namespace ast
     struct OpAssignExpr : public AssignExpr
     {
         tok::TokenType assignOp;
-        OpAssignExpr(Expr* lhs, Expr* rhs, tok::Token &o) : AssignExpr(lhs, rhs, o), assignOp(o.value.op) {};
+        OpAssignExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+            : AssignExpr(lhs, rhs, sc, o), assignOp(o.value.op) {};
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 
-    struct OverloadCallExpr : public Expr, public AstNodeN<Expr>
+    struct OverloadCallExpr : public OverloadableExpr, public AstNodeN<Expr>
     {
         VarExpr* func; //so tree walker won't see it
-        Scope* owner;
-        FuncDeclExpr* ovrResult;
         OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
-            : Expr(l), AstNodeN<Expr>(rhs), func(lhs), owner(o) {}
+            : OverloadableExpr(o, l), AstNodeN<Expr>(rhs), func(lhs) {}
         ~OverloadCallExpr() {delete func;} //has to be deleted manually
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
     };
 
-    inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, tok::Token &op)
+    inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &op)
     {
         if (op == tok::equals)
-            return new AssignExpr(lhs, rhs, op);
+            return new AssignExpr(lhs, rhs, sc, op);
         else if (op == tok::opequals)
-            return new OpAssignExpr(lhs, rhs, op);
+            return new OpAssignExpr(lhs, rhs, sc, op);
         else
-            return new BinExpr(lhs, rhs, op);
+            return new BinExpr(lhs, rhs, sc, op);
     }
 
     //unary expressions
@@ -234,7 +242,7 @@ namespace ast
     struct TupAccExpr : public BinExpr
     {
         TupAccExpr(Expr* lhs, Expr* rhs, tok::Token &o)
-            : BinExpr(lhs, rhs, o)
+            : BinExpr(lhs, rhs, 0, o)
         {}
 
         bool isLval() {return getChildA()->isLval();}
@@ -243,8 +251,8 @@ namespace ast
 
     struct ListAccExpr : public BinExpr
     {
-        ListAccExpr(Expr* lhs, Expr* rhs, tok::Token &o)
-            : BinExpr(lhs, rhs, o)
+        ListAccExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+            : BinExpr(lhs, rhs, sc, o)
         {}
 
         bool isLval() {return getChildA()->isLval();}

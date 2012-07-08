@@ -40,7 +40,7 @@ bool tok::CanBeOverloaded(TokenType type)
         case lbrace:
         case bar:
         case barbar:
-        case colon:
+        //case colon:
         case less:
         case lshift:
         case notgreater:

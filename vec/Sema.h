@@ -2,7 +2,7 @@
 #define SEMA_H
 
 #include "CompUnit.h"
-#include "Expr.h"
+#include "SemaNodes.h"
 
 #include <functional>
 
@@ -20,6 +20,8 @@ namespace sa
         void CachedAstWalk(std::function<void(T*)> action);
 
         void validateTree();
+
+        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, ast::OverloadableExpr* call, typ::Type argType);
         
     public:
         Sema(ast::CompUnit* c) : cu(c) {};

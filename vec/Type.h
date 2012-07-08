@@ -203,11 +203,11 @@ namespace typ
 
     public:
         TypeCompareResult(bool valid) {score = valid ? 0 : -1;}
-        operator bool() {return score != -1;}
+        bool isValid() {return score != -1;}
 
         TypeCompareResult& operator+=(int diff)
         {
-            if (*this)
+            if (isValid())
                 score += diff;
             return *this;
         }
@@ -217,9 +217,9 @@ namespace typ
             return TypeCompareResult(*this) += diff;
         }
 
-        TypeCompareResult& operator+= (TypeCompareResult& other)
+        TypeCompareResult& operator+= (TypeCompareResult other)
         {
-            if (other)
+            if (other.isValid())
                 operator+=(other.score);
             else
                 *this = invalid;

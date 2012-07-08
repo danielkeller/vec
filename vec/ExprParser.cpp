@@ -55,7 +55,7 @@ Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
         if (op == tok::colon && func)
             lhs = new OverloadCallExpr(func, rhs, curScope, op.loc);
         else
-            lhs = makeBinExpr(lhs, rhs, op);
+            lhs = makeBinExpr(lhs, rhs, curScope, op);
         //fall through and "tail recurse"
     }
     return lhs; //cave johnson, we're done here
@@ -125,7 +125,7 @@ Expr* Parser::parsePostfixExpr()
                 err::ExpectedAfter(lexer, tok::Name(listEnd), "expression");
             else
                 rhs->loc += lexer->Last().loc; //lump } in with length of arg. not great but good enough
-            arg = new ListAccExpr(arg, rhs, op);
+            arg = new ListAccExpr(arg, rhs, curScope, op);
             break;
 
         case tupleBegin:
