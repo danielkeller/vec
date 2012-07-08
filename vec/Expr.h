@@ -55,8 +55,12 @@ namespace ast
     {
         Scope* owner; //to look up typedefs
         Ident name; //for errors
+
         DeclExpr(Ident n, typ::Type t, Scope* o, tok::Location const &l)
             : VarExpr(this, l), owner(o), name(n) {type = t;}
+        DeclExpr(const DeclExpr& old) //this has to be specified because var must point to this
+            : VarExpr(this, old.loc), owner(old.owner), name(old.name) {type = old.type;}
+
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
         typ::Type& Type() {return type;} //have to re-override it back to the original
     };
@@ -234,7 +238,7 @@ namespace ast
         {}
 
         bool isLval() {return getChildA()->isLval();}
-        std::string myLbl() {return "a{b}";}
+        std::string myLbl() {return "a[b]";}
     };
 
     struct ListAccExpr : public BinExpr
@@ -244,7 +248,7 @@ namespace ast
         {}
 
         bool isLval() {return getChildA()->isLval();}
-        std::string myLbl() {return "a[b]";}
+        std::string myLbl() {return "a{b}";}
     };
 }
 
