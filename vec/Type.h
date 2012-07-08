@@ -186,7 +186,7 @@ namespace typ
         void clearTuple() {tupleConts.clear();} //if there was an error
         Type finishTuple();
 
-        //these functions aren't really part of the public interface but its simper to make them public
+        //these functions aren't really part of the public interface but its simpler to make them public
 
         //creates a new type with params repaced by the specified types
         Type substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs);
@@ -198,7 +198,7 @@ namespace typ
     //if they are entirely different the score is -1
     class TypeCompareResult
     {
-        int score;
+        unsigned int score; //unsigned so invalid result is always greater than valid
         TypeCompareResult(int s) : score(s) {}
 
     public:

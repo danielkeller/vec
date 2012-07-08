@@ -7,6 +7,8 @@ int:[int a, int b] operator- = 2;
 int:int one = __intrin:6;
 int:[int a, float b] one = 7;
 
+float:[int a, int b] operator- = 2;
+
 one:[7, 8.8];
 
 int:int main = 

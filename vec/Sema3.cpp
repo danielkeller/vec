@@ -12,7 +12,7 @@ using namespace sa;
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
 struct pairComp
 {
-    bool operator()(const ovr_result& lhs, const ovr_result& rhs) {return !(lhs.first < rhs.first);}
+    bool operator()(const ovr_result& lhs, const ovr_result& rhs) {return rhs.first < lhs.first;}
 };
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 

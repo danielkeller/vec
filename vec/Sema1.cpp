@@ -102,7 +102,7 @@ void Sema::Phase1()
                 //now replace the function decl in the overload group
                 OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(cu->global.getVarDef(fde->name));
                 assert(oGroup && "function decl not in group");
-                std::remove(oGroup->functions.begin(), oGroup->functions.end(), fde);
+                oGroup->functions.remove(fde);
                 oGroup->functions.push_back(ide);
 
                 delete ae;
