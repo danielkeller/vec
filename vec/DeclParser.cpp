@@ -132,7 +132,7 @@ Expr* Parser::parseDeclRHS()
             if (!oGroup)
             {
                 err::Error(to.loc) << "redeclaration of non-function as function" << err::underline
-                    << err::note << "see previous declaration" << previousDecl->loc << err::underline;
+                    << previousDecl->loc << err::note << "see previous declaration" << err::underline;
                 return new VarExpr(previousDecl, to.loc); //recover gracefully
             }
         }
@@ -155,7 +155,7 @@ Expr* Parser::parseDeclRHS()
                     != typ::TypeCompareResult::valid)
                 {
                     err::Error(to.loc) << "overloaded function differs only in return type"
-                        << err::underline << err::note << "see previous declaration" << func->loc
+                        << err::underline << func->loc << err::note << "see previous declaration"
                         << err::underline;
                 }
                 declared = true;
