@@ -36,24 +36,21 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, OverloadableExpr* call
     //TODO: now try template functions
     if (result.size() == 0)
     {
-        err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name)
-            << "' is not defined in this scope" << err::underline
-            << call->loc << err::caret;
+        err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name) << "' is not defined in this scope"
+            << err::underline << call->loc << err::caret;
         call->Type() = typ::error;
     }
     else if (!firstChoice.first.isValid())
     {
-        err::Error(call->loc) << "no accessible instance of overloaded function '"
-            << cu->getIdent(oGroup->name) << "' matches arguments of type "
-            << argType.to_str() << err::underline << call->loc << err::caret;
+        err::Error(call->loc) << "no accessible instance of overloaded function '" << cu->getIdent(oGroup->name)
+            << "' matches arguments of type " << argType.to_str() << err::underline << call->loc << err::caret;
         call->Type() = typ::error;
     }
     else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
     {
         err::Error ambigErr(call->loc);
-        ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name)
-            << "' is ambiguous" << err::underline << call->loc << err::caret
-            << firstChoice.second->loc << err::note << "could be" << err::underline;
+        ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name) << "' is ambiguous" << err::underline
+            << call->loc << err::caret << firstChoice.second->loc << err::note << "could be" << err::underline;
 
         while (result.size() && firstChoice.first == result.top().first)
         {
