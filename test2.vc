@@ -1,5 +1,3 @@
-[[int, float], [float, int]] asfsdaf;
-
 int foo = 6;
 
 int:int test = 6;
