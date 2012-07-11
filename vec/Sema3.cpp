@@ -109,6 +109,7 @@ void Sema::Phase3()
                     continue; //break out
                 }
 
+                typ::TupleRAII raiiobj(cu->tm);
                 for (auto arg : call->chld)
                     cu->tm.addToTuple(arg->Type(), cu->reserved.null);
                 typ::Type argType = cu->tm.finishTuple();
@@ -142,6 +143,7 @@ void Sema::Phase3()
                 }
                 else if (tok::CanBeOverloaded(be->op))
                 {
+                    typ::TupleRAII raiiobj(cu->tm);
                     cu->tm.addToTuple(be->getChildA()->Type(), cu->reserved.null);
                     cu->tm.addToTuple(be->getChildB()->Type(), cu->reserved.null);
                     typ::Type argType = cu->tm.finishTuple();
@@ -163,6 +165,7 @@ void Sema::Phase3()
             }
             else if (TuplifyExpr* te = dynamic_cast<TuplifyExpr*>(node))
             {
+                typ::TupleRAII raiiobj(cu->tm);
                 for (auto c : te->chld)
                     cu->tm.addToTuple(c->Type(), cu->reserved.null);
                 te->Type() = cu->tm.finishTuple();

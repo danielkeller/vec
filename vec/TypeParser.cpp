@@ -16,8 +16,6 @@ do {\
     if (backtrackStatus == CanBacktrack)\
     {\
         backtrackStatus = IsBacktracking;\
-        cu->tm.clearTuple();\
-        cu->tm.clearNamedArgs();\
         type = typ::error;\
         return;\
     }\
@@ -167,6 +165,8 @@ type-list
 */
 void Parser::parseTuple()
 {
+    TupleRAII raiiobj(cu->tm);
+
     lexer->Advance();
     do {
         parseSingle();
@@ -320,7 +320,10 @@ void Parser::parseNamed()
             do {
                 parseSingle();
                 if (backtrackStatus == IsBacktracking)
+                {
+                    cu->tm.clearNamedArgs();
                     return;
+                }
 
                 if (nargs < td->params.size()) //otherwise, error
                     cu->tm.addNamedArg(td->params[nargs], type);

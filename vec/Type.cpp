@@ -501,6 +501,7 @@ Type TypeManager::makeFunc(Type ret, Type arg)
         n->arg = arg;
     else
     {
+        typ::TupleRAII raiiobj(*this);
         addToTuple(arg, 0); //is null ident == 0 a safe assumption?
         n->arg = finishTuple();
     }
@@ -510,7 +511,7 @@ Type TypeManager::makeFunc(Type ret, Type arg)
 Type TypeManager::finishTuple()
 {
     TupleNode* n = new TupleNode();
-    std::swap(n->conts, tupleConts); //handily clears out tupleConts
+    std::swap(n->conts, tupleConts.top());
     return unique(n);
 }
 

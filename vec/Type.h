@@ -4,6 +4,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <stack>
 #include "Token.h"
 
 namespace utl
@@ -163,12 +164,15 @@ namespace typ
     class TypeManager
     {
         std::list<TypeNodeB*> nodes;
-        std::list<std::pair<TypeNodeB*, ast::Ident>> tupleConts;
+        std::stack<std::list<std::pair<TypeNodeB*, ast::Ident>>> tupleConts;
         std::map<ast::Ident, TypeNodeB*> namedConts;
 
         //either add n to the list of known nodes
         //or delete n and return an identical node from the list
         TypeNodeB* unique(TypeNodeB* n);
+
+        void startTuple() {tupleConts.emplace();}
+        void clearTuple() {tupleConts.pop();}
 
     public:
         ~TypeManager();
@@ -182,8 +186,7 @@ namespace typ
         void clearNamedArgs() {namedConts.clear();} //if there was an error
         Type finishNamed(Type conts, ast::Ident name);
 
-        void addToTuple(Type elem, ast::Ident name) {tupleConts.emplace_back(elem.node, name);}
-        void clearTuple() {tupleConts.clear();} //if there was an error
+        void addToTuple(Type elem, ast::Ident name) {tupleConts.top().emplace_back(elem.node, name);}
         Type finishTuple();
 
         //these functions aren't really part of the public interface but its simpler to make them public
@@ -192,6 +195,16 @@ namespace typ
         Type substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs);
         //performs a deep copy, keeping everything unique and subbing in params
         TypeNodeB* clone(TypeNodeB* n);
+
+        friend class TupleRAII;
+    };
+
+    class TupleRAII
+    {
+        TypeManager* tm;
+    public:
+        TupleRAII(TypeManager& t) : tm(&t) {tm->startTuple();}
+        ~TupleRAII() {tm->clearTuple();}
     };
 
     //result of comparison saying how "close" two types are
