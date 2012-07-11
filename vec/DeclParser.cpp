@@ -3,7 +3,6 @@
 #include "Error.h"
 #include "Type.h"
 #include "CompUnit.h"
-#include "ParseUtils.h"
 
 #include <cassert>
 
@@ -60,17 +59,22 @@ void Parser::parseTypeDecl()
     {
         if (lexer->Expect(tok::lparen)) //list
         {
-            par::parseListOf(lexer, isIdent, tok::rparen, "identifiers", [this, &td] ()
-            {
-                td.params.push_back(lexer->Next().value.ident_v);
-            });
+            do {
+                if (lexer->Peek() == tok::identifier)
+                    td.params.push_back(lexer->Next().value.ident_v);
+                else
+                    err::Error(lexer->Peek().loc) << "expected identifier in type parameter list"
+                        << err::underline;
+            } while (lexer->Expect(tok::comma));
+            if (!lexer->Expect(tok::rparen))
+                err::ExpectedAfter(lexer, ")", "list of identifers");
         }
         else if (lexer->Peek() == tok::identifier) //single
             td.params.push_back(lexer->Next().value.ident_v);
         else //junk
         {
             err::Error(lexer->Peek().loc) << "unexpected " << lexer->Peek().Name()
-                << " in type parameter list" << err::caret;
+                << " expected type parameter list" << err::caret;
             lexer->ErrUntil(tok::semicolon);
             return;
         }
@@ -96,6 +100,9 @@ primary-expr
 Expr* Parser::parseDecl()
 {
     parseType();
+    
+    if (backtrackStatus == IsBacktracking)
+        return 0;
 
     return parseDeclRHS();
 }
@@ -111,6 +118,12 @@ Expr* Parser::parseDeclRHS()
 
     if (!lexer->Expect(tok::identifier, to))
     {
+        if (backtrackStatus == CanBacktrack)
+        {
+            backtrackStatus = IsBacktracking;
+            return 0; //this value will get ignored anyway
+        }
+
         err::Error(lexer->Last().loc) << "expected identifier in declaration" << err::postcaret;
         return new NullExpr(std::move(lexer->Last().loc));
     }

@@ -75,7 +75,6 @@
     <ClInclude Include="Lexer.h" />
     <ClInclude Include="Location.h" />
     <ClInclude Include="Parser.h" />
-    <ClInclude Include="ParseUtils.h" />
     <ClInclude Include="Scope.h" />
     <ClInclude Include="Sema.h" />
     <ClInclude Include="SemaNodes.h" />

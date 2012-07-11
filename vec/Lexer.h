@@ -35,6 +35,9 @@ namespace lex
 
         ast::CompUnit *getCompUnit() {return compUnit;}
 
+        void backtrackSet();
+        void backtrackReset();
+
     private:
         char * buffer;
         std::string fileName;
@@ -43,6 +46,12 @@ namespace lex
 
         tok::Token nextTok;
         tok::Token curTok;
+
+        struct {
+            const char * curChr;
+            tok::Token nextTok;
+            tok::Token curTok;
+        } backtrack;
 
         ast::CompUnit *compUnit;
 

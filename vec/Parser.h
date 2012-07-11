@@ -37,8 +37,8 @@ namespace par
         //parse list type or listify ie {int} or {1, 2, 3}
         //returns NULL if type is encountered
         //this is needed because we don't know what { means w/o looking at its contents
-        ast::Expr* parseListOrIfy();
-        ast::Expr* parseTupleOrIfy();
+        ast::Expr* parseListify();
+        ast::Expr* parseTuplify();
 
         //DeclParser.cpp
         void parseTypeDecl();
@@ -57,13 +57,17 @@ namespace par
         void parseTypeList();
         //use these when we only want a type
         void parseList();
-        void parseListEnd();
         void parseTuple();
-        void parseTupleEnd();
         void parsePrim();
         void parseParam();
         void parseRef();
         void parseNamed();
+
+        enum {
+            CantBacktrack,
+            CanBacktrack,
+            IsBacktracking
+        } backtrackStatus;
 
         friend class typ::Type;
     };

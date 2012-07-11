@@ -3,7 +3,6 @@
 #include "Util.h"
 #include "Error.h"
 #include "CompUnit.h"
-#include "ParseUtils.h"
 #include "Parser.h"
 
 #include <cstdlib>
@@ -11,6 +10,18 @@
 using namespace par;
 using namespace typ;
 using namespace ast;
+
+#define START_BACKTRACK \
+do {\
+    if (backtrackStatus == CanBacktrack)\
+    {\
+        backtrackStatus = IsBacktracking;\
+        cu->tm.clearTuple();\
+        cu->tm.clearNamedArgs();\
+        type = typ::error;\
+        return;\
+    }\
+} while (false)
 
 bool par::couldBeType(tok::Token &t)
 {
@@ -39,15 +50,13 @@ type
 */
 void Parser::parseType()
 {
-    if (lexer->Expect(tok::colon)) //void function?
-    {
+    if (lexer->Peek() == tok::colon) //void function?
+        type = typ::null;
+    else
         parseSingle();
-        type = cu->tm.makeFunc(typ::null, type);
-        return;
-    }
 
-    parseSingle();
-    parseTypeEnd();
+    if (backtrackStatus != IsBacktracking)
+        parseTypeEnd();
 }
 
 void Parser::parseTypeEnd()
@@ -56,7 +65,8 @@ void Parser::parseTypeEnd()
     {
         Type ret = type;
         parseSingle();
-        type = cu->tm.makeFunc(ret, type);
+        if (backtrackStatus != IsBacktracking)
+            type = cu->tm.makeFunc(ret, type);
     }
 }
 
@@ -101,32 +111,14 @@ void Parser::parseSingle()
         break;
 
     default:
+        START_BACKTRACK;
         err::Error(to.loc) << "unexpected " << to.Name() << ", expecting type" << err::caret;
+        type = typ::error;
         lexer->Advance();
     }
 }
 
-/*
-type-list
-    : type
-    | type-list ',' type
-    ;
-*/
-void Parser::parseTypeList()
-{
-    int num;
-    par::parseListOf(lexer, couldBeType, tupleEnd, "types", [this, &num] ()
-    {
-        ++num;
-        parseSingle();
-        if (lexer->Peek() == tok::identifier)
-        {
-            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
-        }
-        else
-            cu->tm.addToTuple(type, cu->reserved.null);
-    });
-}
+
 
 /*
 single-type
@@ -137,13 +129,15 @@ void Parser::parseList()
 {
     lexer->Advance();
     parseSingle();
-    parseListEnd();
-}
+    if (backtrackStatus == IsBacktracking)
+        return;
 
-void Parser::parseListEnd()
-{
     if (!lexer->Expect(listEnd))
+    {
+        //could be a declaration or something
+        START_BACKTRACK;
         err::ExpectedAfter(lexer, "'}'", "type");
+    }
 
     if (lexer->Expect(tok::bang))
     {
@@ -152,7 +146,7 @@ void Parser::parseListEnd()
         {
             type = cu->tm.makeList(type, to.value.ident_v);
         }
-        else
+        else //don't backtrack?
         {
             err::ExpectedAfter(lexer, "list length", "'!'");
             type = cu->tm.makeList(type);
@@ -166,18 +160,35 @@ void Parser::parseListEnd()
 single-type
     : '[' type-list ']'
     ;
+type-list
+    : type
+    | type-list ',' type
+    ;
 */
 void Parser::parseTuple()
 {
     lexer->Advance();
-    parseTypeList();
-    parseTupleEnd();
-}
+    do {
+        parseSingle();
 
-void Parser::parseTupleEnd()
-{
+        if (backtrackStatus == IsBacktracking)
+            return;
+         
+        if (lexer->Peek() == tok::identifier)
+        {
+            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
+        }
+        else
+            cu->tm.addToTuple(type, cu->reserved.null);
+    } while (lexer->Expect(tok::comma));
+
+    if (!lexer->Expect(tupleEnd))
+    {
+        START_BACKTRACK;
+        err::ExpectedAfter(lexer, tok::Name(tupleEnd), "type list");
+    }
+
     type = cu->tm.finishTuple();
-    //don't need to check for ], parseTypeList does that
 }
 
 /*
@@ -272,7 +283,8 @@ void Parser::parseRef()
 {
     lexer->Advance();
     parseSingle();
-    type = cu->tm.makeRef(type);
+    if (backtrackStatus != IsBacktracking)
+        type = cu->tm.makeRef(type);
 }
 
 /*
@@ -284,14 +296,15 @@ single-type
 */
 void Parser::parseNamed()
 {
-    tok::Token& to = lexer->Next();
-    ast::Ident typeName = to.value.ident_v;
+    tok::Token id = lexer->Next();
+
+    ast::Ident typeName = id.value.ident_v;
     ast::TypeDef * td = curScope->getTypeDef(typeName);
 
     if (!td)
     {
-        err::Error(to.loc) << "undefined type '"
-            << lexer->getCompUnit()->getIdent(typeName) << '\'' << err::underline;
+        //err::Error(id.loc) << "undefined type '"
+        //    << lexer->getCompUnit()->getIdent(typeName) << '\'' << err::underline;
         type = typ::int32; //recover
         return;
     }
@@ -304,17 +317,24 @@ void Parser::parseNamed()
     {
         if (lexer->Expect(tok::lparen))
         {
-            par::parseListOf(lexer, couldBeType, tok::rparen, "types", [&] ()
-            {
+            do {
                 parseSingle();
+                if (backtrackStatus == IsBacktracking)
+                    return;
+
                 if (nargs < td->params.size()) //otherwise, error
                     cu->tm.addNamedArg(td->params[nargs], type);
                 ++nargs; //keep incrementing, we can detect the error that way
-            });
+            } while (lexer->Expect(tok::comma));
+            if (!lexer->Expect(tok::rparen))
+                err::ExpectedAfter(lexer, ")", "list of types");
         }
         else
         {
             parseSingle();
+            if (backtrackStatus == IsBacktracking)
+                return;
+
             if (td->params.size() == 1) //otherwise, error
                 cu->tm.addNamedArg(td->params[0], type);
             nargs = 1;

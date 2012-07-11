@@ -649,3 +649,17 @@ lexMore: //more elegant, in this case, than a while(true)
         return;
     }
 }
+
+void Lexer::backtrackSet()
+{
+    backtrack.curChr = curChr;
+    backtrack.curTok = curTok;
+    backtrack.nextTok = nextTok;
+}
+
+void Lexer::backtrackReset()
+{
+    curChr = backtrack.curChr;
+    curTok = backtrack.curTok;
+    nextTok = backtrack.nextTok;
+}

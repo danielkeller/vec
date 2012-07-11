@@ -157,29 +157,40 @@ Expr* Parser::parsePrimaryExpr()
 {
     tok::Token to = lexer->Peek();
 
-    Expr* ret;
+    //backtracking works by setting a "restore point," then blindly parsing ahead as if it were
+    //a type. if something goes wrong we set backtrackStatus accordingly and return without creating
+    //any types. we then restore, and "try again" by parsing it as an expression instead.
+    if (couldBeType(to))
+    {
+        //it must be a type. don't set backtracking in this case so we get better errors.
+        if (to != tok::identifier && to != listBegin && to != tupleBegin)
+            return parseDecl();
+
+        lexer->backtrackSet(); //get ready...
+        backtrackStatus = CanBacktrack; //get set...
+
+        Expr* decl = parseDecl(); //GO!
+        if (backtrackStatus != IsBacktracking) //success! it was a type.
+        {
+            backtrackStatus = CantBacktrack;
+            return decl;
+        }
+        
+        //nope! it was an expression
+        backtrackStatus = CantBacktrack;
+        lexer->backtrackReset();
+        //now that we're back where we were, parse as an expression
+    }
 
     switch (to.type)
     {
     case tok::identifier:
     {
-        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
-            return parseDecl();
-        //nope, it's an ID
         lexer->Advance();
-        if (lexer->Peek() == tok::identifier) //but the user thinks its a type
-        {
-            err::Error(to.loc) << '\'' << cu->getIdent(to.value.ident_v)
-                << "' is not a type" << err::underline; //we'll show them!
-            to = lexer->Next(); //ignore.
-        }
-
         DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
         if (decl == 0) //didn't find decl
-        {
-            err::Error(to.loc) << "variable '" << cu->getIdent(to.value.ident_v) << "' is undefined" << err::underline;
-            decl = cu->reserved.undeclared_v;
-        }
+            decl = cu->reserved.undeclared_v; //don't complain, it could be in another package
+
         return new VarExpr(decl, to.loc);
     }
     case tok::integer:
@@ -192,97 +203,29 @@ Expr* Parser::parsePrimaryExpr()
         lexer->Advance();
         return new StringConstExpr(to.value.ident_v, to.loc);
 
-
     case tok::lparen:
         return parseBlock();
-
     case listBegin:
-        ret = parseListOrIfy();
-        if (!ret) //it's a type
-        {
-            parseTypeEnd(); //must be here because here we know it's a top level type
-            ret = parseDeclRHS();
-        }
-        return ret;
-
+        return parseListify();
     case tupleBegin:
-        ret = parseTupleOrIfy();
-        if (!ret) //it's a type
-        {
-            parseTypeEnd(); //must be here because here we know it's a top level type
-            ret = parseDeclRHS();
-        }
-        return ret;
+        return parseTuplify();
 
-    default:
-        if (couldBeType(lexer->Peek())) //any other type stuff
-            return parseDecl();
-
-        //otherwise we're SOL
-
+    default: //we're SOL
         err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret;
-        lexer->Advance(); //eat it
+        lexer->Advance(); //eat it so as not to loop forever
         return new NullExpr(std::move(to.loc));
     }
 }
 
 /*
-type
-    : '{' type '}'
-    ;
-
 primary-expr
     : '{' expression '}'
     ;
 */
-Expr* Parser::parseListOrIfy()
+Expr* Parser::parseListify()
 {
     lexer->Advance();
 
-    //now see what's inside it...
-    tok::Token to = lexer->Peek();
-    if (to == tok::identifier) //ambiguous case #1
-    {
-        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
-        {
-            parseNamed();
-            parseListEnd();
-            return NULL;
-        }
-
-        //it's an expr
-        Expr* ret = parseExpression();
-        if (!lexer->Expect(listEnd))
-            err::ExpectedAfter(lexer, "'}'", "expression list");
-        return new ListifyExpr(ret);
-    }
-    else if (to == listBegin || to == tupleBegin) //ambiguous case #2
-    {
-        Expr* ret;
-        if (to == listBegin)
-            ret = parseListOrIfy();
-        else
-            ret = parseTupleOrIfy();
-
-        if (ret) //it's an expr
-        {
-            if (!lexer->Expect(listEnd))
-                err::ExpectedAfter(lexer, "'}'", "expression list");
-            return new ListifyExpr(ret);
-        }
-
-        //it's a type
-        parseListEnd();
-        return NULL;
-    }
-    else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
-    {
-        parseSingle();
-        parseListEnd();
-        return NULL;
-    }
-
-    //otherwise, it's an expression
     Expr* ret = parseExpression();
     if (!lexer->Expect(listEnd))
         err::ExpectedAfter(lexer, "'}'", "expression list");
@@ -290,69 +233,14 @@ Expr* Parser::parseListOrIfy()
 }
 
 /*
-type
-    : '[' type-list ']'
-    ;
-
 primary-expr
     : '[' expression ']'
     ;
 */
-Expr* Parser::parseTupleOrIfy()
+Expr* Parser::parseTuplify()
 {
     lexer->Advance();
 
-    //now see what's inside it...
-    tok::Token to = lexer->Peek();
-    if (to == tok::identifier) //ambiguous case #1
-    {
-        if (curScope->getTypeDef(to.value.ident_v)) //it's a type
-        {
-            parseTypeList();
-            parseTupleEnd();
-            return NULL;
-        }
-
-        //it's an expr
-        Expr* ret = parseExpression();
-        if (!lexer->Expect(tupleEnd))
-            err::ExpectedAfter(lexer, "']'", "expression list");
-        return new TuplifyExpr(ret);
-    }
-    else if (to == listBegin || to == tupleBegin) //ambiguous case #2
-    {
-        Expr* ret;
-        if (to == listBegin)
-            ret = parseListOrIfy();
-        else
-            ret = parseTupleOrIfy();
-
-        if (ret) //it's an expr
-        {
-            if (!lexer->Expect(tupleEnd))
-                err::ExpectedAfter(lexer, "']'", "expression list");
-            return new TuplifyExpr(ret);
-        }
-
-        //it's a type
-        //there might be more types to parse
-        //or a tuple element name
-        if (lexer->Peek() == tok::identifier)
-        {
-            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
-        }
-        lexer->Expect(tok::comma); //get rid of the comma if it's there
-        parseTypeList();
-        parseTupleEnd();
-        return NULL;
-    }
-    else if (couldBeType(to)) //otherwise, if it looks like a type, it is a type
-    {
-        parseTypeList();
-        parseTupleEnd();
-        return NULL;
-    }
-    //otherwise, it's an expression
     Expr* ret = parseExpression();
     if (!lexer->Expect(tupleEnd))
         err::ExpectedAfter(lexer, "']'", "expression list");

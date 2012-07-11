@@ -68,7 +68,4 @@ CompUnit::~CompUnit()
     delete reserved.undeclared_v;
     delete reserved.intrin_v;
     delete treeHead;
-    for(auto it : global.varDefs)
-        if (OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(it.second))
-            delete oGroup; //these are not put in the tree
 }
