@@ -351,7 +351,7 @@ void Parser::parseNamed()
         err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline;
 
-    //recover as best we can. also do "aliasing" (ie replacing ?T with ? when not spec'd) here.
+    //recover as best we can. also do "aliasing" here.
     //get the name of the param and replace ie '?T' with '?T in foo'
     while (nargs < td->params.size())
     {
