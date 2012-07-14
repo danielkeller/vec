@@ -5,10 +5,8 @@
 
 #include <string>
 
-namespace ast
-{
-    typedef int Ident;
-}
+typedef int Ident;
+typedef int Str;
 
 namespace tok
 {
@@ -130,7 +128,7 @@ namespace tok
             TokenType op; //for binop-equals
             long double dbl_v;
             long long int_v;
-            ast::Ident ident_v;
+            Ident ident_v;
         } value;
 
         Location loc;

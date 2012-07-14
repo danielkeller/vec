@@ -34,9 +34,9 @@ void Sema::Phase1()
     //if only a few steps need that, let them implement it
 
     //insert overload group declarations into the tree so they get cleaned up
-    for(auto it : cu->global.varDefs)
+    for(auto it : mod->global.varDefs)
         if (OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(it.second))
-            cu->TreeHead(new StmtPair(new ExprStmt(oGroup), cu->TreeHead()));
+            mod->TreeHead(new StmtPair(new ExprStmt(oGroup), mod->TreeHead()));
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
@@ -54,15 +54,15 @@ void Sema::Phase1()
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (AstNodeN<Expr>* ify)
     {
-        BinExpr* comma = dynamic_cast<BinExpr*>(ify->chld.back());
+        BinExpr* comma = dynamic_cast<BinExpr*>(ify->Children().back());
         while (comma != 0 && comma->op == tok::comma)
         {
-            ify->chld.pop_back(); //remove comma
+            ify->popChild(); //remove comma
             ify->appendChild(comma->getChildA()); //add the left child
             ify->appendChild(comma->getChildB()); //add the (potetially comma) right child
             comma->nullChildA(), comma->nullChildB();
             delete comma;
-            comma = dynamic_cast<BinExpr*>(ify->chld.back());
+            comma = dynamic_cast<BinExpr*>(ify->Children().back());
         }
     };
     AstWalk<ListifyExpr>(ifyFlatten);
@@ -74,7 +74,7 @@ void Sema::Phase1()
         TuplifyExpr* args = dynamic_cast<TuplifyExpr*>(call->getChild(0));
         if (args == 0)
             return;
-        call->chld.pop_back();
+        call->popChild();
         call->consume(args);
     });
 
@@ -92,7 +92,7 @@ void Sema::Phase1()
         if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(ae->getChildB()))
         {
             VarExpr* ve = call->func;
-            if (ve->var == cu->reserved.intrin_v)
+            if (ve->var == Global().reserved.intrin_v)
             {
                 IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChild(0));
                 assert(ice && "improper use of __intrin");
@@ -100,7 +100,7 @@ void Sema::Phase1()
                 ae->parent->replaceChild(ae, ide);
 
                 //now replace the function decl in the overload group
-                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(cu->global.getVarDef(fde->name));
+                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(mod->global.getVarDef(fde->name));
                 assert(oGroup && "function decl not in group");
                 oGroup->functions.remove(fde);
                 oGroup->functions.push_back(ide);
@@ -120,10 +120,10 @@ void Sema::Phase1()
 
         //create and insert function definition
         FunctionDef* fd = new FunctionDef(fde->Type(), conts);
-        if (fde->name == cu->reserved.main
-            && fde->Type().compare(cu->tm.makeList(cu->reserved.string_t))
-                == typ::TypeCompareResult::valid)
-            cu->entryPt = fd; //just reassign it if it's defined twice, there will already be an error
+        //if (fde->name == Global().reserved.main
+        //    && fde->Type().compare(typ::mgr.makeList(Global().reserved.string_t))
+        //        == typ::TypeCompareResult::valid)
+            //mod->entryPt = fd; //just reassign it if it's defined twice, there will already be an error
 
         ae->setChildB(fd);
 
@@ -143,11 +143,11 @@ void Sema::Phase1()
     //after we do this, anything under root is global initialization code
     //so make the __init function for it
     //TODO: does this run at compile time or run time?
-    //typ::Type void_void = cu->tm.makeFunc(typ::null, cu->tm.finishTuple()); //empty tuple
-    //FuncDeclExpr* fde = new FuncDeclExpr(cu->reserved.init, void_void, &(cu->global), cu->treeHead->loc);
-    //FunctionDef* init = new FunctionDef(fde, cu->treeHead); //stick everything in there
+    //typ::Type void_void = typ::mgr.makeFunc(typ::null, typ::mgr.makeTuple()); //empty tuple
+    //FuncDeclExpr* fde = new FuncDeclExpr(Global().reserved.init, void_void, &(mod->global), mod->treeHead->loc);
+    //FunctionDef* init = new FunctionDef(fde, mod->treeHead); //stick everything in there
     //pkg->appendChild(init);
-    //cu->treeHead = pkg;
+    //mod->treeHead = pkg;
 
     //do this after types in case of ref types
 /*

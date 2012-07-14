@@ -1,6 +1,6 @@
 #include "Lexer.h"
 #include "Error.h"
-#include "CompUnit.h"
+#include "Module.h"
 
 #include <fstream>
 #include <cstring>
@@ -17,8 +17,8 @@
 using namespace lex;
 
 
-Lexer::Lexer(std::string fname, ast::CompUnit *cu)
-    : fileName(fname), compUnit(cu)
+Lexer::Lexer(std::string fname, ast::Module *mod)
+    : fileName(fname), mod(mod)
 {
     std::ifstream t(fileName.c_str(), std::ios_base::in | std::ios_base::binary); //to keep CR / CRLF from messing us up
 
@@ -178,7 +178,7 @@ inline void Lexer::lexIdent()
     nextTok.type = tok::identifier;
     //TODO: construct string in place
     std::string idname(curChr, end);
-    nextTok.value.ident_v = compUnit->addIdent(idname);
+    nextTok.value.ident_v = Global().addIdent(idname);
     nextTok.loc.setLength(end - curChr);
     curChr = end - 1;
 }
@@ -219,7 +219,7 @@ inline void Lexer::lexOperator()
         nextTok.type = tok::lbrace; //needed because expect reads a token
     }
 
-    nextTok.value.ident_v = compUnit->reserved.opIdents[nextTok.type];
+    nextTok.value.ident_v = Global().reserved.opIdents[nextTok.type];
     nextTok.type = tok::identifier;
     nextTok.loc = operLoc + nextTok.loc;
 }
@@ -394,7 +394,7 @@ inline void Lexer::lexString()
         err::Error(nextTok.loc) << "eof in string literal" << err::caret;
 
     //insert string as new entry only if it's not already there
-    nextTok.value.int_v = compUnit->addString(strdata);
+    nextTok.value.int_v = Global().addString(strdata);
 }
 
 // the meat of the lexer
@@ -571,6 +571,8 @@ lexMore: //more elegant, in this case, than a while(true)
                 ++nextTok.loc.firstCol;
                 ++curChr;
             }
+            else
+                --curChr; //don't run past \0
             goto lexMore;
         }
         lexChar(tok::slash);

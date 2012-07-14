@@ -8,7 +8,7 @@
 
 namespace ast
 {
-    class CompUnit;
+    class Module;
 }
 
 namespace lex
@@ -17,7 +17,7 @@ namespace lex
     class Lexer
     {
     public:
-        Lexer(std::string fname, ast::CompUnit *cu);
+        Lexer(std::string fname, ast::Module *mod);
         ~Lexer() {delete[] buffer;}
 
         tok::Token & Next();
@@ -33,7 +33,7 @@ namespace lex
         void ErrUntil(tok::TokenType t);
         //throw away token until we pass t (ie a ';')
 
-        ast::CompUnit *getCompUnit() {return compUnit;}
+        ast::Module *getModule() {return mod;}
 
         void backtrackSet();
         void backtrackReset();
@@ -53,7 +53,7 @@ namespace lex
             tok::Token curTok;
         } backtrack;
 
-        ast::CompUnit *compUnit;
+        ast::Module *mod;
 
         inline void lexChar(tok::TokenType type); //consume single character
         inline void lexBinOp(tok::TokenType type); //consume x or x=

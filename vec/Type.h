@@ -14,7 +14,6 @@ namespace utl
 namespace ast
 {
     class Scope;
-    typedef int Ident;
 }
 namespace par
 {
@@ -77,6 +76,8 @@ namespace typ
         PrimitiveType getPrimitive();
 
         friend class TypeManager;
+        friend class TupleBuilder;
+        friend class NamedBuilder;
     };
 
     struct FuncNode;
@@ -161,51 +162,50 @@ namespace typ
     extern Type overload;
     extern Type error;
 
+    class TupleBuilder
+    {
+        friend class TypeManager;
+        std::list<std::pair<TypeNodeB*, Ident>> tupleConts;
+    public:
+        void push_back(Type elem, Ident name) {tupleConts.emplace_back(elem.node, name);}
+    };
+
+    class NamedBuilder
+    {
+        friend class TypeManager;
+        std::map<Ident, TypeNodeB*> namedConts;
+    public:
+        void push_back(Ident name, Type arg) {namedConts[name] = arg;}
+    };
+
     class TypeManager
     {
         std::list<TypeNodeB*> nodes;
-        std::stack<std::list<std::pair<TypeNodeB*, ast::Ident>>> tupleConts;
-        std::map<ast::Ident, TypeNodeB*> namedConts;
 
         //either add n to the list of known nodes
         //or delete n and return an identical node from the list
         TypeNodeB* unique(TypeNodeB* n);
-
-        void startTuple() {tupleConts.emplace();}
-        void clearTuple() {tupleConts.pop();}
 
     public:
         ~TypeManager();
 
         Type makeList(Type conts, int length = 0);
         Type makeRef(Type conts);
-        Type makeParam(ast::Ident name);
+        Type makeParam(Ident name);
         Type makeFunc(Type ret, Type arg);
-        
-        void addNamedArg(ast::Ident name, Type t) {namedConts[name] = t;}
-        void clearNamedArgs() {namedConts.clear();} //if there was an error
-        Type finishNamed(Type conts, ast::Ident name);
-
-        void addToTuple(Type elem, ast::Ident name) {tupleConts.top().emplace_back(elem.node, name);}
-        Type finishTuple();
+        Type makeTuple(TupleBuilder&);
+        Type makeNamed(Type conts, Ident name, NamedBuilder& args);
+        Type makeNamed(Type conts, Ident name);
 
         //these functions aren't really part of the public interface but its simpler to make them public
 
         //creates a new type with params repaced by the specified types
-        Type substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs);
+        Type substitute(Type old, std::map<Ident, TypeNodeB*>& subs);
         //performs a deep copy, keeping everything unique and subbing in params
         TypeNodeB* clone(TypeNodeB* n);
-
-        friend class TupleRAII;
     };
 
-    class TupleRAII
-    {
-        TypeManager* tm;
-    public:
-        TupleRAII(TypeManager& t) : tm(&t) {tm->startTuple();}
-        ~TupleRAII() {tm->clearTuple();}
-    };
+    extern TypeManager mgr;
 
     //result of comparison saying how "close" two types are
     //if they are entirely different the score is -1

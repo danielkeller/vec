@@ -8,8 +8,6 @@
 
 namespace ast
 {
-    typedef int Str;
-
     //abstract expression type
     struct Expr : public virtual AstNodeB
     {

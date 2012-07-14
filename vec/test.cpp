@@ -1,4 +1,4 @@
-#include "CompUnit.h"
+#include "Module.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "Sema.h"
@@ -20,8 +20,8 @@ int main ()
     char fileName[MAX_PATH] = "";
     openDlg(fileName);
 
-    ast::CompUnit cu;
-    lex::Lexer l(fileName, &cu); //we need lexer's buffer for errors
+    ast::Module mod;
+    lex::Lexer l(fileName, &mod); //we need lexer's buffer for errors
 
     {
         par::Parser p(&l);
@@ -30,17 +30,17 @@ int main ()
     {
         std::ofstream dot(fileName + std::string(".1.dot"));
         dot << "digraph G {\n";
-        cu.emitDot(dot);
+        mod.emitDot(dot);
         dot << '}';
         dot.close();
 
-        sa::Sema s(&cu);
+        sa::Sema s(&mod);
 
         s.Phase1();
 
         std::ofstream dot2(fileName + std::string(".2.dot"));
         dot2 << "digraph G {\n";
-        cu.emitDot(dot2);
+        mod.emitDot(dot2);
         dot2 << '}';
         dot2.close();
 
@@ -48,7 +48,7 @@ int main ()
 
         std::ofstream dot3(fileName + std::string(".3.dot"));
         dot3 << "digraph G {\n";
-        cu.emitDot(dot3);
+        mod.emitDot(dot3);
         dot3 << '}';
         dot3.close();
 

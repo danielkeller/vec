@@ -1,6 +1,8 @@
 #ifndef ASTNODE_H
 #define ASTNODE_H
 
+#include "Token.h"
+
 #include <functional>
 #include <ostream>
 #include <cassert>
@@ -246,10 +248,11 @@ namespace ast
     template<class T>
     struct AstNodeN : public virtual AstNodeB
     {
+    private:
         typedef std::vector<T*> conts_t;
-
         conts_t chld;
         
+    public:
         AstNodeN() {}
         AstNodeN(T* first)
         {
@@ -284,6 +287,11 @@ namespace ast
             return chld[n];
         }
 
+        const conts_t& Children() const
+        {
+            return chld;
+        }
+
         void setChild(int n, T* c)
         {
             c->parent = this;
@@ -294,6 +302,11 @@ namespace ast
         {
             c->parent = this;
             chld.push_back(c);
+        }
+
+        void popChild()
+        {
+            chld.pop_back();
         }
 
         void emitDot(std::ostream &os)
@@ -318,6 +331,24 @@ namespace ast
                 c->parent = this;
             bb->chld.clear();
             delete bb;
+        }
+
+        //split this node in half at the position of the iterator
+        //left < posn, middle == posn, right > posn.
+        template<class NewNode>
+        std::tuple<NewNode*, T*, NewNode*>
+        split(typename conts_t::const_iterator posn)
+        {
+            NewNode* right = new NewNode();
+            right->chld.insert(right->chld.begin(), posn + 1, chld.cend());
+            chld.erase(chld.begin() + (posn - chld.cbegin()) + 1, chld.end());
+            for (auto c : right->chld)
+                c->parent = right;
+            T* middle = chld.back();
+            chld.pop_back();
+            NewNode* left = new NewNode();
+            left->consume(this);
+            return std::make_tuple(left, middle, right);
         }
     };
 }

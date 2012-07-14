@@ -1,7 +1,7 @@
 #include "Parser.h"
 #include "Lexer.h"
 #include "Error.h"
-#include "CompUnit.h"
+#include "Module.h"
 #include "Stmt.h"
 
 using namespace par;
@@ -17,8 +17,8 @@ Block* Parser::parseBlock()
 {
     tok::Location begin = lexer->Next().loc;
 
-    cu->scopes.emplace_back(curScope);
-    Scope* blockScope = curScope = &cu->scopes.back();
+    mod->scopes.emplace_back(curScope);
+    Scope* blockScope = curScope = &mod->scopes.back();
 
     if (lexer->Expect(tok::rparen)) //empty parens
         return new Block(new NullStmt(begin + lexer->Last().loc),

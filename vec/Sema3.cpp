@@ -36,20 +36,20 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, OverloadableExpr* call
     //TODO: now try template functions
     if (result.size() == 0)
     {
-        err::Error(call->loc) << "function '" << cu->getIdent(oGroup->name) << "' is not defined in this scope"
+        err::Error(call->loc) << "function '" << Global().getIdent(oGroup->name) << "' is not defined in this scope"
             << err::underline << call->loc << err::caret;
         call->Type() = typ::error;
     }
     else if (!firstChoice.first.isValid())
     {
-        err::Error(call->loc) << "no accessible instance of overloaded function '" << cu->getIdent(oGroup->name)
+        err::Error(call->loc) << "no accessible instance of overloaded function '" << Global().getIdent(oGroup->name)
             << "' matches arguments of type " << argType.to_str() << err::underline << call->loc << err::caret;
         call->Type() = typ::error;
     }
     else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
     {
         err::Error ambigErr(call->loc);
-        ambigErr << "overloaded call to '" << cu->getIdent(oGroup->name) << "' is ambiguous" << err::underline
+        ambigErr << "overloaded call to '" << Global().getIdent(oGroup->name) << "' is ambiguous" << err::underline
             << call->loc << err::caret << firstChoice.second->loc << err::note << "could be" << err::underline;
 
         while (result.size() && firstChoice.first == result.top().first)
@@ -74,7 +74,7 @@ void Sema::Phase3()
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         //we should be able to just go left to right here
-        for (Expr* node : bb->chld)
+        for (Expr* node : bb->Children())
         {
             //we could speed this up by doing it in order of decreasing frequency
 
@@ -84,7 +84,7 @@ void Sema::Phase3()
             else if (Expr* e = dynamic_cast<FloatConstExpr*>(node))
                 e->Type() = typ::float32; //FIXME
             else if (Expr* e = dynamic_cast<StringConstExpr*>(node))
-                e->Type() = cu->reserved.string_t;
+                e->Type() = Global().reserved.string_t;
             else if (AssignExpr* ae = dynamic_cast<AssignExpr*>(node))
             {
                 //try to merge types if its a decl
@@ -109,10 +109,10 @@ void Sema::Phase3()
                     continue; //break out
                 }
 
-                typ::TupleRAII raiiobj(cu->tm);
-                for (auto arg : call->chld)
-                    cu->tm.addToTuple(arg->Type(), cu->reserved.null);
-                typ::Type argType = cu->tm.finishTuple();
+                typ::TupleBuilder builder;
+                for (auto arg : call->Children())
+                    builder.push_back(arg->Type(), Global().reserved.null);
+                typ::Type argType = typ::mgr.makeTuple(builder);
 
                 resolveOverload(oGroup, call, argType);
 
@@ -143,11 +143,11 @@ void Sema::Phase3()
                 }
                 else if (tok::CanBeOverloaded(be->op))
                 {
-                    typ::TupleRAII raiiobj(cu->tm);
-                    cu->tm.addToTuple(be->getChildA()->Type(), cu->reserved.null);
-                    cu->tm.addToTuple(be->getChildB()->Type(), cu->reserved.null);
-                    typ::Type argType = cu->tm.finishTuple();
-                    DeclExpr* def = cu->global.getVarDef(cu->reserved.opIdents[be->op]);
+                    typ::TupleBuilder builder;
+                    builder.push_back(be->getChildA()->Type(), Global().reserved.null);
+                    builder.push_back(be->getChildB()->Type(), Global().reserved.null);
+                    typ::Type argType = typ::mgr.makeTuple(builder);
+                    DeclExpr* def = mod->global.getVarDef(Global().reserved.opIdents[be->op]);
                     OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(def);
                     assert(oGroup && "operator not overloaded properly");
 
@@ -157,18 +157,18 @@ void Sema::Phase3()
             else if (ListifyExpr* le = dynamic_cast<ListifyExpr*>(node))
             {
                 typ::Type conts_t = le->getChild(0)->Type();
-                le->Type() = cu->tm.makeList(conts_t, le->chld.size());
-                for (auto c : le->chld)
+                le->Type() = typ::mgr.makeList(conts_t, le->Children().size());
+                for (auto c : le->Children())
                     if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
                         err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
                             << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
             }
             else if (TuplifyExpr* te = dynamic_cast<TuplifyExpr*>(node))
             {
-                typ::TupleRAII raiiobj(cu->tm);
-                for (auto c : te->chld)
-                    cu->tm.addToTuple(c->Type(), cu->reserved.null);
-                te->Type() = cu->tm.finishTuple();
+                typ::TupleBuilder builder;
+                for (auto c : te->Children())
+                    builder.push_back(c->Type(), Global().reserved.null);
+                te->Type() = typ::mgr.makeTuple(builder);
             }
 
             //err::Error(err::warning, node->loc) << node->Type().to_str() << err::underline;

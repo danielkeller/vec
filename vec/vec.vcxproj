@@ -69,11 +69,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AstNode.h" />
-    <ClInclude Include="CompUnit.h" />
+    <ClInclude Include=".\Module.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="Expr.h" />
     <ClInclude Include="Lexer.h" />
     <ClInclude Include="Location.h" />
+    <ClInclude Include=".\Global.h" />
     <ClInclude Include="Parser.h" />
     <ClInclude Include="Scope.h" />
     <ClInclude Include="Sema.h" />
@@ -84,12 +85,13 @@
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CompUnit.cpp" />
+    <ClCompile Include=".\Module.cpp" />
     <ClCompile Include="DeclParser.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="ExprParser.cpp" />
     <ClCompile Include="Lexer.cpp" />
     <ClCompile Include="Location.cpp" />
+    <ClCompile Include=".\Global.cpp" />
     <ClCompile Include="Scope.cpp" />
     <ClCompile Include="Sema1.cpp" />
     <ClCompile Include="Sema2.cpp" />

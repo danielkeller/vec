@@ -7,7 +7,6 @@
 
 namespace ast
 {
-    typedef int Ident;
     struct DeclExpr;
 
     struct TypeDef
@@ -30,11 +29,11 @@ namespace ast
         //insert var def into current scope
         void addVarDef(Ident name, DeclExpr* decl);
         //recursively find def in all scope parents
-        DeclExpr* getVarDef(ast::Ident name);
+        DeclExpr* getVarDef(Ident name);
 
         //likewise
         void addTypeDef(Ident name, TypeDef & td);
-        TypeDef * getTypeDef(ast::Ident name);
+        TypeDef * getTypeDef(Ident name);
 
         Scope* getParent() {return parent;};
 

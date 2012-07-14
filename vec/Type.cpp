@@ -1,7 +1,7 @@
 #include "Type.h"
 #include "Util.h"
 #include "Error.h"
-#include "CompUnit.h"
+#include "Module.h"
 #include "Parser.h"
 
 #include <list>
@@ -12,6 +12,8 @@ using namespace typ;
 
 namespace typ
 {
+
+TypeManager mgr;
 
 TypeCompareResult TypeCompareResult::valid(true);
 TypeCompareResult TypeCompareResult::invalid(false);
@@ -60,7 +62,7 @@ struct ListNode : public TypeNode<ListNode>
 
 struct TupleNode : public TypeNode<TupleNode>
 {
-    std::list<std::pair<TypeNodeB*, ast::Ident>> conts;
+    std::list<std::pair<TypeNodeB*, Ident>> conts;
     TypeCompareResult compareTo(TupleNode* other);
     bool insertCompareTo(TupleNode* other);
     TypeNodeB* clone(TypeManager*);
@@ -81,9 +83,9 @@ struct NamedNode : public TypeNode<NamedNode>
 {
     //the real type with all args subbed in. what it "really is."
     TypeNodeB* type;
-    ast::Ident name;
+    Ident name;
     //all of the args to the typedef
-    std::map<ast::Ident, TypeNodeB*> args;
+    std::map<Ident, TypeNodeB*> args;
     TypeCompareResult compareTo(NamedNode*);
     bool insertCompareTo(NamedNode* other);
     TypeNodeB* clone(TypeManager*);
@@ -92,7 +94,7 @@ struct NamedNode : public TypeNode<NamedNode>
 
 struct ParamNode : public TypeNode<ParamNode>
 {
-    ast::Ident name;
+    Ident name;
     TypeNodeB* sub; //the type this temporarily represents while substituting
     TypeCompareResult compareTo(ParamNode* other);
     bool insertCompareTo(ParamNode* other);
@@ -476,16 +478,24 @@ Type TypeManager::makeRef(Type conts)
     return unique(n);
 }
 
-Type TypeManager::finishNamed(Type conts, ast::Ident name)
+Type TypeManager::makeNamed(Type conts, Ident name, NamedBuilder& args)
 {
     NamedNode* n = new NamedNode();
     n->name = name;
-    std::swap(n->args, namedConts);
+    std::swap(n->args, args.namedConts);
     n->type = substitute(conts, n->args);
     return unique(n); //we still need to unique n, n != n->type
 }
 
-Type TypeManager::makeParam(ast::Ident name)
+Type TypeManager::makeNamed(Type conts, Ident name)
+{
+    NamedNode* n = new NamedNode();
+    n->name = name;
+    n->type = conts;
+    return unique(n); //we still need to unique n, n != n->type
+}
+
+Type TypeManager::makeParam(Ident name)
 {
     ParamNode* n = new ParamNode();
     n->name = name;
@@ -501,17 +511,17 @@ Type TypeManager::makeFunc(Type ret, Type arg)
         n->arg = arg;
     else
     {
-        typ::TupleRAII raiiobj(*this);
-        addToTuple(arg, 0); //is null ident == 0 a safe assumption?
-        n->arg = finishTuple();
+        typ::TupleBuilder builder;
+        builder.push_back(arg, 0); //is null ident == 0 a safe assumption?
+        n->arg = makeTuple(builder);
     }
     return unique(n);
 }
 
-Type TypeManager::finishTuple()
+Type TypeManager::makeTuple(TupleBuilder& builder)
 {
     TupleNode* n = new TupleNode();
-    std::swap(n->conts, tupleConts.top());
+    std::swap(n->conts, builder.tupleConts);
     return unique(n);
 }
 
@@ -542,7 +552,7 @@ TypeNodeB* TypeManager::unique(TypeNodeB* n)
 //all nodes below it. we can do this without interfering with other types because
 //we will at this point already have nodes for any contained types.
 //note that we have to be careful with the old node, because things are pointing to it
-Type TypeManager::substitute(Type old, std::map<ast::Ident, TypeNodeB*>& subs)
+Type TypeManager::substitute(Type old, std::map<Ident, TypeNodeB*>& subs)
 {
     //first set parameter subs
     for (auto node : nodes)

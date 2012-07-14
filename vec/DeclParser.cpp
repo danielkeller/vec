@@ -2,7 +2,7 @@
 #include "Lexer.h"
 #include "Error.h"
 #include "Type.h"
-#include "CompUnit.h"
+#include "Module.h"
 
 #include <cassert>
 
@@ -11,11 +11,12 @@ using namespace ast;
 
 Parser::Parser(lex::Lexer *l)
     : lexer(l),
-    cu(l->getCompUnit())
+    mod(l->getModule()),
+    backtrackStatus(CantBacktrack)
 {
-    curScope = &cu->global;
+    curScope = &mod->global;
 
-    cu->TreeHead(parseStmtList());
+    mod->TreeHead(parseStmtList());
 }
 
 namespace
@@ -50,7 +51,7 @@ void Parser::parseTypeDecl()
 
     if (curScope->getTypeDef(name))
     {
-        err::Error(t.loc) << "redefinition of type '" << cu->getIdent(name) << '\'' << err::underline;
+        err::Error(t.loc) << "redefinition of type '" << Global().getIdent(name) << '\'' << err::underline;
         lexer->ErrUntil(tok::semicolon);
         return;
     }
@@ -61,7 +62,11 @@ void Parser::parseTypeDecl()
         {
             do {
                 if (lexer->Peek() == tok::identifier)
+                {
+                    if (std::count(td.params.begin(), td.params.end(), lexer->Peek().value.ident_v))
+                        err::Error(lexer->Peek().loc) << "type parameters must be unique" << err::underline;
                     td.params.push_back(lexer->Next().value.ident_v);
+                }
                 else
                     err::Error(lexer->Peek().loc) << "expected identifier in type parameter list"
                         << err::underline;
@@ -135,8 +140,8 @@ Expr* Parser::parseDeclRHS()
     if (type.getFunc().isValid())
     {
         //TODO: insert type params into this scope
-        cu->scopes.emplace_back(curScope);
-        curScope = &cu->scopes.back(); //create scope for function args
+        mod->scopes.emplace_back(curScope);
+        curScope = &mod->scopes.back(); //create scope for function args
 
         OverloadGroupDeclExpr* oGroup;
         if (DeclExpr* previousDecl = curScope->getVarDef(id))
@@ -151,8 +156,8 @@ Expr* Parser::parseDeclRHS()
         }
         else //we have to create the overload group
         {
-            oGroup = new OverloadGroupDeclExpr(id, &(cu->global), to.loc);
-            cu->global.addVarDef(id, oGroup);
+            oGroup = new OverloadGroupDeclExpr(id, &(mod->global), to.loc);
+            mod->global.addVarDef(id, oGroup);
         }
 
         FuncDeclExpr* fde = new FuncDeclExpr(id, type, curScope, to.loc);
@@ -181,8 +186,8 @@ Expr* Parser::parseDeclRHS()
         //leave the decl expr hanging, it will get attached later
         //FIXME: memory leak when functions are declared & not defined
         //add argument definition to function's scope
-        curScope->addVarDef(cu->reserved.arg,
-            new DeclExpr(cu->reserved.arg, type.getFunc().arg(), curScope, to.loc));
+        curScope->addVarDef(Global().reserved.arg,
+            new DeclExpr(Global().reserved.arg, type.getFunc().arg(), curScope, to.loc));
 
         return fde;
     }
@@ -198,7 +203,7 @@ Expr* Parser::parseDeclRHS()
             }
             else
             {
-                err::Error(to.loc) << "redefinition of variable '" << cu->getIdent(id)
+                err::Error(to.loc) << "redefinition of variable '" << Global().getIdent(id)
                     << '\'' << err::underline;
             }
 
@@ -206,7 +211,7 @@ Expr* Parser::parseDeclRHS()
         }
 
         //this works because idents are given out sequentially
-        if (id >= cu->reserved.opIdents.begin()->second && id <= cu->reserved.opIdents.rbegin()->second)
+        if (id >= Global().reserved.opIdents.begin()->second && id <= Global().reserved.opIdents.rbegin()->second)
         {
             err::Error(to.loc) << "'operator' may only be used for functions" << err::underline;
             return new NullExpr(to.loc);

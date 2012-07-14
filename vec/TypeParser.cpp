@@ -2,7 +2,7 @@
 #include "Lexer.h"
 #include "Util.h"
 #include "Error.h"
-#include "CompUnit.h"
+#include "Module.h"
 #include "Parser.h"
 
 #include <cstdlib>
@@ -64,7 +64,7 @@ void Parser::parseTypeEnd()
         Type ret = type;
         parseSingle();
         if (backtrackStatus != IsBacktracking)
-            type = cu->tm.makeFunc(ret, type);
+            type = typ::mgr.makeFunc(ret, type);
     }
 }
 
@@ -142,16 +142,16 @@ void Parser::parseList()
         tok::Token to;
         if (lexer->Expect(tok::integer, to))
         {
-            type = cu->tm.makeList(type, to.value.ident_v);
+            type = typ::mgr.makeList(type, to.value.ident_v);
         }
         else //don't backtrack?
         {
             err::ExpectedAfter(lexer, "list length", "'!'");
-            type = cu->tm.makeList(type);
+            type = typ::mgr.makeList(type);
         }
     }
     else
-        type = cu->tm.makeList(type);
+        type = typ::mgr.makeList(type);
 }
 
 /*
@@ -165,7 +165,7 @@ type-list
 */
 void Parser::parseTuple()
 {
-    TupleRAII raiiobj(cu->tm);
+    typ::TupleBuilder builder;
 
     lexer->Advance();
     do {
@@ -176,10 +176,10 @@ void Parser::parseTuple()
          
         if (lexer->Peek() == tok::identifier)
         {
-            cu->tm.addToTuple(type, lexer->Next().value.ident_v);
+            builder.push_back(type, lexer->Next().value.ident_v);
         }
         else
-            cu->tm.addToTuple(type, cu->reserved.null);
+            builder.push_back(type, Global().reserved.null);
     } while (lexer->Expect(tok::comma));
 
     if (!lexer->Expect(tupleEnd))
@@ -188,7 +188,7 @@ void Parser::parseTuple()
         err::ExpectedAfter(lexer, tok::Name(tupleEnd), "type list");
     }
 
-    type = cu->tm.finishTuple();
+    type = typ::mgr.makeTuple(builder);
 }
 
 /*
@@ -284,7 +284,7 @@ void Parser::parseRef()
     lexer->Advance();
     parseSingle();
     if (backtrackStatus != IsBacktracking)
-        type = cu->tm.makeRef(type);
+        type = typ::mgr.makeRef(type);
 }
 
 /*
@@ -298,13 +298,13 @@ void Parser::parseNamed()
 {
     tok::Token id = lexer->Next();
 
-    ast::Ident typeName = id.value.ident_v;
+    Ident typeName = id.value.ident_v;
     ast::TypeDef * td = curScope->getTypeDef(typeName);
 
     if (!td)
     {
         err::Error(id.loc) << "undefined type '"
-            << lexer->getCompUnit()->getIdent(typeName) << '\'' << err::underline;
+            << Global().getIdent(typeName) << '\'' << err::underline;
         type = typ::int32; //recover
         return;
     }
@@ -312,6 +312,8 @@ void Parser::parseNamed()
     tok::Location argsLoc = lexer->Peek().loc;
 
     size_t nargs = 0;
+
+    typ::NamedBuilder builder;
 
     //TODO: this is incorrect for an expression, right? can we disable backtracking?
     if (lexer->Expect(tok::bang))
@@ -321,13 +323,10 @@ void Parser::parseNamed()
             do {
                 parseSingle();
                 if (backtrackStatus == IsBacktracking)
-                {
-                    cu->tm.clearNamedArgs();
                     return;
-                }
 
                 if (nargs < td->params.size()) //otherwise, error
-                    cu->tm.addNamedArg(td->params[nargs], type);
+                    builder.push_back(td->params[nargs], type);
                 ++nargs; //keep incrementing, we can detect the error that way
             } while (lexer->Expect(tok::comma));
             if (!lexer->Expect(tok::rparen))
@@ -340,7 +339,7 @@ void Parser::parseNamed()
                 return;
 
             if (td->params.size() == 1) //otherwise, error
-                cu->tm.addNamedArg(td->params[0], type);
+                builder.push_back(td->params[0], type);
             nargs = 1;
         }
     }
@@ -355,11 +354,12 @@ void Parser::parseNamed()
     //get the name of the param and replace ie '?T' with '?T in foo'
     while (nargs < td->params.size())
     {
-        Ident alias = cu->addIdent(cu->getIdent(td->params[nargs]) + " in " + cu->getIdent(typeName));
-        cu->tm.addNamedArg(td->params[nargs++], cu->tm.makeParam(alias));
+        Ident alias = Global().addIdent(
+            Global().getIdent(td->params[nargs]) + " in " + Global().getIdent(typeName));
+        builder.push_back(td->params[nargs++], typ::mgr.makeParam(alias));
     }
 
-    type = cu->tm.finishNamed(td->mapped, typeName);
+    type = typ::mgr.makeNamed(td->mapped, typeName, builder);
 }
 
 /*
@@ -373,7 +373,7 @@ void Parser::parseParam()
     lexer->Advance();
     if (lexer->Peek() == tok::identifier)
     {
-        type = cu->tm.makeParam(lexer->Next().value.ident_v);
+        type = typ::mgr.makeParam(lexer->Next().value.ident_v);
     }
     else
         type = typ::any;

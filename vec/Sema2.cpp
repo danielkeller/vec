@@ -9,10 +9,13 @@ using namespace sa;
 
 void Sema::validateTree()
 {
-    AstWalk<AstNodeB>([] (AstNodeB *n)
+    ReverseAstWalk<AstNodeB>([] (AstNodeB *n)
     {
         if (n->parent)
+        {
+            assert(n->parent != n && "cyclic parent");
             n->parent->replaceChild(n, n); //will fire assertion if n is not a child
+        }
     });
 }
 
@@ -24,7 +27,7 @@ void Sema::Phase2()
     //insert temporaries above all expressions
     //because of the way AstWalker works we don't have to worry about
     //it finding the TmpExprs we create
-
+    validateTree();
     //populate the basic blocks with each expresion after creating a temporary for its result
     //when we reach the end of an expression end the basic block
     //and start a new one. closure is used to save state (current BB) between calls
@@ -41,7 +44,7 @@ void Sema::Phase2()
                 return; //don't make a temp for a temp
 
             TmpExpr* te;
-
+            
             if (Block* b = dynamic_cast<Block*>(ex)) //if it's a block, point to correct expr
             {
                 TmpExpr* end = dynamic_cast<TmpExpr*>(findEndExpr(b->getChildA()));
@@ -67,6 +70,7 @@ void Sema::Phase2()
             curBB->appendChild(ex);
         });
     });
+    validateTree();
 
     //replace exprstmts with corresponding basic blocks
     for (auto p : repl)
@@ -77,57 +81,46 @@ void Sema::Phase2()
         //the child is an unneeded temp, don't bother to unlink it
         delete p.first;
     }
+    validateTree();
 
     //now split basic blocks where blocks occur inside them
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         while (true)
         {
-            auto blkit = std::find_if(bb->chld.begin(),
-                                      bb->chld.end(),
-                                      [](Expr*& a){return dynamic_cast<Block*>(a) != 0;});
+            auto blkit = std::find_if(bb->Children().begin(),
+                                      bb->Children().end(),
+                                      [](Expr *const a){return dynamic_cast<Block*>(a) != 0;});
 
-            if (blkit == bb->chld.end())
+            if (blkit == bb->Children().end())
                 return;
+            
+            AstNodeB* blkParent = bb->parent;
+            blkParent->replaceChild(bb, *blkit);
 
-            BasicBlock* left = new BasicBlock();
-            left->chld.insert(left->chld.begin(), bb->chld.begin(), blkit);
-            bb->chld.erase(bb->chld.begin(), blkit);
+            BasicBlock* left;
+            Expr* blk_expr;
+            BasicBlock* right;
 
-            //begin is now blkit, blkit is now invalid because of erase
-            blkit = bb->chld.begin();
+            std::tie(left, blk_expr, right) = bb->split<BasicBlock>(blkit);
 
-            BasicBlock* right = new BasicBlock();
-            right->chld.insert(right->chld.begin(), blkit + 1, bb->chld.end());
+            Block* blk = dynamic_cast<Block*>(blk_expr);
+            assert(blk && "block is missing");
 
-            Block* blk = dynamic_cast<Block*>(*blkit); //save the block
-            bb->parent->replaceChild(bb, blk);
-            bb->chld.clear();
-            delete bb;
-
-            AstNodeB* blkParent = blk->parent; //this is needed because StmtPair's ctor will hose blk->parent
-
-            if (left->chld.size())
+            if (left->Children().size())
                 blkParent->replaceChild(blk, new StmtPair(left, blk));
             else
                 delete left;
 
             blkParent = blk->parent;
 
-            if (right->chld.size())
-                blkParent->replaceChild(blk, new StmtPair(blk, right));
-            else
-            {
-                delete right;
-                return; //there are no more
-            }
-            
-            //validateTree();
+            //right must exist because blkit != end
+            blkParent->replaceChild(blk, new StmtPair(blk, right));
 
             bb = right; //keep going!
         }
     });
-
+    
     //now we can just delete all the rest of the blocks
     AstWalk<Block>([] (Block* b)
     {
@@ -160,6 +153,7 @@ void Sema::Phase2()
             //whew!
         }
     });
+    validateTree();
 
     //combine adjacent BasicBlocks
     AstWalk<StmtPair>([this] (StmtPair* sp)
@@ -177,15 +171,15 @@ void Sema::Phase2()
         if (rhs == 0)
             return; //no other block
 
-        lhs->chld.insert(lhs->chld.end(), rhs->chld.begin(), rhs->chld.end());
-        rhs->chld.clear();
+        lhs->consume(rhs);
         
         if (sp2)
         {
             //reattach what's down the tree
             Stmt* other = sp2->getChildB();
             sp2->nullChildB();
-            delete sp2; //also deletes rhs
+            sp2->nullChildA();
+            delete sp2;
             sp->setChildB(other); //reattach it
         }
         else
@@ -193,7 +187,9 @@ void Sema::Phase2()
             //only one stmt, don't need stmt pair
             sp->parent->replaceChild(sp, lhs);
             sp->nullChildA();
+            sp->nullChildB();
             delete sp;
         }
     });
+    validateTree();
 }

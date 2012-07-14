@@ -2,7 +2,7 @@
 #define PARSER_H
 
 #include "Type.h"
-#include "CompUnit.h"
+#include "Module.h"
 #include "Lexer.h"
 #include "Stmt.h"
 
@@ -22,7 +22,7 @@ namespace par
     private:
         lex::Lexer *lexer;
 
-        ast::CompUnit *cu;
+        ast::Module *mod;
         ast::Scope *curScope;
 
         typ::Type type;

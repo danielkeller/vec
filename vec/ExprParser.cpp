@@ -1,7 +1,7 @@
 #include "Parser.h"
 #include "Lexer.h"
 #include "Error.h"
-#include "CompUnit.h"
+#include "Module.h"
 #include "Stmt.h"
 
 using namespace par;
@@ -189,7 +189,7 @@ Expr* Parser::parsePrimaryExpr()
         lexer->Advance();
         DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
         if (decl == 0) //didn't find decl
-            decl = cu->reserved.undeclared_v; //don't complain, it could be in another package
+            decl = Global().reserved.undeclared_v; //don't complain, it could be in another package
 
         return new VarExpr(decl, to.loc);
     }
