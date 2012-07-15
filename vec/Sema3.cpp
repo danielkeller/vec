@@ -16,7 +16,8 @@ struct pairComp
 };
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
-void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, OverloadableExpr* call, typ::Type argType)
+template<class T>
+void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType)
 {
     ovr_queue result;
     for (auto func : oGroup->functions)
@@ -74,16 +75,16 @@ void Sema::Phase3()
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         //we should be able to just go left to right here
-        for (Expr* node : bb->Children())
+        for (Node0* node : bb->Children())
         {
             //we could speed this up by doing it in order of decreasing frequency
 
             //constants. these should do impicit casts
-            if (Expr* e = dynamic_cast<IntConstExpr*>(node))
+            if (IntConstExpr* e = dynamic_cast<IntConstExpr*>(node))
                 e->Type() = typ::int32; //FIXME
-            else if (Expr* e = dynamic_cast<FloatConstExpr*>(node))
+            else if (FloatConstExpr* e = dynamic_cast<FloatConstExpr*>(node))
                 e->Type() = typ::float32; //FIXME
-            else if (Expr* e = dynamic_cast<StringConstExpr*>(node))
+            else if (StringConstExpr* e = dynamic_cast<StringConstExpr*>(node))
                 e->Type() = Global().reserved.string_t;
             else if (AssignExpr* ae = dynamic_cast<AssignExpr*>(node))
             {
@@ -121,7 +122,7 @@ void Sema::Phase3()
             {
                 if (be->op == tok::colon) //"normal" function call
                 {
-                    Expr* lhs = be->getChildA();
+                    Node0* lhs = be->getChildA();
                     typ::FuncType ft = lhs->Type().getFunc();
                     if (!ft.isValid())
                     {

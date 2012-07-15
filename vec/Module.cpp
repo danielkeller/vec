@@ -6,8 +6,8 @@
 using namespace ast;
 
 Module::Module()
+    : Node0(tok::Location())
 {
-
 }
 
 Module::~Module()

@@ -9,7 +9,7 @@ using namespace sa;
 
 void Sema::validateTree()
 {
-    ReverseAstWalk<AstNodeB>([] (AstNodeB *n)
+    ReverseAstWalk<Node0>([] (Node0 *n)
     {
         if (n->parent)
         {
@@ -27,7 +27,7 @@ void Sema::Phase2()
     //insert temporaries above all expressions
     //because of the way AstWalker works we don't have to worry about
     //it finding the TmpExprs we create
-    validateTree();
+
     //populate the basic blocks with each expresion after creating a temporary for its result
     //when we reach the end of an expression end the basic block
     //and start a new one. closure is used to save state (current BB) between calls
@@ -38,10 +38,10 @@ void Sema::Phase2()
         repl[es] = curBB; //attach it
 
         //start looking under current expr stmt, so we don't mix our expressions
-        AstWalker<Expr>(es, [&curBB] (Expr* ex)
+        AstWalker<Node0>(es, [&curBB] (Node0* ex)
         {
-            if (dynamic_cast<TmpExpr*>(ex))
-                return; //don't make a temp for a temp
+            if (!ex->isExpr() || dynamic_cast<TmpExpr*>(ex))
+                return; //only expressions, don't make a temp for a temp
 
             TmpExpr* te;
             
@@ -70,7 +70,6 @@ void Sema::Phase2()
             curBB->appendChild(ex);
         });
     });
-    validateTree();
 
     //replace exprstmts with corresponding basic blocks
     for (auto p : repl)
@@ -81,7 +80,6 @@ void Sema::Phase2()
         //the child is an unneeded temp, don't bother to unlink it
         delete p.first;
     }
-    validateTree();
 
     //now split basic blocks where blocks occur inside them
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
@@ -90,16 +88,16 @@ void Sema::Phase2()
         {
             auto blkit = std::find_if(bb->Children().begin(),
                                       bb->Children().end(),
-                                      [](Expr *const a){return dynamic_cast<Block*>(a) != 0;});
+                                      [](Node0 *const a){return dynamic_cast<Block*>(a) != 0;});
 
             if (blkit == bb->Children().end())
                 return;
             
-            AstNodeB* blkParent = bb->parent;
+            Node0* blkParent = bb->parent;
             blkParent->replaceChild(bb, *blkit);
 
             BasicBlock* left;
-            Expr* blk_expr;
+            Node0* blk_expr;
             BasicBlock* right;
 
             std::tie(left, blk_expr, right) = bb->split<BasicBlock>(blkit);
@@ -114,8 +112,13 @@ void Sema::Phase2()
 
             blkParent = blk->parent;
 
-            //right must exist because blkit != end
-            blkParent->replaceChild(blk, new StmtPair(blk, right));
+            if (right->Children().size())
+                blkParent->replaceChild(blk, new StmtPair(blk, right));
+            else
+            {
+                delete right;
+                return;
+            }
 
             bb = right; //keep going!
         }
@@ -153,7 +156,6 @@ void Sema::Phase2()
             //whew!
         }
     });
-    validateTree();
 
     //combine adjacent BasicBlocks
     AstWalk<StmtPair>([this] (StmtPair* sp)
@@ -176,7 +178,7 @@ void Sema::Phase2()
         if (sp2)
         {
             //reattach what's down the tree
-            Stmt* other = sp2->getChildB();
+            Node0* other = sp2->getChildB();
             sp2->nullChildB();
             sp2->nullChildA();
             delete sp2;
@@ -191,5 +193,4 @@ void Sema::Phase2()
             delete sp;
         }
     });
-    validateTree();
 }

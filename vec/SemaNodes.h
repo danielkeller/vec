@@ -6,43 +6,39 @@
 namespace ast
 {
     //This file is for AST nodes that are added during semantic analysis, rather than parsing
-    struct SemaStmt : public Stmt
-    {
-        const char *myColor() {return "8";};
-    };
-
-    struct TmpExpr : public Expr, public AstNode0
+    struct TmpExpr : public Node0
     {
         const char *myColor() {return "8";};
         std::string myLbl () {return "tmp";};
-        Expr* setBy;
+        Node0* setBy;
 
-        TmpExpr(Expr* sb) : Expr(sb->loc), setBy(sb){};
+        TmpExpr(Node0* sb) : Node0(sb->loc), setBy(sb){};
 
         void emitDot(std::ostream& os)
         {
-            AstNode0::emitDot(os);
+            Node0::emitDot(os);
             //shows a "sets" relationship
-            os << 'n' << static_cast<AstNodeB*>(setBy) << " -> n" << static_cast<AstNodeB*>(this)
+            os << 'n' << static_cast<Node0*>(setBy) << " -> n" << static_cast<Node0*>(this)
                 << " [style=dotted];\n";
         };
 
         typ::Type& Type() {return setBy->Type();}
     };
 
-    struct ImpliedLoopStmt : public SemaStmt, public AstNode1<Stmt>
+    struct ImpliedLoopStmt : public Node1
     {
         std::vector<IterExpr*> targets;
         ImpliedLoopStmt(ExprStmt* arg)
-            : AstNode1<Stmt>(arg)
+            : Node1(arg)
         {};
-        std::string myLbl() {return "for (`)";};
+        std::string myLbl() {return "for (`)";}
+        bool isExpr() {return false;}
 
         void emitDot(std::ostream& os)
         {
-            AstNode1<Stmt>::emitDot(os);
+            Node1::emitDot(os);
             for (auto n : targets)
-                os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(n)
+                os << 'n' << static_cast<Node0*>(this) << " -> n" << static_cast<Node0*>(n)
                     << " [style=dotted];\n";
         };
     };
@@ -56,21 +52,24 @@ namespace ast
         const char *myColor() {return "8";};
     };
 
-    struct FunctionDef : public Expr, public AstNode1<Stmt>
+    struct FunctionDef : public Node1
     {
-        FunctionDef(typ::Type t, Stmt* s) : Expr(s->loc), AstNode1<Stmt>(s) {Type() = t;}
+        FunctionDef(typ::Type t, Node0* s) : Node1(s, s->loc) {Type() = t;}
         std::string myLbl() {return Type().to_str();}
+        bool isExpr() {return false;}
     };
 
     //basic block class that holds any number of instructions
-    struct BasicBlock : public AstNodeN<Expr>, public Stmt
+    struct BasicBlock : public NodeN
     {
         std::string myLbl() {return "Block";}
+        bool isExpr() {return false;}
     };
 
-    struct Package : public AstNodeN<FunctionDef>, public Stmt
+    struct Package : public NodeN
     {
         std::string myLbl() {return "Package";}
+        bool isExpr() {return false;}
     };
 }
 

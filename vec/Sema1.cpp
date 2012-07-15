@@ -7,7 +7,7 @@
 using namespace ast;
 using namespace sa;
 
-Expr* sa::findEndExpr(AstNodeB* srch)
+Node0* sa::findEndExpr(Node0* srch)
 {
     while (true)
     {
@@ -17,10 +17,8 @@ Expr* sa::findEndExpr(AstNodeB* srch)
             srch = sp->getChildB();
         else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
             srch = es->getChildA();
-        else if (Expr* e = dynamic_cast<Expr*>(srch))
-            return e;
-        else //it's a stmt
-            return 0;
+        else
+            return srch;
     }
 }
 
@@ -52,7 +50,7 @@ void Sema::Phase1()
     });
 
     //flatten out listify and tuplify expressions
-    auto ifyFlatten = [] (AstNodeN<Expr>* ify)
+    auto ifyFlatten = [] (NodeN* ify)
     {
         BinExpr* comma = dynamic_cast<BinExpr*>(ify->Children().back());
         while (comma != 0 && comma->op == tok::comma)
@@ -110,7 +108,7 @@ void Sema::Phase1()
             }
         }
 
-        Stmt* conts = new ExprStmt(ae->getChildB());
+        Node0* conts = new ExprStmt(ae->getChildB());
 
         //add decl exprs generated earlier to the AST
         for (auto it : fde->funcScope->varDefs)
@@ -128,11 +126,11 @@ void Sema::Phase1()
         ae->setChildB(fd);
 
         //find expression in tail position
-        Expr* end = findEndExpr(fd->getChildA());
-        if (end) //if it's really there
+        Node0* end = findEndExpr(fd->getChildA());
+        if (ExprStmt* endParent = dynamic_cast<ExprStmt*>(end->parent)) //if it's really there
         {
             //we know its an expr stmt
-            ExprStmt* endParent = dynamic_cast<ExprStmt*>(end->parent);
+            
             ReturnStmt* impliedRet = new ReturnStmt(end);
             endParent->parent->replaceChild(endParent, impliedRet); //put in the implied return
             endParent->nullChildA();
@@ -172,7 +170,7 @@ void Sema::Phase1()
     AstWalk<IterExpr>([] (IterExpr* ie)
     {
         //find nearest exprStmt up the tree
-        AstNodeB* n;
+        Node0* n;
         for (n = ie; dynamic_cast<ExprStmt*>(n) == 0; n = n->parent)
             assert(n != 0 && "ExprStmt not found");
 
@@ -181,7 +179,7 @@ void Sema::Phase1()
         
         if (!il)
         {
-            AstNodeB* esParent = es->parent; //save because the c'tor clobbers it
+            Node0* esParent = es->parent; //save because the c'tor clobbers it
             il = new ImpliedLoopStmt(es);
             esParent->replaceChild(es, il);
         }
@@ -208,7 +206,7 @@ void Sema::Phase1()
         if (!sp->parent)
             return; //we're screwed
 
-        Stmt* realStmt;
+        Node0* realStmt;
         if (dynamic_cast<NullStmt*>(sp->getChildA()))
         {
             realStmt = sp->getChildB();
@@ -227,14 +225,16 @@ void Sema::Phase1()
     });
     
     //create expr stmts for other things that contain expressions
+    //FIXME: put this back when we start using unique_ptr's
+    /*
     AstWalk<CondStmt>([] (CondStmt* cs)
     {
-        Expr* e = cs->getExpr();
+        Node0* e = cs->getExpr();
         TmpExpr* te = new TmpExpr(e);
         cs->replaceChild(e, te);
         
-        AstNodeB* parent = cs->parent;
+        Node0* parent = cs->parent;
         StmtPair* sp = new StmtPair(new ExprStmt(e), cs);
         parent->replaceChild(cs, sp);
-    });
+    });*/
 }

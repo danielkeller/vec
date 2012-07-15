@@ -7,120 +7,111 @@
 
 namespace ast
 {
-    //abstract statement type
-    struct Stmt : public virtual AstNodeB
+    struct NullStmt : public Node0
     {
-        virtual bool isLval() {return false;};
-        Stmt() {};
-        Stmt(tok::Location const &l) {loc = l;}
-        const char *myColor() {return "1";};
-    };
-
-    struct NullStmt : public Stmt, public AstNode0
-    {
-        NullStmt(tok::Location const &l) : Stmt(l) {};
+        NullStmt(tok::Location const &l) : Node0(l) {};
         std::string myLbl() {return "Null";}
-        const char *myColor() {return "9";};
+        const char *myColor() {return "9";}
+        bool isExpr() {return false;}
     };
 
-    struct ExprStmt : public Stmt, public AstNode1<Expr>
+    struct ExprStmt : public Node1
     {
-        ExprStmt(Expr* conts)
-            : Stmt(conts->loc),
-            AstNode1<Expr>(conts)
+        ExprStmt(Node0* conts)
+            : Node1(conts)
         {};
         std::string myLbl() {return "Expr";}
-        const char *myColor() {return "2";};
+        const char *myColor() {return "2";}
+        bool isExpr() {return false;}
     };
 
-    struct StmtPair : public Stmt, public AstNode2<Stmt, Stmt>
+    struct StmtPair : public Node2
     {
-        StmtPair(Stmt *lhs, Stmt *rhs) : AstNode2<Stmt, Stmt>(lhs, rhs) {};
+        StmtPair(Node0 *lhs, Node0 *rhs) : Node2(lhs, rhs) {};
         std::string myLbl() {return ";";}
-        const char *myColor() {return "3";};
+        const char *myColor() {return "3";}
+        bool isExpr() {return false;}
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << ":p0" <<  " -> n" << static_cast<AstNodeB*>(getChildA()) << ";\n"
-               << 'n' << static_cast<AstNodeB*>(this) << ":p1" <<  " -> n" << static_cast<AstNodeB*>(getChildB()) << ";\n";
+            os << 'n' << static_cast<Node0*>(this) << ":p0" <<  " -> n" << static_cast<Node0*>(getChildA()) << ";\n"
+               << 'n' << static_cast<Node0*>(this) << ":p1" <<  " -> n" << static_cast<Node0*>(getChildB()) << ";\n";
             getChildA()->emitDot(os);
             getChildB()->emitDot(os);
-            os << 'n' << static_cast<AstNodeB*>(this)
+            os << 'n' << static_cast<Node0*>(this)
                << " [label=\";|<p0>|<p1>\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
     };
 
-    struct Block : public Expr, public Stmt, public AstNode1<Stmt>
+    struct Block : public Node1
     {
         Scope *scope;
-        Block(Stmt* conts, Scope *s, tok::Location const &l)
-            : Expr(l),
-            Stmt(l),
-            AstNode1<Stmt>(conts),
+        Block(Node0* conts, Scope *s, tok::Location const &l)
+            : Node1(conts, l),
             scope(s)
         {};
         std::string myLbl() {return "(...)";}
-        const char *myColor() {return "3";};
+        const char *myColor() {return "3";}
+        bool isExpr() {return true;}
     };
 
     //base class for stmts that contain expressions among other things
-    struct CondStmt : public Stmt
+    struct CondStmt
     {
-        virtual Expr* getExpr() = 0;
-        CondStmt(tok::Location const &l) : Stmt(l) {};
+        virtual Node0* getExpr() = 0;
+        CondStmt() {};
     };
 
-    struct IfStmt : public CondStmt, public AstNode2<Expr, Stmt>
+    struct IfStmt : public CondStmt, public Node2
     {
-        IfStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : CondStmt(o.loc + act->loc),
-            AstNode2<Expr, Stmt>(pred, act)
-        {};
-        std::string myLbl() {return "if";};
-        Expr* getExpr() {return getChildA();};
+        IfStmt(Node0* pred, Node0* act, tok::Token &o)
+            : Node2(pred, act, o.loc + act->loc)
+        {}
+        std::string myLbl() {return "if";}
+        Node0* getExpr() {return getChildA();}
+        bool isExpr() {return false;}
     };
 
-    struct IfElseStmt : public CondStmt, public AstNode3<Expr, Stmt, Stmt>
+    struct IfElseStmt : public CondStmt, public Node3
     {
-        IfElseStmt(Expr* pred, Stmt* act1, Stmt* act2, tok::Token &o)
-            : CondStmt(o.loc + act2->loc),
-            AstNode3<Expr, Stmt, Stmt>(pred, act1, act2)
+        IfElseStmt(Node0* pred, Node0* act1, Node0* act2, tok::Token &o)
+            : Node3(pred, act1, act2, o.loc + act2->loc)
         {};
         std::string myLbl() {return "if-else";}
-        Expr* getExpr() {return getChildA();};
+        Node0* getExpr() {return getChildA();}
+        bool isExpr() {return false;}
     };
 
-    struct SwitchStmt : public CondStmt, public AstNode2<Expr, Stmt>
+    struct SwitchStmt : public CondStmt, public Node2
     {
-        SwitchStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : CondStmt(o.loc + act->loc),
-            AstNode2<Expr, Stmt>(pred, act)
+        SwitchStmt(Node0* pred, Node0* act, tok::Token &o)
+            : Node2(pred, act, o.loc + act->loc)
         {};
         std::string myLbl() {return "switch";}
-        Expr* getExpr() {return getChildA();};
+        Node0* getExpr() {return getChildA();}
+        bool isExpr() {return false;}
     };
 
-    struct WhileStmt : public CondStmt, public AstNode2<Expr, Stmt>
+    struct WhileStmt : public CondStmt, public Node2
     {
-        WhileStmt(Expr* pred, Stmt* act, tok::Token &o)
-            : CondStmt(o.loc + act->loc),
-            AstNode2<Expr, Stmt>(pred, act)
+        WhileStmt(Node0* pred, Node0* act, tok::Token &o)
+            : Node2(pred, act, o.loc + act->loc)
         {};
         std::string myLbl() {return "while";}
-        Expr* getExpr() {return getChildA();};
+        Node0* getExpr() {return getChildA();}
+        bool isExpr() {return false;}
     };
 
-    struct ReturnStmt : public CondStmt, public AstNode1<Expr>
+    struct ReturnStmt : public CondStmt, public Node1
     {
-        ReturnStmt(Expr* arg, tok::Token &o)
-            : CondStmt(o.loc + arg->loc),
-            AstNode1<Expr>(arg)
+        ReturnStmt(Node0* arg, tok::Token &o)
+            : Node1(arg, o.loc + arg->loc)
         {};
-        ReturnStmt(Expr* arg)
-            : CondStmt(arg->loc),
-            AstNode1<Expr>(arg)
+        ReturnStmt(Node0* arg)
+            : Node1(arg)
         {};
         std::string myLbl() {return "return";}
-        Expr* getExpr() {return getChildA();};
+        Node0* getExpr() {return getChildA();}
+        bool isExpr() {return false;}
     };
 }
 

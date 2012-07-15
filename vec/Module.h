@@ -10,9 +10,9 @@
 
 namespace ast
 {
-    class Module : public AstNodeB
+    class Module : public Node0
     {
-        Stmt* treeHead;
+        Node0* treeHead;
 
     public:
         ~Module();
@@ -24,23 +24,23 @@ namespace ast
         std::string name;
         ast::Scope pub;
 
-        //the AstNodeB interface
+        //the Node0 interface
         void eachChild(sa::AstWalker0* w) {w->call(treeHead);}
-        void replaceChild(AstNodeB*, AstNodeB* newc)
+        void replaceChild(Node0*, Node0* newc)
         {
-            treeHead = dynamic_cast<Stmt*>(newc);
+            treeHead = newc;
             treeHead->parent = this;
         }
         std::string myLbl() {return "Comp Unit";}
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << " -> n"
-                << static_cast<AstNodeB*>(treeHead) << ";\n";
+            os << 'n' << static_cast<Node0*>(this) << " -> n"
+                << treeHead << ";\n";
             treeHead->emitDot(os);
-            AstNodeB::emitDot(os);
+            Node0::emitDot(os);
         }
-        void TreeHead(Stmt* head) {treeHead = head; head->parent = this;}
-        Stmt* TreeHead() {return treeHead;}
+        void TreeHead(Node0* head) {treeHead = head; head->parent = this;}
+        Node0* TreeHead() {return treeHead;}
 
         friend class GlobalData;
     };

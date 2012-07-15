@@ -4,32 +4,13 @@
 #include "AstNode.h"
 #include "Scope.h"
 #include "Location.h"
-#include "Type.h"
 
 namespace ast
 {
-    //abstract expression type
-    struct Expr : public virtual AstNodeB
-    {
-    protected:
-        //type is private, and has a virtual "sgetter" so we can override its behavior
-        //when a derived Expr has some sort of deterministic type. wasted space isn't
-        //a big deal since it's only sizeof(void*) bytes
-        typ::Type type;
-
-    public:
-        //Expr() = default;
-        //Expr(tok::Location &&l) : AstNodeB(l) {};
-        Expr(tok::Location const &l) : type(typ::error) {loc = l;}
-        virtual bool isLval() {return false;};
-        virtual typ::Type& Type() {return type;} //sgetter. sget it?
-        const char *myColor() {return "4";};
-    };
-
     //leaf expression type
-    struct NullExpr : public Expr, public AstNode0
+    struct NullExpr : public Node0
     {
-        NullExpr(tok::Location const &l) : Expr(l) {};
+        NullExpr(tok::Location const &l) : Node0(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
         typ::Type& Type() {return typ::null;}
@@ -37,11 +18,11 @@ namespace ast
 
     struct DeclExpr;
 
-    struct VarExpr : public Expr, public AstNode0
+    struct VarExpr : public Node0
     {
         DeclExpr* var; //the variable we belong to
 
-        VarExpr(DeclExpr* v, tok::Location const &l) : Expr(l), var(v) {};
+        VarExpr(DeclExpr* v, tok::Location const &l) : Node0(l), var(v) {};
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
@@ -90,9 +71,9 @@ namespace ast
             : DeclExpr(n, typ::error, global, firstLoc) {}
     };
 
-    struct ConstExpr : public Expr, public AstNode0
+    struct ConstExpr : public Node0
     {
-        ConstExpr(tok::Location &l) : Expr(l) {};
+        ConstExpr(tok::Location &l) : Node0(l) {};
         const char *myColor() {return "7";};
     };
 
@@ -117,33 +98,33 @@ namespace ast
         std::string myLbl() {return "str: " + utl::to_str(value);}
     };
 
-    struct OverloadableExpr : public Expr
+    struct OverloadableExpr
     {
         Scope* owner;
         FuncDeclExpr* ovrResult;
-        OverloadableExpr(Scope* o, const tok::Location & l)
-            : Expr(l), owner(o), ovrResult(0) {}
+        OverloadableExpr(Scope* o)
+            : owner(o), ovrResult(0) {}
     };
 
     //general binary expressions
-    struct BinExpr : public OverloadableExpr, public AstNode2<Expr, Expr>
+    struct BinExpr : public OverloadableExpr, public Node2
     {
         tok::TokenType op;
         tok::Location opLoc;
-        BinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
-            : OverloadableExpr(sc, lhs->loc + rhs->loc),
-            AstNode2<Expr, Expr>(lhs, rhs), op(o.type), opLoc(o.loc)
+        BinExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::Token &o)
+            : OverloadableExpr(sc),
+            Node2(lhs, rhs), op(o.type), opLoc(o.loc)
         {};
-        BinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::TokenType o)
-            : OverloadableExpr(sc, lhs->loc + rhs->loc),
-            AstNode2<Expr, Expr>(lhs, rhs), op(o)
+        BinExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::TokenType o)
+            : OverloadableExpr(sc),
+            Node2(lhs, rhs), op(o)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
 
     struct AssignExpr : public BinExpr
     {
-        AssignExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+        AssignExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::Token &o)
             : BinExpr(lhs, rhs, sc, o) {};
         std::string myLbl() {return "'='";}
         typ::Type& Type() {return getChildA()->Type();}
@@ -152,21 +133,21 @@ namespace ast
     struct OpAssignExpr : public AssignExpr
     {
         tok::TokenType assignOp;
-        OpAssignExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+        OpAssignExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::Token &o)
             : AssignExpr(lhs, rhs, sc, o), assignOp(o.value.op) {};
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 
-    struct OverloadCallExpr : public OverloadableExpr, public AstNodeN<Expr>
+    struct OverloadCallExpr : public OverloadableExpr, public NodeN
     {
         VarExpr* func; //so tree walker won't see it
-        OverloadCallExpr(VarExpr* lhs, Expr* rhs, Scope* o, const tok::Location & l)
-            : OverloadableExpr(o, l), AstNodeN<Expr>(rhs), func(lhs) {}
+        OverloadCallExpr(VarExpr* lhs, Node0* rhs, Scope* o, const tok::Location & l)
+            : OverloadableExpr(o), NodeN(rhs, l), func(lhs) {}
         ~OverloadCallExpr() {delete func;} //has to be deleted manually
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
     };
 
-    inline BinExpr* makeBinExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &op)
+    inline BinExpr* makeBinExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::Token &op)
     {
         if (op == tok::equals)
             return new AssignExpr(lhs, rhs, sc, op);
@@ -177,69 +158,65 @@ namespace ast
     }
 
     //unary expressions
-    struct UnExpr : public Expr, public AstNode1<Expr>
+    struct UnExpr : public Node1
     {
         tok::TokenType op;
-        UnExpr(Expr* arg, tok::Token &o)
-            : Expr(o.loc + arg->loc),
-            AstNode1<Expr>(arg), op(o.type)
+        UnExpr(Node0* arg, tok::Token &o)
+            : Node1(arg, o.loc + arg->loc), op(o.type)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
 
-    struct IterExpr : public Expr, public AstNode1<Expr>
+    struct IterExpr : public Node1
     {
-        IterExpr(Expr* arg, tok::Token &o)
-            : Expr(o.loc + arg->loc),
-            AstNode1<Expr>(arg)
+        IterExpr(Node0* arg, tok::Token &o)
+            : Node1(arg, o.loc + arg->loc)
         {};
 
         bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "`";}
     };
 
-    struct AggExpr : public Expr, public AstNode1<Expr>
+    struct AggExpr : public Node1
     {
         tok::TokenType op;
-        AggExpr(Expr* arg, tok::Token &o)
-            : Expr(o.loc + arg->loc),
-            AstNode1<Expr>(arg), op(o.value.op)
+        AggExpr(Node0* arg, tok::Token &o)
+            : Node1(arg, o.loc + arg->loc), op(o.value.op)
         {};
         std::string myLbl() {return tok::Name(op) + std::string("=");}
     };
 
     //TODO: more accurate location
-    struct ListifyExpr : public Expr, public AstNodeN<Expr>
+    struct ListifyExpr : public NodeN
     {
-        ListifyExpr(Expr* arg)
-            : Expr(arg->loc), AstNodeN<Expr>(arg)
+        ListifyExpr(Node0* arg)
+            : NodeN(arg, arg->loc)
         {};
         std::string myLbl() {return "\\{...\\}";}
     };
 
-    struct TuplifyExpr : public Expr, public AstNodeN<Expr>
+    struct TuplifyExpr : public NodeN
     {
-        TuplifyExpr(Expr* arg)
-            : Expr(arg->loc), AstNodeN<Expr>(arg)
+        TuplifyExpr(Node0* arg)
+            : NodeN(arg, arg->loc)
         {};
         std::string myLbl() {return "[...]";}
     };
 
     //postfix expressions
     //for ++ and --
-    struct PostExpr : public Expr, public AstNode1<Expr>
+    struct PostExpr : public Node1
     {
         tok::TokenType op;
-        PostExpr(Expr* arg, tok::Token &o)
-            : Expr(arg->loc + o.loc),
-            AstNode1<Expr>(arg), op(o.type)
+        PostExpr(Node0* arg, tok::Token &o)
+            : Node1(arg, arg->loc + o.loc), op(o.type)
         {};
         std::string myLbl() {return tok::Name(op);}
     };
 
     struct TupAccExpr : public BinExpr
     {
-        TupAccExpr(Expr* lhs, Expr* rhs, tok::Token &o)
+        TupAccExpr(Node0* lhs, Node0* rhs, tok::Token &o)
             : BinExpr(lhs, rhs, 0, o)
         {}
 
@@ -249,7 +226,7 @@ namespace ast
 
     struct ListAccExpr : public BinExpr
     {
-        ListAccExpr(Expr* lhs, Expr* rhs, Scope* sc, tok::Token &o)
+        ListAccExpr(Node0* lhs, Node0* rhs, Scope* sc, tok::Token &o)
             : BinExpr(lhs, rhs, sc, o)
         {}
 

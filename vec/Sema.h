@@ -21,7 +21,8 @@ namespace sa
 
         void validateTree();
 
-        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, ast::OverloadableExpr* call, typ::Type argType);
+        template<class T>
+        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
         
     public:
         Sema(ast::Module* c) : mod(c) {};
@@ -58,7 +59,7 @@ namespace sa
     }
 
     //finds the last non-block expression in a list of them
-    ast::Expr* findEndExpr(ast::AstNodeB* srch);
+    ast::Node0* findEndExpr(ast::Node0* srch);
 }
 
 #endif

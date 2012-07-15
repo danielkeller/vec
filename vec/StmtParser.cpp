@@ -25,7 +25,7 @@ Block* Parser::parseBlock()
                          blockScope,
                          begin + lexer->Last().loc);
     
-    Stmt* conts;
+    Node0* conts;
 
     conts = parseStmtList();
 
@@ -45,16 +45,16 @@ stmt-list
     | 'default' ':' stmt-list
     ;
 */
-Stmt* Parser::parseStmtList()
+Node0* Parser::parseStmtList()
 {
-    Stmt* lhs = parseStmt();
+    Node0* lhs = parseStmt();
 
     //if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
     //    err::ExpectedAfter(lexer, "';'", "expression");
 
     if (!(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
     {
-        Stmt* rhs = parseStmtList();
+        Node0* rhs = parseStmtList();
         return new StmtPair(lhs, rhs);
     }
     else //if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
@@ -74,7 +74,7 @@ stmt
     | type-decl
     ;
 */
-Stmt* Parser::parseStmt()
+Node0* Parser::parseStmt()
 {
     tok::Token to = lexer->Peek();
 
@@ -90,10 +90,10 @@ Stmt* Parser::parseStmt()
         lexer->Advance();
         if (!lexer->Expect(tok::lparen))
             err::ExpectedAfter(lexer, "'('", "'while'");
-        Expr* pred = parseExpression();
+        Node0* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Stmt* act = parseStmt();
+        Node0* act = parseStmt();
         return new WhileStmt(pred, act, to);
     }
 
@@ -102,10 +102,10 @@ Stmt* Parser::parseStmt()
         lexer->Advance();
         if (!lexer->Expect(tok::lparen))
             err::ExpectedAfter(lexer, "'('", "'if'");
-        Expr* pred = parseExpression();
+        Node0* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Stmt* act1 = parseStmt();
+        Node0* act1 = parseStmt();
         if (!lexer->Expect(tok::k_else))
             return new IfStmt(pred, act1, to);
         else
@@ -117,10 +117,10 @@ Stmt* Parser::parseStmt()
         lexer->Advance();
         if (!lexer->Expect(tok::lparen))
             err::ExpectedAfter(lexer, "'('", "'switch'");
-        Expr* pred = parseExpression();
+        Node0* pred = parseExpression();
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
-        Stmt* act = parseBlock();
+        Node0* act = parseBlock();
         return new SwitchStmt(pred, act, to);
     }
 
@@ -131,7 +131,7 @@ Stmt* Parser::parseStmt()
     case tok::k_return:
     {
         lexer->Advance();
-        Stmt* ret = new ReturnStmt(parseExpression(), to);
+        Node0* ret = new ReturnStmt(parseExpression(), to);
         if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
             err::ExpectedAfter(lexer, "';'", "expression");
         return ret;
@@ -143,7 +143,7 @@ Stmt* Parser::parseStmt()
         exit(-1);
     default:
     {
-        Stmt* ret = new ExprStmt(parseExpression());
+        Node0* ret = new ExprStmt(parseExpression());
         if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen && lexer->Last() != tok::rparen)
             err::ExpectedAfter(lexer, "';'", "expression");
         return ret;

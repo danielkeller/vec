@@ -27,28 +27,28 @@ namespace par
 
         typ::Type type;
 
-        //ExprParser.cpp
-        ast::Expr* parseExpression();
-        ast::Expr* parseBinaryExprInAgg();
-        ast::Expr* parseBinaryExprRHS(ast::Expr* lhs, tok::prec::precidence minPrec);
-        ast::Expr* parseUnaryExpr();
-        ast::Expr* parsePostfixExpr();
-        ast::Expr* parsePrimaryExpr();
+        //Node0Parser.cpp
+        ast::Node0* parseExpression();
+        ast::Node0* parseBinaryExprInAgg();
+        ast::Node0* parseBinaryExprRHS(ast::Node0* lhs, tok::prec::precidence minPrec);
+        ast::Node0* parseUnaryExpr();
+        ast::Node0* parsePostfixExpr();
+        ast::Node0* parsePrimaryExpr();
         //parse list type or listify ie {int} or {1, 2, 3}
         //returns NULL if type is encountered
         //this is needed because we don't know what { means w/o looking at its contents
-        ast::Expr* parseListify();
-        ast::Expr* parseTuplify();
+        ast::Node0* parseListify();
+        ast::Node0* parseTuplify();
 
         //DeclParser.cpp
         void parseTypeDecl();
-        ast::Expr* parseDecl();
-        ast::Expr* parseDeclRHS(); //parse the ident part of a decl, after the type has been parsed
+        ast::Node0* parseDecl();
+        ast::Node0* parseDeclRHS(); //parse the ident part of a decl, after the type has been parsed
 
         //StmtParser.cpp
-        ast::Stmt* parseStmtList();
+        ast::Node0* parseStmtList();
         ast::Block* parseBlock();
-        ast::Stmt* parseStmt();
+        ast::Node0* parseStmt();
 
         //TypeParser.cpp
         void parseType();

@@ -9,9 +9,9 @@ using namespace ast;
 
 //big ole binary expression parser right here
 //uses token precidence and associativity to parse it all in one function
-Expr* Parser::parseExpression()
+Node0* Parser::parseExpression()
 {
-    Expr* lhs = parseUnaryExpr();
+    Node0* lhs = parseUnaryExpr();
     return parseBinaryExprRHS(lhs, tok::prec::comma); //minumun prec is comma so ';' and stuff makes it return
 }
 
@@ -22,21 +22,21 @@ agg-expr
     ;
 */
 //needed because agg unary expr has lower precidence than assignment
-Expr* Parser::parseBinaryExprInAgg()
+Node0* Parser::parseBinaryExprInAgg()
 {
-    Expr* lhs = parseUnaryExpr();
+    Node0* lhs = parseUnaryExpr();
     return parseBinaryExprRHS(lhs, tok::prec::assignment);
 }
 
 //TODO: don't other unary ops have precidence lower than binary ops?
 
-Expr* Parser::parseBinaryExprRHS(Expr* lhs, tok::prec::precidence minPrec)
+Node0* Parser::parseBinaryExprRHS(Node0* lhs, tok::prec::precidence minPrec)
 {
     while(lexer->Peek().Precidence() >= minPrec) //keep shifting?
     {
         tok::Token op = lexer->Next(); //we know its a bin op because others are prec::none
 
-        Expr* rhs = parseUnaryExpr();
+        Node0* rhs = parseUnaryExpr();
 
         //shift
         rhs = parseBinaryExprRHS(rhs, tok::prec::precidence(op.Precidence()
@@ -72,7 +72,7 @@ unary-expr
     | UN_OP unary-expr
     ;
 */
-Expr* Parser::parseUnaryExpr()
+Node0* Parser::parseUnaryExpr()
 {
     tok::Token op = lexer->Peek();
     switch (op.type)
@@ -104,11 +104,11 @@ postfix-expr
     | postfix-expr '{' expression '}'
     ;
 */
-Expr* Parser::parsePostfixExpr()
+Node0* Parser::parsePostfixExpr()
 {
-    Expr* arg = parsePrimaryExpr();
+    Node0* arg = parsePrimaryExpr();
     tok::Token op;
-    Expr* rhs;
+    Node0* rhs;
     while (true)
     {
         switch (lexer->Peek().type)
@@ -153,7 +153,7 @@ primary-expr
     | '(' expression ')'
     ;
 */
-Expr* Parser::parsePrimaryExpr()
+Node0* Parser::parsePrimaryExpr()
 {
     tok::Token to = lexer->Peek();
 
@@ -169,7 +169,7 @@ Expr* Parser::parsePrimaryExpr()
         lexer->backtrackSet(); //get ready...
         backtrackStatus = CanBacktrack; //get set...
 
-        Expr* decl = parseDecl(); //GO!
+        Node0* decl = parseDecl(); //GO!
         if (backtrackStatus != IsBacktracking) //success! it was a type.
         {
             backtrackStatus = CantBacktrack;
@@ -222,11 +222,11 @@ primary-expr
     : '{' expression '}'
     ;
 */
-Expr* Parser::parseListify()
+Node0* Parser::parseListify()
 {
     lexer->Advance();
 
-    Expr* ret = parseExpression();
+    Node0* ret = parseExpression();
     if (!lexer->Expect(listEnd))
         err::ExpectedAfter(lexer, "'}'", "expression list");
     return new ListifyExpr(ret);
@@ -237,11 +237,11 @@ primary-expr
     : '[' expression ']'
     ;
 */
-Expr* Parser::parseTuplify()
+Node0* Parser::parseTuplify()
 {
     lexer->Advance();
 
-    Expr* ret = parseExpression();
+    Node0* ret = parseExpression();
     if (!lexer->Expect(tupleEnd))
         err::ExpectedAfter(lexer, "']'", "expression list");
     return new TuplifyExpr(ret);

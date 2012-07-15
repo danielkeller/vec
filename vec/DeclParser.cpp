@@ -102,7 +102,7 @@ primary-expr
     : type IDENT
     ;
 */
-Expr* Parser::parseDecl()
+Node0* Parser::parseDecl()
 {
     parseType();
     
@@ -117,7 +117,7 @@ primary-expr
     : type IDENT
     ;
 */
-Expr* Parser::parseDeclRHS()
+Node0* Parser::parseDeclRHS()
 {
     tok::Token to;
 

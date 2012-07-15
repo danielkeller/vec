@@ -2,6 +2,7 @@
 #define ASTNODE_H
 
 #include "Token.h"
+#include "Type.h"
 
 #include <functional>
 #include <ostream>
@@ -15,7 +16,7 @@
 
 namespace ast
 {
-    class AstNodeB;
+    class Node0;
 }
 
 namespace sa
@@ -24,32 +25,42 @@ namespace sa
     class AstWalker0
     {
     public:
-        virtual void call(ast::AstNodeB* node) = 0;
+        virtual void call(ast::Node0* node) = 0;
     };
 }
 
 namespace ast
 {
-    //virtual AstNode base class for generic node classes ie expr, stmt
+    //virtual Node base class for generic node classes ie expr, stmt
 
-    class AstNodeB
+    class Node0
     {
+    protected:
+        //type is private, and has a virtual "sgetter" so we can override its behavior
+        //when a derived Expr has some sort of deterministic type. wasted space isn't
+        //a big deal since it's only sizeof(void*) bytes
+        typ::Type type;
+
     public:
+        virtual typ::Type& Type() {return type;} //sgetter. sget it?
+        virtual bool isLval() {return false;}
+        virtual bool isExpr() {return true;}
+
         tok::Location loc; //might not be set
-        AstNodeB *parent;
-        AstNodeB(tok::Location const &l) : loc(l), parent(0) {};
-        AstNodeB() : parent(0) {};
-        virtual ~AstNodeB() {};
-        virtual void eachChild(sa::AstWalker0*) = 0;
+        Node0 *parent;
+        Node0(tok::Location const &l) : loc(l), parent(0) {};
+
+        virtual ~Node0() {};
+        virtual void eachChild(sa::AstWalker0*) {};
 
         virtual void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"" << myLbl()
+            os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl()
                 << "\",style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
 
         //replace child of unknown position
-        virtual void replaceChild(AstNodeB*, AstNodeB*)
+        virtual void replaceChild(Node0*, Node0*)
         {
             assert(false && "didn't find child");
         }
@@ -65,27 +76,24 @@ namespace ast
         }
     };
 
-    class AstNode0 : public virtual AstNodeB
-    {
-    public:
-        AstNode0() {};
-        ~AstNode0() {};
-        void eachChild(sa::AstWalker0*) {};
-    };
-
     //ast node from which all others are derived
-    template<class A>
-    class AstNode1 : public AstNode0
+    class Node1 : public Node0
     {
-        A* a;
+        Node0* a;
     public:
-        AstNode1(A* a_i)
-            : a(a_i)
+        Node1(Node0* a_i, tok::Location const &l)
+            : Node0(l), a(a_i)
         {
             a->parent = this;
         }
 
-        ~AstNode1()
+        Node1(Node0* a_i)
+            : Node0(a_i->loc), a(a_i)
+        {
+            a->parent = this;
+        }
+
+        ~Node1()
         {
             delete a;
         }
@@ -95,23 +103,22 @@ namespace ast
             w->call(a);
         }
 
-        void replaceChild(AstNodeB* old, AstNodeB* n)
+        void replaceChild(Node0* old, Node0* n)
         {
             //cast the old type to the child's type to compare correctly
-            if (dynamic_cast<A*>(old) == a)
-                setChildA(dynamic_cast<A*>(n));
+            if (old == a)
+                setChildA(n);
             else
-                AstNode0::replaceChild(old, n);
+                Node0::replaceChild(old, n);
         }
 
-        A* getChildA()
+        Node0* getChildA()
         {
             return a;
         }
 
-        void setChildA(A* newchld)
+        void setChildA(Node0* newchld)
         {
-            assert(newchld && "replacing child with incompatible type");
             a = newchld;
             newchld->parent = this;
         }
@@ -124,52 +131,56 @@ namespace ast
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(a) << ";\n";
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << a << ";\n";
             a->emitDot(os);
-            AstNode0::emitDot(os);
+            Node0::emitDot(os);
         }
     };
 
-    template<class A, class B>
-    class AstNode2 : public AstNode1<A>
+    class Node2 : public Node1
     {
-        B* b;
+        Node0* b;
 
     public:
-        AstNode2(A* a_i, B* b_i)
-            : AstNode1<A>(a_i), b(b_i)
+        Node2(Node0* a_i, Node0* b_i, tok::Location const &l)
+            : Node1(a_i, l), b(b_i)
         {
             b->parent = this;
         }
 
-        ~AstNode2()
+        Node2(Node0* a_i, Node0* b_i)
+            : Node1(a_i, a_i->loc + b_i->loc), b(b_i)
+        {
+            b->parent = this;
+        }
+
+        ~Node2()
         {
             delete b;
         }
 
         void eachChild(sa::AstWalker0 *w)
         {
-            AstNode1<A>::eachChild(w);
+            Node1::eachChild(w);
             w->call(b);
         }
 
-        void replaceChild(AstNodeB* old, AstNodeB* n)
+        void replaceChild(Node0* old, Node0* n)
         {
             //cast the old type to the child's type to compare correctly
-            if (dynamic_cast<B*>(old) == b)
-                setChildB(dynamic_cast<B*>(n));
+            if (old == b)
+                setChildB(n);
             else
-                AstNode1<A>::replaceChild(old, n);
+                Node1::replaceChild(old, n);
         }
 
-        B* getChildB()
+        Node0* getChildB()
         {
             return b;
         }
 
-        void setChildB(B* newchld)
+        void setChildB(Node0* newchld)
         {
-            assert(newchld && "replacing child with incompatible type");
             b = newchld;
             newchld->parent = this;
         }
@@ -181,52 +192,56 @@ namespace ast
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(b) << ";\n";
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << b << ";\n";
             b->emitDot(os);
-            AstNode1<A>::emitDot(os);
+            Node1::emitDot(os);
         }
     };
 
-    template<class A, class B, class C>
-    class AstNode3 : public AstNode2<A, B>
+    class Node3 : public Node2
     {
-        C* c;
+        Node0* c;
 
     public:
-        AstNode3(A* a_i, B* b_i, C* c_i)
-            : AstNode2<A, B>(a_i, b_i), c(c_i)
+        Node3(Node0* a_i, Node0* b_i, Node0* c_i, tok::Location const &l)
+            : Node2(a_i, b_i, l), c(c_i)
         {
             c->parent = this;
         }
 
-        ~AstNode3()
+        Node3(Node0* a_i, Node0* b_i, Node0* c_i)
+            : Node2(a_i, b_i, a_i->loc + c_i->loc), c(c_i)
+        {
+            c->parent = this;
+        }
+
+        ~Node3()
         {
             delete c;
         }
 
         void eachChild(sa::AstWalker0 *w)
         {
-            AstNode2<A, B>::eachChild(w);
+            Node2::eachChild(w);
             w->call(c);
         }
 
-        void replaceChild(AstNodeB* old, AstNodeB* n)
+        void replaceChild(Node0* old, Node0* n)
         {
             //cast the old type to the child's type to compare correctly
-            if (dynamic_cast<C*>(old) == c)
-                setChildC(dynamic_cast<C*>(n));
+            if (old == c)
+                setChildC(n);
             else
-                AstNode2<A, B>::replaceChild(old, n);
+                Node2::replaceChild(old, n);
         }
 
-        C* getChildC()
+        Node0* getChildC()
         {
             return c;
         }
 
-        void setChildC(C* newchld)
+        void setChildC(Node0* newchld)
         {
-            assert(newchld && "replacing child with incompatible type");
             c = newchld;
             newchld->parent = this;
         }
@@ -238,28 +253,29 @@ namespace ast
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<AstNodeB*>(this) << " -> n" << static_cast<AstNodeB*>(c) << ";\n";
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << c << ";\n";
             c->emitDot(os);
-            AstNode2<A, B>::emitDot(os);
+            Node2::emitDot(os);
         }
     };
 
     //node with any number of children
-    template<class T>
-    struct AstNodeN : public virtual AstNodeB
+    struct NodeN : public Node0
     {
     private:
-        typedef std::vector<T*> conts_t;
+        typedef std::vector<Node0*> conts_t;
         conts_t chld;
         
     public:
-        AstNodeN() {}
-        AstNodeN(T* first)
+        NodeN() : Node0(tok::Location()) {}
+        NodeN(tok::Location const &l) : Node0(l) {}
+        NodeN(Node0* first, tok::Location const &l)
+            : Node0(l)
         {
             appendChild(first);
         }
 
-        ~AstNodeN()
+        ~NodeN()
         {
             for (auto n : chld)
                 delete n;
@@ -271,18 +287,18 @@ namespace ast
                 w->call(n);
         }
 
-        void replaceChild(AstNodeB* old, AstNodeB* nw)
+        void replaceChild(Node0* old, Node0* nw)
         {
-            for (T*& n : chld) //specify ref type to be able to modify it
+            for (Node0*& n : chld) //specify ref type to be able to modify it
                 if (n == old)
                 {
-                    n = dynamic_cast<T*>(nw);
+                    n = nw;
                     return;
                 }
             assert(false && "didn't find child");
         }
 
-        T*& getChild(int n)
+        Node0*& getChild(int n)
         {
             return chld[n];
         }
@@ -292,13 +308,13 @@ namespace ast
             return chld;
         }
 
-        void setChild(int n, T* c)
+        void setChild(int n, Node0* c)
         {
             c->parent = this;
             chld[n] = c;
         }
 
-        void appendChild(T* c)
+        void appendChild(Node0* c)
         {
             c->parent = this;
             chld.push_back(c);
@@ -314,17 +330,17 @@ namespace ast
             int p = 0;
             for (auto n : chld)
             {
-                os << 'n' << static_cast<AstNodeB*>(this) << ":p" << p <<  " -> n" << static_cast<AstNodeB*>(n) << ";\n";
+                os << 'n' << static_cast<Node0*>(this) << ":p" << p <<  " -> n" << static_cast<Node0*>(n) << ";\n";
                 ++p;
                 n->emitDot(os);
             }
-            os << 'n' << static_cast<AstNodeB*>(this) << " [label=\"" << myLbl();
+            os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl();
             for (unsigned int p = 0; p < chld.size(); ++p)
                 os << "|<p" << p << ">     ";
             os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
 
-        void consume(AstNodeN<T>* bb)
+        void consume(NodeN* bb)
         {
             chld.insert(chld.end(), bb->chld.begin(), bb->chld.end());
             for (auto c : chld)
@@ -336,18 +352,23 @@ namespace ast
         //split this node in half at the position of the iterator
         //left < posn, middle == posn, right > posn.
         template<class NewNode>
-        std::tuple<NewNode*, T*, NewNode*>
+        std::tuple<NewNode*, Node0*, NewNode*>
         split(typename conts_t::const_iterator posn)
         {
             NewNode* right = new NewNode();
+
             right->chld.insert(right->chld.begin(), posn + 1, chld.cend());
             chld.erase(chld.begin() + (posn - chld.cbegin()) + 1, chld.end());
+
             for (auto c : right->chld)
                 c->parent = right;
-            T* middle = chld.back();
+
+            Node0* middle = chld.back();
             chld.pop_back();
+
             NewNode* left = new NewNode();
             left->consume(this);
+
             return std::make_tuple(left, middle, right);
         }
     };
@@ -362,7 +383,7 @@ namespace sa
         std::function<void(Base*)> action;
 
     public:
-        void call(ast::AstNodeB* node)
+        void call(ast::Node0* node)
         {
             node->eachChild(this);
             Base * bNode = dynamic_cast<Base*>(node);
@@ -370,7 +391,7 @@ namespace sa
                 action(bNode);
         };
         template <class A>
-        AstWalker(ast::AstNodeB *r, A act) : action(act)
+        AstWalker(ast::Node0 *r, A act) : action(act)
         {
             call(r);
         }
@@ -383,7 +404,7 @@ namespace sa
         std::function<void(Base*)> action;
 
     public:
-        void call(ast::AstNodeB* node)
+        void call(ast::Node0* node)
         {
             Base * bNode = dynamic_cast<Base*>(node);
             if (bNode)
@@ -391,7 +412,7 @@ namespace sa
             node->eachChild(this);
         };
         template <class A>
-        ReverseAstWalker(ast::AstNodeB *r, A act) : action(act)
+        ReverseAstWalker(ast::Node0 *r, A act) : action(act)
         {
             call(r);
         }
@@ -407,7 +428,7 @@ namespace sa
         std::list<Base*> cache;
 
     public:
-        void call(ast::AstNodeB* node)
+        void call(ast::Node0* node)
         {
             node->eachChild(this);
             Base * bNode = dynamic_cast<Base*>(node);
@@ -415,7 +436,7 @@ namespace sa
                 cache.push_back(bNode);
         };
         template <class A>
-        CachedAstWalker(ast::AstNodeB *r, A act) : action(act)
+        CachedAstWalker(ast::Node0 *r, A act) : action(act)
         {
             call(r);
             for (auto it : cache)
