@@ -178,7 +178,7 @@ void Sema::Phase1()
     AstWalk<VarExpr>([] (VarExpr* ve)
     {
         OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(ve->var);
-        if (oGroup == 0 || dynamic_cast<DeclExpr*>(ve) != 0)
+        if (oGroup == 0)
             return;
 
         if (oGroup->functions.size() == 1)
