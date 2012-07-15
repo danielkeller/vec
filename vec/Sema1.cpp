@@ -7,21 +7,6 @@
 using namespace ast;
 using namespace sa;
 
-Node0* sa::findEndExpr(Node0* srch)
-{
-    while (true)
-    {
-        if (Block *b = dynamic_cast<Block*>(srch))
-            srch = b->getChildA();
-        else if (StmtPair* sp = dynamic_cast<StmtPair*>(srch))
-            srch = sp->getChildB();
-        else if (ExprStmt* es = dynamic_cast<ExprStmt*>(srch))
-            srch = es->getChildA();
-        else
-            return srch;
-    }
-}
-
 //Phase one is for insertion / modification of nodes in a way which
 //generally preserves the structure of the AST, and/or which need that
 //structure to not be compacted into basic blocks
@@ -33,14 +18,14 @@ void Sema::Phase1()
 
     //insert overload group declarations into the tree so they get cleaned up
     for(auto it : mod->global.varDefs)
-        if (OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(it.second))
+        if (OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(it.second))
             mod->TreeHead(new StmtPair(new ExprStmt(oGroup), mod->TreeHead()));
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
     AstWalk<Block>([] (Block *b)
     {
-        ExprStmt* es = dynamic_cast<ExprStmt*>(b->getChildA());
+        ExprStmt* es = exact_cast<ExprStmt*>(b->getChildA());
         if (es)
         {
             b->parent->replaceChild(b, es->getChildA());
@@ -52,7 +37,7 @@ void Sema::Phase1()
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (NodeN* ify)
     {
-        BinExpr* comma = dynamic_cast<BinExpr*>(ify->Children().back());
+        BinExpr* comma = exact_cast<BinExpr*>(ify->Children().back());
         while (comma != 0 && comma->op == tok::comma)
         {
             ify->popChild(); //remove comma
@@ -60,7 +45,7 @@ void Sema::Phase1()
             ify->appendChild(comma->getChildB()); //add the (potetially comma) right child
             comma->nullChildA(), comma->nullChildB();
             delete comma;
-            comma = dynamic_cast<BinExpr*>(ify->Children().back());
+            comma = exact_cast<BinExpr*>(ify->Children().back());
         }
     };
     AstWalk<ListifyExpr>(ifyFlatten);
@@ -69,7 +54,7 @@ void Sema::Phase1()
     //push flattened tuplify exprs into func calls
     AstWalk<OverloadCallExpr>([] (OverloadCallExpr* call)
     {
-        TuplifyExpr* args = dynamic_cast<TuplifyExpr*>(call->getChild(0));
+        TuplifyExpr* args = exact_cast<TuplifyExpr*>(call->getChild(0));
         if (args == 0)
             return;
         call->popChild();
@@ -81,13 +66,13 @@ void Sema::Phase1()
     //FIXME: memory leak when functions are declared & not defined
     CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
     {
-        FuncDeclExpr* fde = dynamic_cast<FuncDeclExpr*>(ae->getChildA());
+        FuncDeclExpr* fde = exact_cast<FuncDeclExpr*>(ae->getChildA());
         //TODO: or varexpr?
         if (fde == 0)
             return;
 
         //insert intrinsic declaration if that's what this is
-        if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(ae->getChildB()))
+        if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(ae->getChildB()))
         {
             VarExpr* ve = call->func;
             if (ve->var == Global().reserved.intrin_v)
@@ -127,7 +112,7 @@ void Sema::Phase1()
 
         //find expression in tail position
         Node0* end = findEndExpr(fd->getChildA());
-        if (ExprStmt* endParent = dynamic_cast<ExprStmt*>(end->parent)) //if it's really there
+        if (ExprStmt* endParent = exact_cast<ExprStmt*>(end->parent)) //if it's really there
         {
             //we know its an expr stmt
             
@@ -171,11 +156,11 @@ void Sema::Phase1()
     {
         //find nearest exprStmt up the tree
         Node0* n;
-        for (n = ie; dynamic_cast<ExprStmt*>(n) == 0; n = n->parent)
+        for (n = ie; exact_cast<ExprStmt*>(n) == 0; n = n->parent)
             assert(n != 0 && "ExprStmt not found");
 
-        ExprStmt* es = dynamic_cast<ExprStmt*>(n);
-        ImpliedLoopStmt* il = dynamic_cast<ImpliedLoopStmt*>(es->parent);
+        ExprStmt* es = exact_cast<ExprStmt*>(n);
+        ImpliedLoopStmt* il = exact_cast<ImpliedLoopStmt*>(es->parent);
         
         if (!il)
         {
@@ -192,7 +177,7 @@ void Sema::Phase1()
     //this makes function pointers & stuff easier
     AstWalk<VarExpr>([] (VarExpr* ve)
     {
-        OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(ve->var);
+        OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(ve->var);
         if (oGroup == 0 || dynamic_cast<DeclExpr*>(ve) != 0)
             return;
 
@@ -207,12 +192,12 @@ void Sema::Phase1()
             return; //we're screwed
 
         Node0* realStmt;
-        if (dynamic_cast<NullStmt*>(sp->getChildA()))
+        if (exact_cast<NullStmt*>(sp->getChildA()) != 0)
         {
             realStmt = sp->getChildB();
             sp->nullChildB(); //unlink so as not to delete it
         }
-        else if (dynamic_cast<NullStmt*>(sp->getChildB()))
+        else if (exact_cast<NullStmt*>(sp->getChildB()) != 0)
         {
             realStmt = sp->getChildA();
             sp->nullChildA();

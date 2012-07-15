@@ -93,6 +93,7 @@
     <ClCompile Include="Location.cpp" />
     <ClCompile Include=".\Global.cpp" />
     <ClCompile Include="Scope.cpp" />
+    <ClCompile Include="Sema.cpp" />
     <ClCompile Include="Sema1.cpp" />
     <ClCompile Include="Sema2.cpp" />
     <ClCompile Include="Sema3.cpp" />

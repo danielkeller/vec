@@ -14,6 +14,7 @@ namespace sa
 
         template<class T>
         void AstWalk(std::function<void(T*)> action);
+        void AnyAstWalk(std::function<void(ast::Node0*)> action);
         template<class T>
         void ReverseAstWalk(std::function<void(T*)> action);
         template<class T>

@@ -7,18 +7,6 @@
 using namespace ast;
 using namespace sa;
 
-void Sema::validateTree()
-{
-    ReverseAstWalk<Node0>([] (Node0 *n)
-    {
-        if (n->parent)
-        {
-            assert(n->parent != n && "cyclic parent");
-            n->parent->replaceChild(n, n); //will fire assertion if n is not a child
-        }
-    });
-}
-
 //Phase two is where the AST is compacted into basic blocks. at some point in the future
 //it may also turn it into a CFG (control flow graph), but for now it maintains the
 //superstructure of the AST
@@ -38,16 +26,16 @@ void Sema::Phase2()
         repl[es] = curBB; //attach it
 
         //start looking under current expr stmt, so we don't mix our expressions
-        AstWalker<Node0>(es, [&curBB] (Node0* ex)
+        AnyAstWalker(es, [&curBB] (Node0* ex)
         {
-            if (!ex->isExpr() || dynamic_cast<TmpExpr*>(ex))
+            if (!ex->isExpr() || exact_cast<TmpExpr*>(ex))
                 return; //only expressions, don't make a temp for a temp
 
             TmpExpr* te;
             
-            if (Block* b = dynamic_cast<Block*>(ex)) //if it's a block, point to correct expr
+            if (Block* b = exact_cast<Block*>(ex)) //if it's a block, point to correct expr
             {
-                TmpExpr* end = dynamic_cast<TmpExpr*>(findEndExpr(b->getChildA()));
+                TmpExpr* end = exact_cast<TmpExpr*>(findEndExpr(b->getChildA()));
                 if (end)
                 {
                     //conveniently, the temp expr is already there
@@ -88,7 +76,7 @@ void Sema::Phase2()
         {
             auto blkit = std::find_if(bb->Children().begin(),
                                       bb->Children().end(),
-                                      [](Node0 *const a){return dynamic_cast<Block*>(a) != 0;});
+                                      [](Node0 *const a){return exact_cast<Block*>(a) != 0;});
 
             if (blkit == bb->Children().end())
                 return;
@@ -102,7 +90,7 @@ void Sema::Phase2()
 
             std::tie(left, blk_expr, right) = bb->split<BasicBlock>(blkit);
 
-            Block* blk = dynamic_cast<Block*>(blk_expr);
+            Block* blk = exact_cast<Block*>(blk_expr);
             assert(blk && "block is missing");
 
             if (left->Children().size())

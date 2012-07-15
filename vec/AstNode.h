@@ -386,12 +386,29 @@ namespace sa
         void call(ast::Node0* node)
         {
             node->eachChild(this);
-            Base * bNode = dynamic_cast<Base*>(node);
+            Base * bNode = exact_cast<Base*>(node);
             if (bNode)
                 action(bNode);
         };
         template <class A>
         AstWalker(ast::Node0 *r, A act) : action(act)
+        {
+            call(r);
+        }
+    };
+
+    class AnyAstWalker : public AstWalker0
+    {
+        std::function<void(ast::Node0*)> action;
+
+    public:
+        void call(ast::Node0* node)
+        {
+            node->eachChild(this);
+            action(node);
+        };
+        template <class A>
+        AnyAstWalker(ast::Node0 *r, A act) : action(act)
         {
             call(r);
         }
@@ -406,7 +423,7 @@ namespace sa
     public:
         void call(ast::Node0* node)
         {
-            Base * bNode = dynamic_cast<Base*>(node);
+            Base * bNode = exact_cast<Base*>(node);
             if (bNode)
                 action(bNode);
             node->eachChild(this);
@@ -431,7 +448,7 @@ namespace sa
         void call(ast::Node0* node)
         {
             node->eachChild(this);
-            Base * bNode = dynamic_cast<Base*>(node);
+            Base * bNode = exact_cast<Base*>(node);
             if (bNode)
                 cache.push_back(bNode);
         };

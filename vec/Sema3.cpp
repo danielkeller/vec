@@ -80,13 +80,13 @@ void Sema::Phase3()
             //we could speed this up by doing it in order of decreasing frequency
 
             //constants. these should do impicit casts
-            if (IntConstExpr* e = dynamic_cast<IntConstExpr*>(node))
+            if (IntConstExpr* e = exact_cast<IntConstExpr*>(node))
                 e->Type() = typ::int32; //FIXME
-            else if (FloatConstExpr* e = dynamic_cast<FloatConstExpr*>(node))
+            else if (FloatConstExpr* e = exact_cast<FloatConstExpr*>(node))
                 e->Type() = typ::float32; //FIXME
-            else if (StringConstExpr* e = dynamic_cast<StringConstExpr*>(node))
+            else if (StringConstExpr* e = exact_cast<StringConstExpr*>(node))
                 e->Type() = Global().reserved.string_t;
-            else if (AssignExpr* ae = dynamic_cast<AssignExpr*>(node))
+            else if (AssignExpr* ae = exact_cast<AssignExpr*>(node))
             {
                 //try to merge types if its a decl
                 if (ae->Type().compare(ae->getChildB()->Type()) == typ::TypeCompareResult::invalid)
@@ -99,9 +99,9 @@ void Sema::Phase3()
                     //whew!
                 }
             }
-            else if (OverloadCallExpr* call = dynamic_cast<OverloadCallExpr*>(node))
+            else if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(node))
             {
-                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(call->func->var);
+                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(call->func->var);
                 if (oGroup == 0)
                 {
                     err::Error(call->func->loc) << "cannot call object of non-function type '"
@@ -118,7 +118,7 @@ void Sema::Phase3()
                 resolveOverload(oGroup, call, argType);
 
             }
-            else if (BinExpr* be = dynamic_cast<BinExpr*>(node))
+            else if (BinExpr* be = exact_cast<BinExpr*>(node))
             {
                 if (be->op == tok::colon) //"normal" function call
                 {
@@ -149,13 +149,13 @@ void Sema::Phase3()
                     builder.push_back(be->getChildB()->Type(), Global().reserved.null);
                     typ::Type argType = typ::mgr.makeTuple(builder);
                     DeclExpr* def = mod->global.getVarDef(Global().reserved.opIdents[be->op]);
-                    OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(def);
+                    OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(def);
                     assert(oGroup && "operator not overloaded properly");
 
                     resolveOverload(oGroup, be, argType);
                 }
             }
-            else if (ListifyExpr* le = dynamic_cast<ListifyExpr*>(node))
+            else if (ListifyExpr* le = exact_cast<ListifyExpr*>(node))
             {
                 typ::Type conts_t = le->getChild(0)->Type();
                 le->Type() = typ::mgr.makeList(conts_t, le->Children().size());
@@ -164,7 +164,7 @@ void Sema::Phase3()
                         err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
                             << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
             }
-            else if (TuplifyExpr* te = dynamic_cast<TuplifyExpr*>(node))
+            else if (TuplifyExpr* te = exact_cast<TuplifyExpr*>(node))
             {
                 typ::TupleBuilder builder;
                 for (auto c : te->Children())

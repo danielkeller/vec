@@ -3,8 +3,37 @@
 
 #include <string>
 #include <ostream>
-
 #include <sstream>
+#include <type_traits>
+
+namespace ast
+{
+    class Node0;
+}
+
+//#define exact_cast dynamic_cast
+
+#ifndef exact_cast
+template<class To>
+struct exact_cast
+{
+    To result;
+
+    template<class From>
+    exact_cast(From* from)
+    {
+        if (typeid(std::remove_pointer<To>::type) == typeid(*from))
+            result = static_cast<To>(from);
+        else
+            result = 0;
+    }
+
+    operator To() const
+    {
+        return result;
+    }
+};
+#endif
 
 namespace utl
 {
