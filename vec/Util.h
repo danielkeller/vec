@@ -5,6 +5,7 @@
 #include <ostream>
 #include <sstream>
 #include <type_traits>
+#include <typeinfo>
 
 namespace ast
 {
@@ -22,7 +23,7 @@ struct exact_cast
     template<class From>
     exact_cast(From* from)
     {
-        if (typeid(std::remove_pointer<To>::type) == typeid(*from))
+        if (typeid(typename std::remove_pointer<To>::type) == typeid(*from))
             result = static_cast<To>(from);
         else
             result = 0;
