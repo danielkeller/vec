@@ -21,7 +21,7 @@ Block* Parser::parseBlock()
     Scope* blockScope = curScope = &mod->scopes.back();
 
     if (lexer->Expect(tok::rparen)) //empty parens
-        return new Block(new NullStmt(begin + lexer->Last().loc),
+        return new Block(Ptr(new NullStmt(begin + lexer->Last().loc)),
                          blockScope,
                          begin + lexer->Last().loc);
     
@@ -33,7 +33,7 @@ Block* Parser::parseBlock()
         err::ExpectedAfter(lexer, "')'", "block");
 
     curScope = curScope->getParent();
-    return new Block(conts, blockScope, begin + lexer->Last().loc);
+    return new Block(Ptr(conts), blockScope, begin + lexer->Last().loc);
 }
 
 /*
@@ -55,7 +55,7 @@ Node0* Parser::parseStmtList()
     if (!(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
     {
         Node0* rhs = parseStmtList();
-        return new StmtPair(lhs, rhs);
+        return new StmtPair(Ptr(lhs), Ptr(rhs));
     }
     else //if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
         return lhs;
@@ -94,7 +94,7 @@ Node0* Parser::parseStmt()
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
         Node0* act = parseStmt();
-        return new WhileStmt(pred, act, to);
+        return new WhileStmt(Ptr(pred), Ptr(act), to);
     }
 
     case tok::k_if:
@@ -107,9 +107,9 @@ Node0* Parser::parseStmt()
             err::ExpectedAfter(lexer, "')'", "expression");
         Node0* act1 = parseStmt();
         if (!lexer->Expect(tok::k_else))
-            return new IfStmt(pred, act1, to);
+            return new IfStmt(Ptr(pred), Ptr(act1), to);
         else
-            return new IfElseStmt(pred, act1, parseStmt(), to);
+            return new IfElseStmt(Ptr(pred), Ptr(act1), Ptr(parseStmt()), to);
     }
 
     case tok::k_switch:
@@ -121,7 +121,7 @@ Node0* Parser::parseStmt()
         if (!lexer->Expect(tok::rparen))
             err::ExpectedAfter(lexer, "')'", "expression");
         Node0* act = parseBlock();
-        return new SwitchStmt(pred, act, to);
+        return new SwitchStmt(Ptr(pred), Ptr(act), to);
     }
 
     case tok::k_break:
@@ -131,7 +131,7 @@ Node0* Parser::parseStmt()
     case tok::k_return:
     {
         lexer->Advance();
-        Node0* ret = new ReturnStmt(parseExpression(), to);
+        Node0* ret = new ReturnStmt(Ptr(parseExpression()), to);
         if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
             err::ExpectedAfter(lexer, "';'", "expression");
         return ret;
@@ -143,7 +143,7 @@ Node0* Parser::parseStmt()
         exit(-1);
     default:
     {
-        Node0* ret = new ExprStmt(parseExpression());
+        Node0* ret = new ExprStmt(Ptr(parseExpression()));
         if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen && lexer->Last() != tok::rparen)
             err::ExpectedAfter(lexer, "';'", "expression");
         return ret;

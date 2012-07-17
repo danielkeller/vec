@@ -19,11 +19,10 @@ void Sema::Phase2()
     //populate the basic blocks with each expresion after creating a temporary for its result
     //when we reach the end of an expression end the basic block
     //and start a new one. closure is used to save state (current BB) between calls
-    std::map<ExprStmt*, BasicBlock*> repl;
+    std::map<ExprStmt*, Ptr> repl;
     AstWalk<ExprStmt>([&repl] (ExprStmt* es)
     {
-        BasicBlock* curBB = new BasicBlock();
-        repl[es] = curBB; //attach it
+        auto curBB = MkNPtr(new BasicBlock());
 
         //start looking under current expr stmt, so we don't mix our expressions
         AnyAstWalker(es, [&curBB] (Node0* ex)
@@ -43,91 +42,85 @@ void Sema::Phase2()
                 }
                 else //it's a stmt of some sort (i think this isn't really needed)
                 {
-                    NullExpr* ne = new NullExpr(std::move(ex->loc));
+                    NullExpr* ne = new NullExpr(ex->loc);
                     te = new TmpExpr(ne);
-                    curBB->appendChild(ne);
+                    curBB->appendChild(Ptr(ne));
                 }
             }
             else //create temporary "set by" current expression
                 te = new TmpExpr(ex);
 
             //attach temporary to expression's parent in lieu of it
-            ex->parent->replaceChild(ex, te);
+            Ptr expr = ex->parent->replaceChild(ex, Ptr(te));
 
             //attach expression to the basic block
-            curBB->appendChild(ex);
+            curBB->appendChild(move(expr));
         });
+
+        repl[es] = move(curBB); //attach it
     });
 
     //replace exprstmts with corresponding basic blocks
-    for (auto p : repl)
+    for (auto& p : repl)
     {
         //attach basic block in place of expression statement
-        p.first->parent->replaceChild(p.first, p.second);
-
-        //the child is an unneeded temp, don't bother to unlink it
-        delete p.first;
+        p.first->parent->replaceChild(p.first, move(p.second));
     }
 
     //now split basic blocks where blocks occur inside them
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
-        while (true)
+        while (bb)
         {
-            auto blkit = std::find_if(bb->Children().begin(),
-                                      bb->Children().end(),
-                                      [](Node0 *const a){return exact_cast<Block*>(a) != 0;});
+            auto blkit = bb->Children().cbegin();
+
+            for (; blkit != bb->Children().cend(); ++blkit)
+                if (exact_cast<Block*>(blkit->get()) != 0)
+                    break;
 
             if (blkit == bb->Children().end())
                 return;
             
-            Node0* blkParent = bb->parent;
-            blkParent->replaceChild(bb, *blkit);
+            Node0* bbParent = bb->parent;
 
-            BasicBlock* left;
-            Node0* blk_expr;
-            BasicBlock* right;
+            NPtr<BasicBlock>::type left;
+            Ptr blk;
+            NPtr<BasicBlock>::type right;
 
-            std::tie(left, blk_expr, right) = bb->split<BasicBlock>(blkit);
-
-            Block* blk = exact_cast<Block*>(blk_expr);
-            assert(blk && "block is missing");
+            std::tie(left, blk, right) = bb->split<BasicBlock>(blkit);
+            //after split bb is empty but attached
+            bb->detachSelf();
 
             if (left->Children().size())
-                blkParent->replaceChild(blk, new StmtPair(left, blk));
-            else
-                delete left;
-
-            blkParent = blk->parent;
+                blk = Ptr(new StmtPair(move(left), move(blk)));
 
             if (right->Children().size())
-                blkParent->replaceChild(blk, new StmtPair(blk, right));
-            else
             {
-                delete right;
-                return;
+                bb = right.get(); //keep going!
+                blk = Ptr(new StmtPair(move(blk), move(right)));
             }
+            else
+                bb = nullptr;
 
-            bb = right; //keep going!
+            bbParent->replaceDetachedChild(move(blk));
         }
     });
     
     //now we can just delete all the rest of the blocks
-    AstWalk<Block>([] (Block* b)
+    AstWalk<Block>([this] (Block* b)
     {
-        b->parent->replaceChild(b, b->getChildA());
-        b->nullChildA();
-        delete b;
+        b->parent->replaceChild(b, b->detachChildA());
+        validateTree();
     });
+
+    validateTree();
 
     //the tree of stmt pairs is pretty messed up by now, lets fix it
     ReverseAstWalk<StmtPair>([] (StmtPair* upper)
     {
         //is the left child also a stmt pair?
-        StmtPair* lower;
-
         //this has to be repeated in case lower->getChildA() is also a stmt pair
-        while ((lower = dynamic_cast<StmtPair*>(upper->getChildA())) != 0)
+        while (auto lower = upper->detachChildAAs<StmtPair>())
         {
             /*
                  ===                ===
@@ -137,48 +130,47 @@ void Sema::Phase2()
                  a b                     b  c
             */
 
-            upper->setChildA(lower->getChildA());
-            lower->setChildA(lower->getChildB());
-            lower->setChildB(upper->getChildB());
-            upper->setChildB(lower);
+            upper->setChildA(lower->detachChildA());
+            lower->setChildA(lower->detachChildB());
+            lower->setChildB(upper->detachChildB());
+            upper->setChildB(move(lower));
             //whew!
         }
     });
 
     //combine adjacent BasicBlocks
-    AstWalk<StmtPair>([this] (StmtPair* sp)
+    AstWalk<StmtPair>([this] (StmtPair* upper)
     {
-        BasicBlock* lhs = dynamic_cast<BasicBlock*>(sp->getChildA());
-        if (lhs == 0)
+        auto lhs = upper->detachChildAAs<BasicBlock>();
+        if (!lhs)
             return;
 
-        StmtPair* sp2 = dynamic_cast<StmtPair*>(sp->getChildB());
-        BasicBlock* rhs = dynamic_cast<BasicBlock*>(sp->getChildB());
+        auto lower = upper->detachChildBAs<StmtPair>();
 
-        if (sp2 != 0) //rhs must be 0, block could be down the right subtree
-            rhs = dynamic_cast<BasicBlock*>(sp2->getChildA());
-
-        if (rhs == 0)
-            return; //no other block
-
-        lhs->consume(rhs);
-        
-        if (sp2)
+        if (lower) //block could be down the right subtree
         {
-            //reattach what's down the tree
-            Node0* other = sp2->getChildB();
-            sp2->nullChildB();
-            sp2->nullChildA();
-            delete sp2;
-            sp->setChildB(other); //reattach it
+            auto rhs = lower->detachChildAAs<BasicBlock>();
+            if (rhs)
+            {
+                lhs->consume(move(rhs));
+                upper->setChildB(lower->detachChildB());
+                upper->setChildA(move(lhs));
+                return;
+            }
+
+            upper->setChildB(move(lower));
         }
         else
         {
-            //only one stmt, don't need stmt pair
-            sp->parent->replaceChild(sp, lhs);
-            sp->nullChildA();
-            sp->nullChildB();
-            delete sp;
+            auto rhs = upper->detachChildBAs<BasicBlock>();
+            if (rhs)
+            {
+                lhs->consume(move(rhs));
+                upper->parent->replaceChild(upper, move(lhs));
+                return;
+            }
         }
+        
+        upper->setChildA(move(lhs));
     });
 }

@@ -75,8 +75,9 @@ void Sema::Phase3()
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         //we should be able to just go left to right here
-        for (Node0* node : bb->Children())
+        for (auto& it : bb->Children())
         {
+            Node0* node = it.get();
             //we could speed this up by doing it in order of decreasing frequency
 
             //constants. these should do impicit casts
@@ -111,7 +112,7 @@ void Sema::Phase3()
                 }
 
                 typ::TupleBuilder builder;
-                for (auto arg : call->Children())
+                for (auto& arg : call->Children())
                     builder.push_back(arg->Type(), Global().reserved.null);
                 typ::Type argType = typ::mgr.makeTuple(builder);
 
@@ -159,7 +160,7 @@ void Sema::Phase3()
             {
                 typ::Type conts_t = le->getChild(0)->Type();
                 le->Type() = typ::mgr.makeList(conts_t, le->Children().size());
-                for (auto c : le->Children())
+                for (auto& c : le->Children())
                     if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
                         err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
                             << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
@@ -167,7 +168,7 @@ void Sema::Phase3()
             else if (TuplifyExpr* te = exact_cast<TuplifyExpr*>(node))
             {
                 typ::TupleBuilder builder;
-                for (auto c : te->Children())
+                for (auto& c : te->Children())
                     builder.push_back(c->Type(), Global().reserved.null);
                 te->Type() = typ::mgr.makeTuple(builder);
             }

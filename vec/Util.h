@@ -12,6 +12,9 @@ namespace ast
     class Node0;
 }
 
+//normally it's better to leave on std:: but this more than doubles the length
+using std::move;
+
 //#define exact_cast dynamic_cast
 
 #ifndef exact_cast
@@ -23,7 +26,7 @@ struct exact_cast
     template<class From>
     exact_cast(From* from)
     {
-        if (typeid(typename std::remove_pointer<To>::type) == typeid(*from))
+        if (from != nullptr && typeid(typename std::remove_pointer<To>::type) == typeid(*from))
             result = static_cast<To>(from);
         else
             result = 0;

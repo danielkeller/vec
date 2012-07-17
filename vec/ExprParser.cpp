@@ -53,9 +53,9 @@ Node0* Parser::parseBinaryExprRHS(Node0* lhs, tok::prec::precidence minPrec)
         //special case for function calls. They need to know their scope
         VarExpr* func = dynamic_cast<VarExpr*>(lhs);
         if (op == tok::colon && func)
-            lhs = new OverloadCallExpr(func, rhs, curScope, op.loc);
+            lhs = new OverloadCallExpr(MkNPtr(func), Ptr(rhs), curScope, op.loc);
         else
-            lhs = makeBinExpr(lhs, rhs, curScope, op);
+            lhs = makeBinExpr(Ptr(lhs), Ptr(rhs), curScope, op);
         //fall through and "tail recurse"
     }
     return lhs; //cave johnson, we're done here
@@ -84,13 +84,13 @@ Node0* Parser::parseUnaryExpr()
     case tok::plusplus:
     case tok::minusminus:
         lexer->Advance();
-        return new UnExpr(parsePostfixExpr(), op);
+        return new UnExpr(Ptr(parsePostfixExpr()), op);
     case tok::tick:
         lexer->Advance();
-        return new IterExpr(parsePostfixExpr(), op);
+        return new IterExpr(Ptr(parsePostfixExpr()), op);
     case tok::opequals:
         lexer->Advance();
-        return new AggExpr(parseBinaryExprInAgg(), op);
+        return new AggExpr(Ptr(parseBinaryExprInAgg()), op);
     default:
         return parsePostfixExpr();
     }
@@ -115,7 +115,7 @@ Node0* Parser::parsePostfixExpr()
         {
         case tok::plusplus:
         case tok::minusminus:
-            arg = new PostExpr(arg, lexer->Next());
+            arg = new PostExpr(Ptr(arg), lexer->Next());
             break;
 
         case listBegin:
@@ -125,7 +125,7 @@ Node0* Parser::parsePostfixExpr()
                 err::ExpectedAfter(lexer, tok::Name(listEnd), "expression");
             else
                 rhs->loc += lexer->Last().loc; //lump } in with length of arg. not great but good enough
-            arg = new ListAccExpr(arg, rhs, curScope, op);
+            arg = new ListAccExpr(Ptr(arg), Ptr(rhs), curScope, op);
             break;
 
         case tupleBegin:
@@ -135,7 +135,7 @@ Node0* Parser::parsePostfixExpr()
                 err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression");
             else
                 rhs->loc += lexer->Last().loc;
-            arg = new TupAccExpr(arg, rhs, op);
+            arg = new TupAccExpr(Ptr(arg), Ptr(rhs), op);
             break;
 
         default: //Toto, I've a feeling we're not in postfix anymore.
@@ -213,7 +213,7 @@ Node0* Parser::parsePrimaryExpr()
     default: //we're SOL
         err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret;
         lexer->Advance(); //eat it so as not to loop forever
-        return new NullExpr(std::move(to.loc));
+        return new NullExpr(to.loc);
     }
 }
 
@@ -229,7 +229,7 @@ Node0* Parser::parseListify()
     Node0* ret = parseExpression();
     if (!lexer->Expect(listEnd))
         err::ExpectedAfter(lexer, "'}'", "expression list");
-    return new ListifyExpr(ret);
+    return new ListifyExpr(Ptr(ret));
 }
 
 /*
@@ -244,5 +244,5 @@ Node0* Parser::parseTuplify()
     Node0* ret = parseExpression();
     if (!lexer->Expect(tupleEnd))
         err::ExpectedAfter(lexer, "']'", "expression list");
-    return new TuplifyExpr(ret);
+    return new TuplifyExpr(Ptr(ret));
 }

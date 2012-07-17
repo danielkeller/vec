@@ -19,7 +19,11 @@ void Sema::Phase1()
     //insert overload group declarations into the tree so they get cleaned up
     for(auto it : mod->global.varDefs)
         if (OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(it.second))
-            mod->TreeHead(new StmtPair(new ExprStmt(oGroup), mod->TreeHead()));
+        {
+            Ptr oldHead = mod->detachChildA();
+            Ptr newHead = Ptr(new ExprStmt(Ptr(oGroup)));
+            mod->setChildA(Ptr(new StmtPair(move(newHead), move(oldHead))));
+        }
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
@@ -28,24 +32,20 @@ void Sema::Phase1()
         ExprStmt* es = exact_cast<ExprStmt*>(b->getChildA());
         if (es)
         {
-            b->parent->replaceChild(b, es->getChildA());
-            es->nullChildA(); //null so we don't delete everything
-            delete b;
+            b->parent->replaceChild(b, es->detachChildA());
         }
     });
 
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (NodeN* ify)
     {
-        BinExpr* comma = exact_cast<BinExpr*>(ify->Children().back());
-        while (comma != 0 && comma->op == tok::comma)
+        auto comma = ify->detachChildAs<BinExpr>(ify->Children().size() - 1);
+        while (comma && comma->op == tok::comma)
         {
             ify->popChild(); //remove comma
-            ify->appendChild(comma->getChildA()); //add the left child
-            ify->appendChild(comma->getChildB()); //add the (potetially comma) right child
-            comma->nullChildA(), comma->nullChildB();
-            delete comma;
-            comma = exact_cast<BinExpr*>(ify->Children().back());
+            ify->appendChild(comma->detachChildA()); //add the left child
+            ify->appendChild(comma->detachChildB()); //add the (potetially comma) right child
+            comma = ify->detachChildAs<BinExpr>(ify->Children().size() - 1);
         }
     };
     AstWalk<ListifyExpr>(ifyFlatten);
@@ -54,11 +54,11 @@ void Sema::Phase1()
     //push flattened tuplify exprs into func calls
     AstWalk<OverloadCallExpr>([] (OverloadCallExpr* call)
     {
-        TuplifyExpr* args = exact_cast<TuplifyExpr*>(call->getChild(0));
-        if (args == 0)
+        auto args = call->detachChildAs<TuplifyExpr>(0);
+        if (!args)
             return;
         call->popChild();
-        call->consume(args);
+        call->swap(args.get());
     });
 
     //Package* pkg = new Package();
@@ -68,59 +68,56 @@ void Sema::Phase1()
     {
         FuncDeclExpr* fde = exact_cast<FuncDeclExpr*>(ae->getChildA());
         //TODO: or varexpr?
-        if (fde == 0)
+        if (!fde)
             return;
 
         //insert intrinsic declaration if that's what this is
         if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(ae->getChildB()))
         {
-            VarExpr* ve = call->func;
+            VarExpr* ve = call->func.get();
             if (ve->var == Global().reserved.intrin_v)
             {
-                IntConstExpr* ice = dynamic_cast<IntConstExpr*>(call->getChild(0));
+                IntConstExpr* ice = exact_cast<IntConstExpr*>(call->getChild(0));
                 assert(ice && "improper use of __intrin");
-                IntrinDeclExpr* ide = new IntrinDeclExpr(fde, (int)ice->value);
-                ae->parent->replaceChild(ae, ide);
+                auto ide = MkNPtr(new IntrinDeclExpr(fde, (int)ice->value));
 
                 //now replace the function decl in the overload group
-                OverloadGroupDeclExpr* oGroup = dynamic_cast<OverloadGroupDeclExpr*>(mod->global.getVarDef(fde->name));
+                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(mod->global.getVarDef(fde->name));
                 assert(oGroup && "function decl not in group");
                 oGroup->functions.remove(fde);
-                oGroup->functions.push_back(ide);
+                oGroup->functions.push_back(ide.get());
 
-                delete ae;
+                ae->parent->replaceChild(ae, move(ide));
                 return;
             }
         }
 
-        Node0* conts = new ExprStmt(ae->getChildB());
+        Ptr conts = Ptr(new ExprStmt(ae->detachChildB()));
 
         //add decl exprs generated earlier to the AST
         for (auto it : fde->funcScope->varDefs)
         {
-            conts = new StmtPair(new ExprStmt(it.second), conts);
+            conts = Ptr(new StmtPair(Ptr(new ExprStmt(Ptr(it.second))), move(conts)));
         }
 
         //create and insert function definition
-        FunctionDef* fd = new FunctionDef(fde->Type(), conts);
+        auto fd = MkNPtr(new FunctionDef(fde->Type(), move(conts)));
         //if (fde->name == Global().reserved.main
         //    && fde->Type().compare(typ::mgr.makeList(Global().reserved.string_t))
         //        == typ::TypeCompareResult::valid)
             //mod->entryPt = fd; //just reassign it if it's defined twice, there will already be an error
 
-        ae->setChildB(fd);
-
         //find expression in tail position
         Node0* end = findEndExpr(fd->getChildA());
-        if (ExprStmt* endParent = exact_cast<ExprStmt*>(end->parent)) //if it's really there
+        if (end) //if it's really there
         {
             //we know its an expr stmt
-            
-            ReturnStmt* impliedRet = new ReturnStmt(end);
-            endParent->parent->replaceChild(endParent, impliedRet); //put in the implied return
-            endParent->nullChildA();
-            delete endParent;
+            ExprStmt* endParent = exact_cast<ExprStmt*>(end->parent);
+            Ptr impliedRet = Ptr(new ReturnStmt(end->detachSelf()));
+            endParent->parent->replaceChild(endParent, move(impliedRet)); //put in the implied return
         }
+
+        ae->setChildB(move(fd));
     });
 
     //after we do this, anything under root is global initialization code
@@ -165,8 +162,8 @@ void Sema::Phase1()
         if (!il)
         {
             Node0* esParent = es->parent; //save because the c'tor clobbers it
-            il = new ImpliedLoopStmt(es);
-            esParent->replaceChild(es, il);
+            il = new ImpliedLoopStmt(es->detachSelf());
+            esParent->replaceDetachedChild(Ptr(il));
         }
         
         il->targets.push_back(ie);
@@ -188,25 +185,10 @@ void Sema::Phase1()
     //remove null stmts under StmtPairs
     AstWalk<StmtPair>([] (StmtPair* sp)
     {
-        if (!sp->parent)
-            return; //we're screwed
-
-        Node0* realStmt;
         if (exact_cast<NullStmt*>(sp->getChildA()) != 0)
-        {
-            realStmt = sp->getChildB();
-            sp->nullChildB(); //unlink so as not to delete it
-        }
+            sp->parent->replaceChild(sp, sp->detachChildB());
         else if (exact_cast<NullStmt*>(sp->getChildB()) != 0)
-        {
-            realStmt = sp->getChildA();
-            sp->nullChildA();
-        }
-        else
-            return; //nope
-
-        sp->parent->replaceChild(sp, realStmt);
-        delete sp;
+            sp->parent->replaceChild(sp, sp->detachChildA());
     });
     
     //create expr stmts for other things that contain expressions

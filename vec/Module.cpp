@@ -6,11 +6,10 @@
 using namespace ast;
 
 Module::Module()
-    : Node0(tok::Location())
+    : Node1(nullptr, tok::Location())
 {
 }
 
 Module::~Module()
 {
-    delete treeHead;
 }

@@ -16,7 +16,7 @@ Parser::Parser(lex::Lexer *l)
 {
     curScope = &mod->global;
 
-    mod->TreeHead(parseStmtList());
+    mod->setChildA(Ptr(parseStmtList()));
 }
 
 namespace
@@ -130,7 +130,7 @@ Node0* Parser::parseDeclRHS()
         }
 
         err::Error(lexer->Last().loc) << "expected identifier in declaration" << err::postcaret;
-        return new NullExpr(std::move(lexer->Last().loc));
+        return new NullExpr(lexer->Last().loc);
     }
 
     Ident id = to.value.ident_v;

@@ -22,8 +22,10 @@ Node0* sa::findEndExpr(Node0* srch)
             srch = sp->getChildB();
         else if (ExprStmt* es = exact_cast<ExprStmt*>(srch))
             srch = es->getChildA();
-        else
+        else if (srch->isExpr())
             return srch;
+        else
+            return nullptr;
     }
 }
 
@@ -31,10 +33,22 @@ void Sema::validateTree()
 {
     AnyAstWalk([] (Node0 *n)
     {
-        if (n->parent)
+        Node0* parent = n->parent;
+        if (parent)
         {
-            assert(n->parent != n && "cyclic parent");
-            n->parent->replaceChild(n, n); //will fire assertion if n is not a child
+            assert(parent != n && "cyclic parent");
+            Ptr node = n->detachSelf(); //will fire assertion if n is not a child
+            parent->replaceDetachedChild(move(node));
         }
     });
+}
+
+//TODO: is this a good place for this?
+inline void deleter::operator()(Node0* x)
+{
+    //this is not a good thing for general debugging, it's probably very annoying
+#if 1
+    std::cerr << "deleting a " << x->myLbl() << std::endl;
+#endif
+    delete x;
 }

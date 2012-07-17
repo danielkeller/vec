@@ -17,8 +17,8 @@ namespace ast
 
     struct ExprStmt : public Node1
     {
-        ExprStmt(Node0* conts)
-            : Node1(conts)
+        ExprStmt(Ptr conts)
+            : Node1(move(conts))
         {};
         std::string myLbl() {return "Expr";}
         const char *myColor() {return "2";}
@@ -27,7 +27,7 @@ namespace ast
 
     struct StmtPair : public Node2
     {
-        StmtPair(Node0 *lhs, Node0 *rhs) : Node2(lhs, rhs) {};
+        StmtPair(Ptr lhs, Ptr rhs) : Node2(move(lhs), move(rhs)) {};
         std::string myLbl() {return ";";}
         const char *myColor() {return "3";}
         bool isExpr() {return false;}
@@ -35,8 +35,8 @@ namespace ast
         {
             os << 'n' << static_cast<Node0*>(this) << ":p0" <<  " -> n" << static_cast<Node0*>(getChildA()) << ";\n"
                << 'n' << static_cast<Node0*>(this) << ":p1" <<  " -> n" << static_cast<Node0*>(getChildB()) << ";\n";
-            getChildA()->emitDot(os);
-            getChildB()->emitDot(os);
+            nodeDot(getChildA(), os);
+            nodeDot(getChildB(), os);
             os << 'n' << static_cast<Node0*>(this)
                << " [label=\";|<p0>|<p1>\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
@@ -45,8 +45,8 @@ namespace ast
     struct Block : public Node1
     {
         Scope *scope;
-        Block(Node0* conts, Scope *s, tok::Location const &l)
-            : Node1(conts, l),
+        Block(Ptr conts, Scope *s, tok::Location const &l)
+            : Node1(move(conts), l),
             scope(s)
         {};
         std::string myLbl() {return "(...)";}
@@ -63,8 +63,8 @@ namespace ast
 
     struct IfStmt : public CondStmt, public Node2
     {
-        IfStmt(Node0* pred, Node0* act, tok::Token &o)
-            : Node2(pred, act, o.loc + act->loc)
+        IfStmt(Ptr pred, Ptr act, tok::Token &o)
+            : Node2(move(pred), move(act), o.loc + act->loc)
         {}
         std::string myLbl() {return "if";}
         Node0* getExpr() {return getChildA();}
@@ -73,8 +73,8 @@ namespace ast
 
     struct IfElseStmt : public CondStmt, public Node3
     {
-        IfElseStmt(Node0* pred, Node0* act1, Node0* act2, tok::Token &o)
-            : Node3(pred, act1, act2, o.loc + act2->loc)
+        IfElseStmt(Ptr pred, Ptr act1, Ptr act2, tok::Token &o)
+            : Node3(move(pred), move(act1), move(act2), o.loc + act2->loc)
         {};
         std::string myLbl() {return "if-else";}
         Node0* getExpr() {return getChildA();}
@@ -83,8 +83,8 @@ namespace ast
 
     struct SwitchStmt : public CondStmt, public Node2
     {
-        SwitchStmt(Node0* pred, Node0* act, tok::Token &o)
-            : Node2(pred, act, o.loc + act->loc)
+        SwitchStmt(Ptr pred, Ptr act, tok::Token &o)
+            : Node2(move(pred), move(act), o.loc + act->loc)
         {};
         std::string myLbl() {return "switch";}
         Node0* getExpr() {return getChildA();}
@@ -93,8 +93,8 @@ namespace ast
 
     struct WhileStmt : public CondStmt, public Node2
     {
-        WhileStmt(Node0* pred, Node0* act, tok::Token &o)
-            : Node2(pred, act, o.loc + act->loc)
+        WhileStmt(Ptr pred, Ptr act, tok::Token &o)
+            : Node2(move(pred), move(act), o.loc + act->loc)
         {};
         std::string myLbl() {return "while";}
         Node0* getExpr() {return getChildA();}
@@ -103,11 +103,11 @@ namespace ast
 
     struct ReturnStmt : public CondStmt, public Node1
     {
-        ReturnStmt(Node0* arg, tok::Token &o)
-            : Node1(arg, o.loc + arg->loc)
+        ReturnStmt(Ptr arg, tok::Token &o)
+            : Node1(move(arg), o.loc + arg->loc)
         {};
-        ReturnStmt(Node0* arg)
-            : Node1(arg)
+        ReturnStmt(Ptr arg)
+            : Node1(move(arg))
         {};
         std::string myLbl() {return "return";}
         Node0* getExpr() {return getChildA();}

@@ -28,8 +28,8 @@ namespace ast
     struct ImpliedLoopStmt : public Node1
     {
         std::vector<IterExpr*> targets;
-        ImpliedLoopStmt(ExprStmt* arg)
-            : Node1(arg)
+        ImpliedLoopStmt(Ptr arg)
+            : Node1(move(arg))
         {};
         std::string myLbl() {return "for (`)";}
         bool isExpr() {return false;}
@@ -43,10 +43,11 @@ namespace ast
         };
     };
 
-    //do it this way, or with inline assembly?
+    //TODO: do it this way, or with inline assembly?
     struct IntrinDeclExpr : public FuncDeclExpr
     {
         int intrin_id;
+        //it's "based on" func so it's ok not to use Ptr
         IntrinDeclExpr(FuncDeclExpr* func, int id)
             : FuncDeclExpr(*func), intrin_id(id) {}
         const char *myColor() {return "8";};
@@ -54,7 +55,7 @@ namespace ast
 
     struct FunctionDef : public Node1
     {
-        FunctionDef(typ::Type t, Node0* s) : Node1(s, s->loc) {Type() = t;}
+        FunctionDef(typ::Type t, Ptr s) : Node1(move(s), s->loc) {Type() = t;}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return false;}
     };

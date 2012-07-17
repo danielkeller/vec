@@ -9,6 +9,7 @@
 #include <cassert>
 #include <list>
 #include <vector>
+#include <memory>
 
 #ifdef _WIN32
 #pragma warning (disable: 4250 4127) //inherits via dominance, cond expr is constant
@@ -31,6 +32,38 @@ namespace sa
 
 namespace ast
 {
+    struct deleter {inline void operator()(Node0* x);};
+    template<class Node>
+    struct NPtr
+    {
+        typedef std::unique_ptr<Node, deleter> type;
+    };
+    typedef std::unique_ptr<Node0, deleter> Ptr;
+    
+    //convenience method to created a Node Ptr using TAD
+    template<class Node>
+    typename NPtr<Node>::type MkNPtr(Node* ptr)
+    {
+        return (typename NPtr<Node>::type)(ptr);
+    }
+    //the gist of this is: you can't just make and delete ast nodes. they must be created and
+    //passed around inside unique_ptrs. if you want a "reference" to the node, you can get one
+    //in the form of a normal pointer, but you can't delete it or change its attachment
+
+    //to be fully safe, all classes should use factory constructors that return unique_ptrs
+    //however, this requires a lot of boilerplate code.
+
+    //when/if MSVC supports variadic templates, each class should have a private c'tor & d'tor
+    //and be friends with a function similar to
+    /*
+    template<class T, class...Args>
+    std::unique_ptr<T> make_unique(Args&&... args)
+    {
+        std::unique_ptr<T> ret (new T(std::forward<Args>(args)...));
+        return ret;
+    }
+    */
+
     //virtual Node base class for generic node classes ie expr, stmt
 
     class Node0
@@ -41,6 +74,35 @@ namespace ast
         //a big deal since it's only sizeof(void*) bytes
         typ::Type type;
 
+        //facility for creating unique_ptrs to ast node classes
+        Node0(tok::Location const &l) : loc(l), parent(0) {};
+        virtual ~Node0() {};
+        friend struct deleter;
+
+        void setParent(const Ptr& node)
+        {
+            if (node)
+                node->parent = this;
+        }
+
+        void nullParent(const Ptr& node)
+        {
+            if (node)
+                node->parent = nullptr;
+        }
+
+        //this allows emitDot to be robust in case of null nodes
+        void nodeDot(const Ptr& n, std::ostream &os)
+        {
+            if (n)
+                n->emitDot(os);
+        }
+        void nodeDot(Node0* n, std::ostream &os)
+        {
+            if (n)
+                n->emitDot(os);
+        }
+
     public:
         virtual typ::Type& Type() {return type;} //sgetter. sget it?
         virtual bool isLval() {return false;}
@@ -48,9 +110,7 @@ namespace ast
 
         tok::Location loc; //might not be set
         Node0 *parent;
-        Node0(tok::Location const &l) : loc(l), parent(0) {};
 
-        virtual ~Node0() {};
         virtual void eachChild(sa::AstWalker0*) {};
 
         virtual void emitDot(std::ostream &os)
@@ -60,9 +120,21 @@ namespace ast
         }
 
         //replace child of unknown position
-        virtual void replaceChild(Node0*, Node0*)
+        virtual Ptr replaceChild(Node0*, Ptr)
         {
             assert(false && "didn't find child");
+            return nullptr;
+        }
+
+        //replace child that was detached (and so set to null)
+        Ptr replaceDetachedChild(Ptr n)
+        {
+            return replaceChild(nullptr, move(n));
+        }
+
+        Ptr detachSelf()
+        {
+            return parent->replaceChild(this, nullptr);
         }
 
         virtual std::string myLbl()
@@ -79,182 +151,216 @@ namespace ast
     //ast node from which all others are derived
     class Node1 : public Node0
     {
-        Node0* a;
-    public:
-        Node1(Node0* a_i, tok::Location const &l)
-            : Node0(l), a(a_i)
+        Ptr a;
+
+    protected:
+        Node1(Ptr a_i, tok::Location const &l)
+            : Node0(l), a(move(a_i))
         {
-            a->parent = this;
+            setParent(a);
         }
 
-        Node1(Node0* a_i)
-            : Node0(a_i->loc), a(a_i)
+        Node1(Ptr a_i)
+            : Node0(a_i->loc), a(move(a_i))
         {
-            a->parent = this;
+            setParent(a);
         }
 
         ~Node1()
         {
-            delete a;
         }
+
+    public:
 
         void eachChild(sa::AstWalker0 *w)
         {
-            w->call(a);
+            w->call(getChildA());
         }
 
-        void replaceChild(Node0* old, Node0* n)
+        Ptr replaceChild(Node0* old, Ptr n)
         {
             //cast the old type to the child's type to compare correctly
-            if (old == a)
-                setChildA(n);
+            if (old == getChildA())
+                return setChildA(move(n));
             else
-                Node0::replaceChild(old, n);
+                return Node0::replaceChild(old, move(n));
         }
 
         Node0* getChildA()
         {
-            return a;
+            return a.get();
         }
 
-        void setChildA(Node0* newchld)
+        Ptr detachChildA()
         {
-            a = newchld;
-            newchld->parent = this;
+            nullParent(a);
+            return move(a);
         }
 
-        //unlink if we're about to delete this
-        void nullChildA()
+        template<class Node>
+        typename NPtr<Node>::type detachChildAAs()
         {
-            a = 0;
+            if (exact_cast<Node*>(getChildA()))
+                return NPtr<Node>::type(static_cast<Node*>(detachChildA().release()));
+            else
+                return NPtr<Node>::type();
+        }
+
+        Ptr setChildA(Ptr newchld)
+        {
+            std::swap(a, newchld);
+            setParent(a);
+            return move(newchld);
         }
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<Node0*>(this) << " -> n" << a << ";\n";
-            a->emitDot(os);
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << getChildA() << ";\n";
+            nodeDot(a, os);
             Node0::emitDot(os);
         }
     };
 
     class Node2 : public Node1
     {
-        Node0* b;
+        Ptr b;
 
-    public:
-        Node2(Node0* a_i, Node0* b_i, tok::Location const &l)
-            : Node1(a_i, l), b(b_i)
+    protected:
+        Node2(Ptr a_i, Ptr b_i, tok::Location const &l)
+            : Node1(move(a_i), l), b(move(b_i))
         {
-            b->parent = this;
+            setParent(b);
         }
 
-        Node2(Node0* a_i, Node0* b_i)
-            : Node1(a_i, a_i->loc + b_i->loc), b(b_i)
+        Node2(Ptr a_i, Ptr b_i)
+            : Node1(move(a_i), a_i->loc + b_i->loc), b(move(b_i))
         {
-            b->parent = this;
+            setParent(b);
         }
 
         ~Node2()
         {
-            delete b;
         }
 
+    public:
         void eachChild(sa::AstWalker0 *w)
         {
             Node1::eachChild(w);
-            w->call(b);
+            w->call(getChildB());
         }
 
-        void replaceChild(Node0* old, Node0* n)
+        Ptr replaceChild(Node0* old, Ptr n)
         {
             //cast the old type to the child's type to compare correctly
-            if (old == b)
-                setChildB(n);
+            if (old == getChildB())
+                return setChildB(move(n));
             else
-                Node1::replaceChild(old, n);
+                return Node1::replaceChild(old, move(n));
         }
 
         Node0* getChildB()
         {
-            return b;
+            return b.get();
         }
 
-        void setChildB(Node0* newchld)
+        Ptr detachChildB()
         {
-            b = newchld;
-            newchld->parent = this;
+            nullParent(b);
+            return move(b);
         }
 
-        void nullChildB()
+        template<class Node>
+        typename NPtr<Node>::type detachChildBAs()
         {
-            b = 0;
+            if (exact_cast<Node*>(getChildB()))
+                return NPtr<Node>::type(static_cast<Node*>(detachChildB().release()));
+            else
+                return NPtr<Node>::type();
+        }
+
+        Ptr setChildB(Ptr newchld)
+        {
+            std::swap(b, newchld);
+            setParent(b);
+            return move(newchld);
         }
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<Node0*>(this) << " -> n" << b << ";\n";
-            b->emitDot(os);
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << getChildB() << ";\n";
+            nodeDot(b, os);
             Node1::emitDot(os);
         }
     };
 
     class Node3 : public Node2
     {
-        Node0* c;
+        Ptr c;
 
-    public:
-        Node3(Node0* a_i, Node0* b_i, Node0* c_i, tok::Location const &l)
-            : Node2(a_i, b_i, l), c(c_i)
+    protected:
+        Node3(Ptr a_i, Ptr b_i, Ptr c_i, tok::Location const &l)
+            : Node2(move(a_i), move(b_i), l), c(move(c_i))
         {
-            c->parent = this;
+            setParent(c);
         }
 
-        Node3(Node0* a_i, Node0* b_i, Node0* c_i)
-            : Node2(a_i, b_i, a_i->loc + c_i->loc), c(c_i)
+        Node3(Ptr a_i, Ptr b_i, Ptr c_i)
+            : Node2(move(a_i), move(b_i), a_i->loc + c_i->loc), c(move(c_i))
         {
-            c->parent = this;
+            setParent(c);
         }
 
         ~Node3()
         {
-            delete c;
         }
 
+    public:
         void eachChild(sa::AstWalker0 *w)
         {
             Node2::eachChild(w);
-            w->call(c);
+            w->call(getChildC());
         }
 
-        void replaceChild(Node0* old, Node0* n)
+        Ptr replaceChild(Node0* old, Ptr n)
         {
             //cast the old type to the child's type to compare correctly
-            if (old == c)
-                setChildC(n);
+            if (old == getChildC())
+                return setChildC(move(n));
             else
-                Node2::replaceChild(old, n);
+                return Node2::replaceChild(old, move(n));
         }
 
         Node0* getChildC()
         {
-            return c;
+            return c.get();
         }
 
-        void setChildC(Node0* newchld)
+        Ptr detachChildC()
         {
-            c = newchld;
-            newchld->parent = this;
+            nullParent(c);
+            return move(c);
         }
 
-        void nullChildC()
+        template<class Node>
+        typename NPtr<Node>::type detachChildCAs()
         {
-            c = 0;
+            if (exact_cast<Node*>(getChildC()))
+                return NPtr<Node>::type(static_cast<Node*>(detachChildC().release()));
+            else
+                return NPtr<Node>::type();
+        }
+
+        Ptr setChildC(Ptr newchld)
+        {
+            std::swap(c, newchld);
+            setParent(c);
+            return move(newchld);
         }
 
         void emitDot(std::ostream &os)
         {
-            os << 'n' << static_cast<Node0*>(this) << " -> n" << c << ";\n";
-            c->emitDot(os);
+            os << 'n' << static_cast<Node0*>(this) << " -> n" << getChildC() << ";\n";
+            nodeDot(c, os);
             Node2::emitDot(os);
         }
     };
@@ -263,61 +369,95 @@ namespace ast
     struct NodeN : public Node0
     {
     private:
-        typedef std::vector<Node0*> conts_t;
+        typedef std::vector<Ptr> conts_t;
         conts_t chld;
         
-    public:
+    protected:
         NodeN() : Node0(tok::Location()) {}
         NodeN(tok::Location const &l) : Node0(l) {}
-        NodeN(Node0* first, tok::Location const &l)
+        NodeN(Ptr first, tok::Location const &l)
             : Node0(l)
         {
-            appendChild(first);
+            appendChild(move(first));
         }
 
         ~NodeN()
         {
-            for (auto n : chld)
-                delete n;
         };
 
+    public:
         void eachChild(sa::AstWalker0 *w)
         {
-            for (auto n : chld)
-                w->call(n);
+            for (Ptr& c : chld) //have to use ref type to not make a copy
+                w->call(c.get());
         }
 
-        void replaceChild(Node0* old, Node0* nw)
+        Ptr replaceChild(Node0* old, Ptr n)
         {
-            for (Node0*& n : chld) //specify ref type to be able to modify it
-                if (n == old)
+            for (Ptr& c : chld)
+                if (c.get() == old)
                 {
-                    n = nw;
-                    return;
+                    std::swap(c, n);
+                    setParent(c);
+                    return move(n);
                 }
             assert(false && "didn't find child");
+            return nullptr;
         }
 
-        Node0*& getChild(int n)
+        Node0* getChild(int n)
         {
-            return chld[n];
+            return chld[n].get();
         }
 
+        Ptr detachChild(int n)
+        {
+            nullParent(chld[n]);
+            return move(chld[n]);
+        }
+
+        Ptr detachChild(conts_t::const_iterator posn)
+        {
+            //we have to do this weird syntax because iterators aren't very unique_ptr friendly
+            return detachChild(posn - chld.begin());
+        }
+
+        template<class Node>
+        typename NPtr<Node>::type detachChildAs(int n)
+        {
+            if (exact_cast<Node*>(getChild(n)))
+                return MkNPtr(static_cast<Node*>(detachChild(n).release()));
+            else
+                return nullptr;
+        }
+
+        template<class Node>
+        typename NPtr<Node>::type detachChildAs(conts_t::const_iterator posn)
+        {
+            if (exact_cast<Node*>(*posn))
+                return MkNPtr(static_cast<Node*>(detachChild(posn).release()));
+            else
+                return nullptr;
+        }
+
+
+        Ptr setChild(int n, Ptr newchild)
+        {
+            std::swap(chld[n], newchild);
+            setParent(chld[n]);
+            return move(newchild);
+        }
+
+        //TODO: this is bad coding; it exposes implementation details
         const conts_t& Children() const
         {
             return chld;
         }
 
-        void setChild(int n, Node0* c)
+        void appendChild(Ptr c)
         {
-            c->parent = this;
-            chld[n] = c;
-        }
-
-        void appendChild(Node0* c)
-        {
-            c->parent = this;
-            chld.push_back(c);
+            setParent(c);
+            chld.push_back(move(c));
         }
 
         void popChild()
@@ -328,11 +468,11 @@ namespace ast
         void emitDot(std::ostream &os)
         {
             int p = 0;
-            for (auto n : chld)
+            for (Ptr& n : chld)
             {
-                os << 'n' << static_cast<Node0*>(this) << ":p" << p <<  " -> n" << static_cast<Node0*>(n) << ";\n";
+                os << 'n' << static_cast<Node0*>(this) << ":p" << p <<  " -> n" << n.get() << ";\n";
                 ++p;
-                n->emitDot(os);
+                nodeDot(n, os);
             }
             os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl();
             for (unsigned int p = 0; p < chld.size(); ++p)
@@ -340,36 +480,44 @@ namespace ast
             os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
 
-        void consume(NodeN* bb)
+        void swap(NodeN* other)
         {
-            chld.insert(chld.end(), bb->chld.begin(), bb->chld.end());
-            for (auto c : chld)
-                c->parent = this;
-            bb->chld.clear();
-            delete bb;
+            std::swap(chld, other->chld);
+            for (Ptr& c : chld)
+                setParent(c);
+        }
+
+        void consume(NPtr<NodeN>::type other)
+        {
+            for (Ptr& c : other->chld)
+                appendChild(move(c));
         }
 
         //split this node in half at the position of the iterator
         //left < posn, middle == posn, right > posn.
         template<class NewNode>
-        std::tuple<NewNode*, Node0*, NewNode*>
-        split(typename conts_t::const_iterator posn)
+        std::tuple<typename NPtr<NewNode>::type, Ptr, typename NPtr<NewNode>::type>
+        split(conts_t::const_iterator posn)
         {
-            NewNode* right = new NewNode();
+            assert(parent && "split may only be called on attached child");
 
-            right->chld.insert(right->chld.begin(), posn + 1, chld.cend());
+            auto right = MkNPtr(new NewNode());
+
+            for (auto it = posn + 1; it < chld.cend(); ++it)
+                right->appendChild(detachChild(it));
+            //MSVC doesn't support C++11 erase yet
             chld.erase(chld.begin() + (posn - chld.cbegin()) + 1, chld.end());
 
-            for (auto c : right->chld)
-                c->parent = right;
+            for (Ptr& c : right->chld)
+                right->setParent(c);
 
-            Node0* middle = chld.back();
+            Ptr middle = move(chld.back());
             chld.pop_back();
 
-            NewNode* left = new NewNode();
-            left->consume(this);
+            auto left = MkNPtr(new NewNode());
+            left->swap(this);
 
-            return std::make_tuple(left, middle, right);
+            return std::make_tuple(move(left), move(middle), move(right));
         }
     };
 }
