@@ -55,7 +55,8 @@ namespace ast
 
     struct FunctionDef : public Node1
     {
-        FunctionDef(typ::Type t, Ptr s) : Node1(move(s), s->loc) {Type() = t;}
+        FunctionDef(typ::Type t, Ptr s)
+            : Node1(move(s)) {Type() = t;}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return false;}
     };

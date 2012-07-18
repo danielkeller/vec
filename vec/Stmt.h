@@ -64,8 +64,10 @@ namespace ast
     struct IfStmt : public CondStmt, public Node2
     {
         IfStmt(Ptr pred, Ptr act, tok::Token &o)
-            : Node2(move(pred), move(act), o.loc + act->loc)
-        {}
+            : Node2(move(pred), move(act))
+        {
+            loc = o.loc + getChildB()->loc;
+        }
         std::string myLbl() {return "if";}
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}
@@ -74,8 +76,10 @@ namespace ast
     struct IfElseStmt : public CondStmt, public Node3
     {
         IfElseStmt(Ptr pred, Ptr act1, Ptr act2, tok::Token &o)
-            : Node3(move(pred), move(act1), move(act2), o.loc + act2->loc)
-        {};
+            : Node3(move(pred), move(act1), move(act2))
+        {
+            loc = o.loc + getChildC()->loc;
+        }
         std::string myLbl() {return "if-else";}
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}
@@ -84,8 +88,10 @@ namespace ast
     struct SwitchStmt : public CondStmt, public Node2
     {
         SwitchStmt(Ptr pred, Ptr act, tok::Token &o)
-            : Node2(move(pred), move(act), o.loc + act->loc)
-        {};
+            : Node2(move(pred), move(act))
+        {
+            loc = o.loc + getChildB()->loc;
+        }
         std::string myLbl() {return "switch";}
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}
@@ -94,8 +100,10 @@ namespace ast
     struct WhileStmt : public CondStmt, public Node2
     {
         WhileStmt(Ptr pred, Ptr act, tok::Token &o)
-            : Node2(move(pred), move(act), o.loc + act->loc)
-        {};
+            : Node2(move(pred), move(act))
+        {
+            loc = o.loc + getChildB()->loc;
+        }
         std::string myLbl() {return "while";}
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}
@@ -104,11 +112,13 @@ namespace ast
     struct ReturnStmt : public CondStmt, public Node1
     {
         ReturnStmt(Ptr arg, tok::Token &o)
-            : Node1(move(arg), o.loc + arg->loc)
-        {};
+            : Node1(move(arg))
+        {
+            loc = o.loc + getChildA()->loc;
+        }
         ReturnStmt(Ptr arg)
             : Node1(move(arg))
-        {};
+        {}
         std::string myLbl() {return "return";}
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}

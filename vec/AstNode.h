@@ -201,9 +201,9 @@ namespace ast
         typename NPtr<Node>::type detachChildAAs()
         {
             if (exact_cast<Node*>(getChildA()))
-                return NPtr<Node>::type(static_cast<Node*>(detachChildA().release()));
+                return MkNPtr(static_cast<Node*>(detachChildA().release()));
             else
-                return NPtr<Node>::type();
+                return nullptr;
         }
 
         Ptr setChildA(Ptr newchld)
@@ -233,8 +233,9 @@ namespace ast
         }
 
         Node2(Ptr a_i, Ptr b_i)
-            : Node1(move(a_i), a_i->loc + b_i->loc), b(move(b_i))
+            : Node1(move(a_i), tok::Location()), b(move(b_i))
         {
+            loc = getChildA()->loc + b->loc; //this has to be here in case the 1st arg is eval'd first
             setParent(b);
         }
 
@@ -273,9 +274,9 @@ namespace ast
         typename NPtr<Node>::type detachChildBAs()
         {
             if (exact_cast<Node*>(getChildB()))
-                return NPtr<Node>::type(static_cast<Node*>(detachChildB().release()));
+                return MkNPtr(static_cast<Node*>(detachChildB().release()));
             else
-                return NPtr<Node>::type();
+                return nullptr;
         }
 
         Ptr setChildB(Ptr newchld)
@@ -305,8 +306,9 @@ namespace ast
         }
 
         Node3(Ptr a_i, Ptr b_i, Ptr c_i)
-            : Node2(move(a_i), move(b_i), a_i->loc + c_i->loc), c(move(c_i))
+            : Node2(move(a_i), move(b_i), tok::Location()), c(move(c_i))
         {
+            loc = getChildA()->loc + c->loc;
             setParent(c);
         }
 
@@ -345,9 +347,9 @@ namespace ast
         typename NPtr<Node>::type detachChildCAs()
         {
             if (exact_cast<Node*>(getChildC()))
-                return NPtr<Node>::type(static_cast<Node*>(detachChildC().release()));
+                return MkNPtr(static_cast<Node*>(detachChildC().release()));
             else
-                return NPtr<Node>::type();
+                return nullptr;
         }
 
         Ptr setChildC(Ptr newchld)

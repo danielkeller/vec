@@ -169,8 +169,10 @@ namespace ast
     struct IterExpr : public Node1
     {
         IterExpr(Ptr arg, tok::Token &o)
-            : Node1(move(arg), o.loc + arg->loc)
-        {};
+            : Node1(move(arg))
+        {
+            loc = o.loc + getChildA()->loc;
+        };
 
         bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "`";}
@@ -180,8 +182,10 @@ namespace ast
     {
         tok::TokenType op;
         AggExpr(Ptr arg, tok::Token &o)
-            : Node1(move(arg), o.loc + arg->loc), op(o.value.op)
-        {};
+            : Node1(move(arg)), op(o.value.op)
+        {
+            loc = o.loc + getChildA()->loc;
+        };
         std::string myLbl() {return tok::Name(op) + std::string("=");}
     };
 
@@ -189,16 +193,20 @@ namespace ast
     struct ListifyExpr : public NodeN
     {
         ListifyExpr(Ptr arg)
-            : NodeN(move(arg), arg->loc)
-        {};
+            : NodeN(move(arg), tok::Location())
+        {
+            loc = getChild(0)->loc;
+        };
         std::string myLbl() {return "\\{...\\}";}
     };
 
     struct TuplifyExpr : public NodeN
     {
         TuplifyExpr(Ptr arg)
-            : NodeN(move(arg), arg->loc)
-        {};
+            : NodeN(move(arg), tok::Location())
+        {
+            loc = getChild(0)->loc;
+        };
         std::string myLbl() {return "[...]";}
     };
 
@@ -208,8 +216,10 @@ namespace ast
     {
         tok::TokenType op;
         PostExpr(Ptr arg, tok::Token &o)
-            : Node1(move(arg), arg->loc + o.loc), op(o.type)
-        {};
+            : Node1(move(arg)), op(o.type)
+        {
+            loc = getChildA()->loc + o.loc;
+        };
         std::string myLbl() {return tok::Name(op);}
     };
 

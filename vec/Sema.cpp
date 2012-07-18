@@ -46,8 +46,8 @@ void Sema::validateTree()
 //TODO: is this a good place for this?
 inline void deleter::operator()(Node0* x)
 {
-    //this is not a good thing for general debugging, it's probably very annoying
-#if 1
+    //this is not a good thing for general debugging, it's probably very annoying (and causes invalid reads)
+#if 0
     std::cerr << "deleting a " << x->myLbl() << std::endl;
 #endif
     delete x;

@@ -19,14 +19,6 @@ Parser::Parser(lex::Lexer *l)
     mod->setChildA(Ptr(parseStmtList()));
 }
 
-namespace
-{
-bool isIdent(tok::Token &t)
-{
-    return t == tok::identifier;
-}
-}
-
 /*
 type-decl
     : 'type' IDENT = type ';'
