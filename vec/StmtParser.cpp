@@ -43,21 +43,40 @@ stmt-list
     | expression ':' stmt-list
     | 'case' expression ':' stmt-list
     | 'default' ':' stmt-list
+    | 'private' ':' stmt-list //only in global scope
     ;
 */
 Node0* Parser::parseStmtList()
 {
-    Node0* lhs = parseStmt();
+    tok::Token label = lexer->Peek();
 
-    //if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen)
-    //    err::ExpectedAfter(lexer, "';'", "expression");
+    bool wantColon = true;
+
+    switch (label.type)
+    {
+    case tok::k_private:
+        if (curScope == &mod->pub)
+            curScope = &mod->global;
+        else
+            err::Error(label.loc) << "'private' not expected in this scope" << err::underline;
+        lexer->Advance();
+        break;
+
+    default:
+        wantColon = false;
+    }
+
+    if (wantColon && !lexer->Expect(tok::colon))
+        err::ExpectedAfter(lexer, ":", "label");
+
+    Node0* lhs = parseStmt();
 
     if (!(lexer->Peek() == tok::rparen || lexer->Peek() == tok::end))
     {
         Node0* rhs = parseStmtList();
         return new StmtPair(Ptr(lhs), Ptr(rhs));
     }
-    else //if (lexer->Peek() == tok::rparen || lexer->Peek() == tok::end)
+    else
         return lhs;
 
 }

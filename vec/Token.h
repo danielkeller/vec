@@ -106,6 +106,8 @@ namespace tok
         k_if,
         k_inline,
         k_int,
+        k_module,
+        k_private,
         k_return,
         k_switch,
         k_tail,

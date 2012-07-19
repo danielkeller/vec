@@ -623,8 +623,14 @@ lexMore: //more elegant, in this case, than a while(true)
             return;
         lexKwOrIdent("if", tok::k_if);
         return;
+    case 'm':
+        lexKwOrIdent("module", tok::k_module);
+        return;
     case 'o':
         lexOperator();
+        return;
+    case 'p':
+        lexKwOrIdent("private", tok::k_private);
         return;
     case 'r':
         lexKwOrIdent("return", tok::k_return);

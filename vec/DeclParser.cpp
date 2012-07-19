@@ -14,7 +14,19 @@ Parser::Parser(lex::Lexer *l)
     mod(l->getModule()),
     backtrackStatus(CantBacktrack)
 {
-    curScope = &mod->global;
+    curScope = &mod->pub;
+
+    if (lexer->Expect(tok::k_module))
+    {
+        tok::Token name;
+        if (lexer->Expect(tok::identifier, name))
+            mod->name = Global().getIdent(name.value.ident_v);
+        else
+            err::ExpectedAfter(lexer, "identifier", "'module'");
+
+        if (!lexer->Expect(tok::semicolon))
+            err::ExpectedAfter(lexer, ";", "module definition");
+    }
 
     mod->setChildA(Ptr(parseStmtList()));
 }
@@ -132,8 +144,11 @@ Node0* Parser::parseDeclRHS()
     if (type.getFunc().isValid())
     {
         //TODO: insert type params into this scope
-        mod->scopes.emplace_back(curScope);
-        curScope = &mod->scopes.back(); //create scope for function args
+        if (lexer->Peek() == tok::equals)
+        {
+            mod->scopes.emplace_back(curScope);
+            curScope = &mod->scopes.back(); //create scope for function args
+        }
 
         OverloadGroupDeclExpr* oGroup;
         if (DeclExpr* previousDecl = curScope->getVarDef(id))
@@ -148,8 +163,8 @@ Node0* Parser::parseDeclRHS()
         }
         else //we have to create the overload group
         {
-            oGroup = new OverloadGroupDeclExpr(id, &(mod->global), to.loc);
-            mod->global.addVarDef(id, oGroup);
+            oGroup = new OverloadGroupDeclExpr(id, to.loc);
+            mod->pub.addVarDef(id, oGroup);
         }
 
         FuncDeclExpr* fde = new FuncDeclExpr(id, type, curScope, to.loc);
@@ -176,10 +191,10 @@ Node0* Parser::parseDeclRHS()
             oGroup->functions.push_back(fde);
 
         //leave the decl expr hanging, it will get attached later
-        //FIXME: memory leak when functions are declared & not defined
         //add argument definition to function's scope
-        curScope->addVarDef(Global().reserved.arg,
-            new DeclExpr(Global().reserved.arg, type.getFunc().arg(), curScope, to.loc));
+        if (lexer->Peek() == tok::equals)
+            curScope->addVarDef(Global().reserved.arg,
+                new DeclExpr(Global().reserved.arg, type.getFunc().arg(), to.loc));
 
         return fde;
     }
@@ -209,7 +224,7 @@ Node0* Parser::parseDeclRHS()
             return new NullExpr(to.loc);
         }
 
-        ret = new DeclExpr(id, type, curScope, to.loc);
+        ret = new DeclExpr(id, type, to.loc);
         curScope->addVarDef(id, ret);
     }
 

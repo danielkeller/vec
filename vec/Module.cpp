@@ -6,7 +6,8 @@
 using namespace ast;
 
 Module::Module()
-    : Node1(nullptr, tok::Location())
+    : Node1(nullptr, tok::Location()),
+    pub(&Global().universal), global(&pub) //set scope parents (global -> public -> universal)
 {
 }
 

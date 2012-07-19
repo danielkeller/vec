@@ -46,10 +46,10 @@ GlobalData::GlobalData()
     universal.addTypeDef(reserved.string, td);
     reserved.string_t = typ::mgr.makeNamed(td.mapped, reserved.string);
 
-    reserved.undeclared_v = new ast::DeclExpr(reserved.undeclared, typ::error, &universal, tok::Location());
+    reserved.undeclared_v = new ast::DeclExpr(reserved.undeclared, typ::error, tok::Location());
     universal.addVarDef(reserved.undeclared, reserved.undeclared_v);
 
-    reserved.intrin_v = new ast::DeclExpr(reserved.intrin, typ::error, &universal, tok::Location());
+    reserved.intrin_v = new ast::DeclExpr(reserved.intrin, typ::error, tok::Location());
     universal.addVarDef(reserved.intrin, reserved.intrin_v);
 
     //HACK HACK

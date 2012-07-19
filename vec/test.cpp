@@ -21,6 +21,12 @@ int main ()
     openDlg(fileName);
 
     ast::Module mod;
+
+    mod.name = fileName;
+    auto ext = mod.name.find_first_of(".vc");
+    if (ext != std::string::npos)
+        mod.name.resize(ext);
+
     lex::Lexer l(fileName, &mod); //we need lexer's buffer for errors
 
     {

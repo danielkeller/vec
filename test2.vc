@@ -1,3 +1,5 @@
+module dfsa;
+
 int foo = 6;
 
 int:int test = 6;
@@ -8,11 +10,14 @@ int:int one = __intrin:6;
 int:[int a, float b] one = 7;
 
 one:[7, 8.8];
+int:int qwer;
+
+private:
+foo:2;
 
 int:int main = 
 (
-    {int} bar = {foo, 6, 7.8, one};
-	int barf = [foo, 6, 7.8, one];
+    int bar;
     
     bar - barf;
 

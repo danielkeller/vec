@@ -181,6 +181,10 @@ const char* tok::Name(TokenType type)
             return "'if'";
         case k_int:
             return "'int'";
+        case k_module:
+            return "'module'";
+        case k_private:
+            return "'private'";
         case k_return:
             return "'return'";
         case k_switch:

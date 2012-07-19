@@ -303,8 +303,8 @@ void Parser::parseNamed()
 
     if (!td)
     {
-        err::Error(id.loc) << "undefined type '"
-            << Global().getIdent(typeName) << '\'' << err::underline;
+        //err::Error(id.loc) << "undefined type '"
+        //    << Global().getIdent(typeName) << '\'' << err::underline;
         type = typ::int32; //recover
         return;
     }

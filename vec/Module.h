@@ -16,11 +16,11 @@ namespace ast
         ~Module();
         Module();
 
-        Scope global;
-        std::list<Scope> scopes;
-
         std::string name;
         ast::Scope pub;
+
+        Scope global;
+        std::list<Scope> scopes;
 
         std::string myLbl() {return "Comp Unit";}
 

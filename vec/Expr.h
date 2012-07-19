@@ -32,13 +32,12 @@ namespace ast
     //could possibly have a weak_string of its name?
     struct DeclExpr : public VarExpr
     {
-        Scope* owner; //to look up typedefs
         Ident name; //for errors
 
-        DeclExpr(Ident n, typ::Type t, Scope* o, tok::Location const &l)
-            : VarExpr(this, l), owner(o), name(n) {type = t;}
+        DeclExpr(Ident n, typ::Type t, tok::Location const &l)
+            : VarExpr(this, l),  name(n) {type = t;}
         DeclExpr(const DeclExpr& old) //this has to be specified because var must point to this
-            : VarExpr(this, old.loc), owner(old.owner), name(old.name) {type = old.type;}
+            : VarExpr(this, old.loc), name(old.name) {type = old.type;}
 
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
         typ::Type& Type() {return type;} //have to re-override it back to the original
@@ -59,7 +58,7 @@ namespace ast
     {
         Scope* funcScope;
         FuncDeclExpr(Ident n, typ::Type t, Scope* s, tok::Location const &l)
-            : DeclExpr(n, t, s->getParent(), l), funcScope(s) {}
+            : DeclExpr(n, t, l), funcScope(s) {}
     };
 
     //declaration of an entire function overload group
@@ -67,8 +66,8 @@ namespace ast
     {
         typ::Type& Type() {return typ::overload;}
         std::list<FuncDeclExpr*> functions;
-        OverloadGroupDeclExpr(Ident n, Scope* global, tok::Location const &firstLoc)
-            : DeclExpr(n, typ::error, global, firstLoc) {}
+        OverloadGroupDeclExpr(Ident n, tok::Location const &firstLoc)
+            : DeclExpr(n, typ::error, firstLoc) {}
     };
 
     struct ConstExpr : public Node0

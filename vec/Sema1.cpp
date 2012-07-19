@@ -17,7 +17,7 @@ void Sema::Phase1()
     //if only a few steps need that, let them implement it
 
     //insert overload group declarations into the tree so they get cleaned up
-    for(auto it : mod->global.varDefs)
+    for(auto it : mod->pub.varDefs)
         if (OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(it.second))
         {
             Ptr oldHead = mod->detachChildA();
@@ -77,6 +77,9 @@ void Sema::Phase1()
             VarExpr* ve = call->func.get();
             if (ve->var == Global().reserved.intrin_v)
             {
+                for (auto it : fde->funcScope->varDefs)
+                    Ptr(it.second); //this is kind of dumb but it doesn't access the d'tor directly
+
                 IntConstExpr* ice = exact_cast<IntConstExpr*>(call->getChild(0));
                 assert(ice && "improper use of __intrin");
                 auto ide = MkNPtr(new IntrinDeclExpr(fde, (int)ice->value));

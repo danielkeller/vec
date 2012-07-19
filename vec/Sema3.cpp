@@ -22,7 +22,9 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     ovr_queue result;
     for (auto func : oGroup->functions)
     {
-        if (!call->owner->canSee(func->owner))
+        //funcScope is the function's owning scope if its a decl, funcScope->parent is
+        //if its a definition
+        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->parent))
             continue; //not visible in this scope
 
         result.push(
@@ -32,16 +34,18 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             );
     }
 
-    ovr_result firstChoice = result.top();
-
     //TODO: now try template functions
     if (result.size() == 0)
     {
         err::Error(call->loc) << "function '" << Global().getIdent(oGroup->name) << "' is not defined in this scope"
             << err::underline << call->loc << err::caret;
         call->Type() = typ::error;
+        return;
     }
-    else if (!firstChoice.first.isValid())
+
+    ovr_result firstChoice = result.top();
+
+    if (!firstChoice.first.isValid())
     {
         err::Error(call->loc) << "no accessible instance of overloaded function '" << Global().getIdent(oGroup->name)
             << "' matches arguments of type " << argType.to_str() << err::underline << call->loc << err::caret;
