@@ -70,6 +70,7 @@
   <ItemGroup>
     <ClInclude Include="AstNode.h" />
     <ClInclude Include=".\Module.h" />
+    <ClInclude Include="AstWalker.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="Expr.h" />
     <ClInclude Include="Lexer.h" />
@@ -97,6 +98,7 @@
     <ClCompile Include="Sema1.cpp" />
     <ClCompile Include="Sema2.cpp" />
     <ClCompile Include="Sema3.cpp" />
+    <ClCompile Include="SemaImport.cpp" />
     <ClCompile Include="StmtParser.cpp" />
     <ClCompile Include="test.cpp" />
     <ClCompile Include="Token.cpp" />
@@ -105,9 +107,9 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\intrinsic" />
     <None Include="..\test.vc" />
     <None Include="..\test2.vc" />
-    <None Include="intrinsic" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

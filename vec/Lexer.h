@@ -8,7 +8,7 @@
 
 namespace ast
 {
-    class Module;
+    struct Module;
 }
 
 namespace lex
@@ -17,8 +17,7 @@ namespace lex
     class Lexer
     {
     public:
-        Lexer(std::string fname, ast::Module *mod);
-        ~Lexer() {delete[] buffer;}
+        Lexer(ast::Module *mod);
 
         tok::Token & Next();
         tok::Token & Peek() {return nextTok;}
@@ -39,8 +38,6 @@ namespace lex
         void backtrackReset();
 
     private:
-        char * buffer;
-        std::string fileName;
 
         const char * curChr;
 

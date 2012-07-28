@@ -60,6 +60,9 @@
     <ClInclude Include=".\Global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AstWalker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Token.cpp">
@@ -116,6 +119,9 @@
     <ClCompile Include="Sema.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SemaImport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\test.vc">
@@ -124,7 +130,7 @@
     <None Include="..\test2.vc">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="intrinsic">
+    <None Include="..\intrinsic">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

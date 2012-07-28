@@ -4,16 +4,12 @@
 #include <string>
 #include <list>
 #include <map>
-#include <stack>
+#include <vector>
 #include "Token.h"
 
 namespace utl
 {
     class weak_string;
-}
-namespace ast
-{
-    class Scope;
 }
 namespace par
 {
@@ -63,6 +59,9 @@ namespace typ
 
         TypeCompareResult compare(const Type& other);
         bool operator==(const Type& other) const {return node == other.node;}
+
+        //this allows use in stl map for example
+        bool operator<(const Type& other) const {return node < other.node;}
 
         std::string to_str();
 
@@ -161,6 +160,7 @@ namespace typ
     extern Type null;
     extern Type overload;
     extern Type error;
+    extern Type undeclared;
 
     class TupleBuilder
     {
@@ -173,9 +173,9 @@ namespace typ
     class NamedBuilder
     {
         friend class TypeManager;
-        std::map<Ident, TypeNodeB*> namedConts;
+        std::list<TypeNodeB*> namedConts;
     public:
-        void push_back(Ident name, Type arg) {namedConts[name] = arg;}
+        void push_back(Type arg) {namedConts.push_back(arg);}
     };
 
     class TypeManager
@@ -186,6 +186,9 @@ namespace typ
         //or delete n and return an identical node from the list
         TypeNodeB* unique(TypeNodeB* n);
 
+        //creates a new type with params repaced by the specified types
+        Type substitute(Type old, std::map<Ident, TypeNodeB*>& subs);
+
     public:
         ~TypeManager();
 
@@ -194,13 +197,12 @@ namespace typ
         Type makeParam(Ident name);
         Type makeFunc(Type ret, Type arg);
         Type makeTuple(TupleBuilder&);
-        Type makeNamed(Type conts, Ident name, NamedBuilder& args);
+        Type makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args);
+        Type makeExternNamed(Ident name, NamedBuilder& args);
         Type makeNamed(Type conts, Ident name);
 
         //these functions aren't really part of the public interface but its simpler to make them public
 
-        //creates a new type with params repaced by the specified types
-        Type substitute(Type old, std::map<Ident, TypeNodeB*>& subs);
         //performs a deep copy, keeping everything unique and subbing in params
         TypeNodeB* clone(TypeNodeB* n);
     };

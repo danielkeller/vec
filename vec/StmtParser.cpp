@@ -17,8 +17,9 @@ Block* Parser::parseBlock()
 {
     tok::Location begin = lexer->Next().loc;
 
+    NormalScope* oldScope = curScope;
     mod->scopes.emplace_back(curScope);
-    Scope* blockScope = curScope = &mod->scopes.back();
+    NormalScope* blockScope = curScope = &mod->scopes.back();
 
     if (lexer->Expect(tok::rparen)) //empty parens
         return new Block(Ptr(new NullStmt(begin + lexer->Last().loc)),
@@ -32,7 +33,7 @@ Block* Parser::parseBlock()
     if(!lexer->Expect(tok::rparen))
         err::ExpectedAfter(lexer, "')'", "block");
 
-    curScope = curScope->getParent();
+    curScope = oldScope;
     return new Block(Ptr(conts), blockScope, begin + lexer->Last().loc);
 }
 
@@ -56,9 +57,9 @@ Node0* Parser::parseStmtList()
     {
     case tok::k_private:
         if (curScope == &mod->pub)
-            curScope = &mod->global;
+            curScope = &mod->priv;
         else
-            err::Error(label.loc) << "'private' not expected in this scope" << err::underline;
+            err::Error(label.loc) << "'private' not allowed in this scope" << err::underline;
         lexer->Advance();
         break;
 

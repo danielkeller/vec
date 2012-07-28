@@ -1,6 +1,7 @@
 #include "Sema.h"
 #include "SemaNodes.h"
 #include "Error.h"
+#include "Global.h"
 
 #include <cassert>
 #include <queue>
@@ -23,8 +24,8 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     for (auto func : oGroup->functions)
     {
         //funcScope is the function's owning scope if its a decl, funcScope->parent is
-        //if its a definition
-        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->parent))
+        //if its a definition. TODO: this is kind of stupid
+        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->getParent()))
             continue; //not visible in this scope
 
         result.push(
@@ -153,7 +154,7 @@ void Sema::Phase3()
                     builder.push_back(be->getChildA()->Type(), Global().reserved.null);
                     builder.push_back(be->getChildB()->Type(), Global().reserved.null);
                     typ::Type argType = typ::mgr.makeTuple(builder);
-                    DeclExpr* def = mod->global.getVarDef(Global().reserved.opIdents[be->op]);
+                    DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[be->op]);
                     OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(def);
                     assert(oGroup && "operator not overloaded properly");
 

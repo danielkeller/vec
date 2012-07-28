@@ -56,8 +56,8 @@ namespace ast
 
     struct FuncDeclExpr : public DeclExpr
     {
-        Scope* funcScope;
-        FuncDeclExpr(Ident n, typ::Type t, Scope* s, tok::Location const &l)
+        NormalScope* funcScope;
+        FuncDeclExpr(Ident n, typ::Type t, NormalScope* s, tok::Location const &l)
             : DeclExpr(n, t, l), funcScope(s) {}
     };
 
@@ -68,6 +68,7 @@ namespace ast
         std::list<FuncDeclExpr*> functions;
         OverloadGroupDeclExpr(Ident n, tok::Location const &firstLoc)
             : DeclExpr(n, typ::error, firstLoc) {}
+        void Insert(FuncDeclExpr* newDecl);
     };
 
     struct ConstExpr : public Node0
@@ -99,9 +100,9 @@ namespace ast
 
     struct OverloadableExpr
     {
-        Scope* owner;
+        NormalScope* owner;
         FuncDeclExpr* ovrResult;
-        OverloadableExpr(Scope* o)
+        OverloadableExpr(NormalScope* o)
             : owner(o), ovrResult(0) {}
     };
 
@@ -110,11 +111,11 @@ namespace ast
     {
         tok::TokenType op;
         tok::Location opLoc;
-        BinExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::Token &o)
+        BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : OverloadableExpr(sc),
             Node2(move(lhs), move(rhs)), op(o.type), opLoc(o.loc)
         {};
-        BinExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::TokenType o)
+        BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::TokenType o)
             : OverloadableExpr(sc),
             Node2(move(lhs), move(rhs)), op(o)
         {};
@@ -123,7 +124,7 @@ namespace ast
 
     struct AssignExpr : public BinExpr
     {
-        AssignExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::Token &o)
+        AssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
         typ::Type& Type() {return getChildA()->Type();}
@@ -132,7 +133,7 @@ namespace ast
     struct OpAssignExpr : public AssignExpr
     {
         tok::TokenType assignOp;
-        OpAssignExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::Token &o)
+        OpAssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : AssignExpr(move(lhs), move(rhs), sc, o), assignOp(o.value.op) {};
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
@@ -140,12 +141,12 @@ namespace ast
     struct OverloadCallExpr : public OverloadableExpr, public NodeN
     {
         NPtr<VarExpr>::type func; //so tree walker won't see it
-        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, Scope* o, const tok::Location & l)
+        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, NormalScope* o, const tok::Location & l)
             : OverloadableExpr(o), NodeN(move(rhs), l), func(move(lhs)) {}
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
     };
 
-    inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::Token &op)
+    inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &op)
     {
         if (op == tok::equals)
             return new AssignExpr(move(lhs), move(rhs), sc, op);
@@ -234,7 +235,7 @@ namespace ast
 
     struct ListAccExpr : public BinExpr
     {
-        ListAccExpr(Ptr lhs, Ptr rhs, Scope* sc, tok::Token &o)
+        ListAccExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : BinExpr(move(lhs), move(rhs), sc, o)
         {}
 

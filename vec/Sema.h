@@ -3,6 +3,7 @@
 
 #include "Module.h"
 #include "SemaNodes.h"
+#include "AstWalker.h"
 
 #include <functional>
 
@@ -14,6 +15,8 @@ namespace sa
 
         template<class T>
         void AstWalk(std::function<void(T*)> action);
+        template<class T>
+        void DynamicAstWalk(std::function<void(T*)> action);
         void AnyAstWalk(std::function<void(ast::Node0*)> action);
         template<class T>
         void ReverseAstWalk(std::function<void(T*)> action);
@@ -34,10 +37,13 @@ namespace sa
         //convert AST to basic block graph
         void Phase2();
 
+        //phase 2.5. bring in external symbols.
+        void Import();
+
         //infer types
         void Phase3();
 
-        //any changes that need types
+        //constant propigation
         void Phase4();
     };
 
@@ -45,6 +51,12 @@ namespace sa
     void Sema::AstWalk(std::function<void(T*)> action)
     {
         AstWalker<T> aw(mod, action);
+    }
+
+    template<class T>
+    void Sema::DynamicAstWalk(std::function<void(T*)> action)
+    {
+        DynamicAstWalker<T> aw(mod, action);
     }
 
     template<class T>

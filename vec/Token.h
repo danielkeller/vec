@@ -142,10 +142,6 @@ namespace tok
         TokenType Type() {return type;}
         Token() : type (none) {};
         Token(TokenType t) : type(t) {}
-        /*
-        Token(TokenType t, Location & l) : type(t), loc(l) {}
-        Token(TokenType t, TokenType o, Location & l) : type(t), loc(l) {value.op = o;}
-        */
     };
 
     bool operator==(Token &lhs, TokenType rhs);

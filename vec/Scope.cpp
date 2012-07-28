@@ -2,12 +2,12 @@
 
 using namespace ast;
 
-void Scope::addTypeDef(Ident name, TypeDef &td)
+void NormalScope::addTypeDef(Ident name, TypeDef &td)
 {
     typeDefs[name] = td;
 }
 
-TypeDef * Scope::getTypeDef(Ident name)
+TypeDef * NormalScope::getTypeDef(Ident name)
 {
     auto it = typeDefs.find(name);
     if (it == typeDefs.end())
@@ -15,18 +15,18 @@ TypeDef * Scope::getTypeDef(Ident name)
         if (parent)
             return parent->getTypeDef(name);
         else
-            return 0;
+            return nullptr;
     }
     else
         return &it->second;
 }
 
-void Scope::addVarDef(Ident name, DeclExpr* decl)
+void NormalScope::addVarDef(Ident name, DeclExpr* decl)
 {
     varDefs[name] = decl;
 }
 
-DeclExpr* Scope::getVarDef(Ident name)
+DeclExpr* NormalScope::getVarDef(Ident name)
 {
     auto it = varDefs.find(name);
     if (it == varDefs.end())
@@ -34,16 +34,85 @@ DeclExpr* Scope::getVarDef(Ident name)
         if (parent)
             return parent->getVarDef(name);
         else
-            return 0;
+            return nullptr;
     }
     else
         return it->second;
 }
 
-bool Scope::canSee(Scope* other)
+bool NormalScope::canSee(Scope* other)
 {
-    Scope * search;
-    for (search = this; search && search != other; search = search->parent)
-        ;
-    return search == other;
+    if (this == other)
+        return true;
+    else if (!parent)
+        return false;
+    else
+        return getParent()->canSee(other);
+}
+
+DeclExpr* ImportScope::getVarDef(Ident name)
+{
+    //don't cycle
+    if (hasVisited)
+        return nullptr;
+    hasVisited = true;
+
+    for (auto scope : imports)
+    {
+        DeclExpr* decl = scope->getVarDef(name);
+        if (decl)
+        {
+            hasVisited = false;
+            return decl;
+        }
+    }
+
+    hasVisited = false;
+    return nullptr;
+}
+
+TypeDef * ImportScope::getTypeDef(Ident name)
+{
+    //don't cycle
+    if (hasVisited)
+        return nullptr;
+    hasVisited = true;
+
+    for (auto scope : imports)
+    {
+        TypeDef* decl = scope->getTypeDef(name);
+        if (decl)
+        {
+            hasVisited = false;
+            return decl;
+        }
+    }
+
+    hasVisited = false;
+    return nullptr;
+}
+
+bool ImportScope::canSee(Scope* other)
+{
+    if (this == other)
+        return true;
+    else if (!imports.size())
+        return false;
+
+    //don't cycle
+    if (hasVisited)
+        return false;
+    hasVisited = true;
+    
+    for (auto scope : imports)
+    {
+        if (scope->canSee(other))
+        {
+            hasVisited = false;
+            return true;
+        }
+    }
+
+    hasVisited = false;
+    return false;
 }

@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Module.h"
 #include "Stmt.h"
+#include "Global.h"
 
 using namespace par;
 using namespace ast;
@@ -46,11 +47,12 @@ Node0* Parser::parseBinaryExprRHS(Node0* lhs, tok::prec::precidence minPrec)
         //special case for functions
         FuncDeclExpr* de = dynamic_cast<FuncDeclExpr*>(lhs);
         if (op == tok::equals && de)
-            curScope = curScope->getParent(); //pop scope stack
+            curScope = static_cast<NormalScope*>(curScope->getParent()); //pop scope stack
+        //static_cast is non-ideal but should be safe
 
         //reduce
 
-        //special case for function calls. They need to know their scope
+        //special case for function calls with a VarExpr (overloaded calls)
         VarExpr* func = dynamic_cast<VarExpr*>(lhs);
         if (op == tok::colon && func)
             lhs = new OverloadCallExpr(MkNPtr(func), Ptr(rhs), curScope, op.loc);
@@ -160,6 +162,8 @@ Node0* Parser::parsePrimaryExpr()
     //backtracking works by setting a "restore point," then blindly parsing ahead as if it were
     //a type. if something goes wrong we set backtrackStatus accordingly and return without creating
     //any types. we then restore, and "try again" by parsing it as an expression instead.
+    //TODO: maybe it would be better to only allow declarations at the beginning of expressions?
+    //it would prevent the creation of lots of extraneous types
     if (couldBeType(to))
     {
         //it must be a type. don't set backtracking in this case so we get better errors.

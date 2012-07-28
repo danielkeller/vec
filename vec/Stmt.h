@@ -44,8 +44,8 @@ namespace ast
 
     struct Block : public Node1
     {
-        Scope *scope;
-        Block(Ptr conts, Scope *s, tok::Location const &l)
+        NormalScope *scope;
+        Block(Ptr conts, NormalScope *s, tok::Location const &l)
             : Node1(move(conts), l),
             scope(s)
         {};

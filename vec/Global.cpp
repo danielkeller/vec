@@ -4,10 +4,15 @@
 
 std::unique_ptr<GlobalData> singleton;
 
+void GlobalData::create()
+{
+    assert(!singleton && "creating multiple GlobalDatas!");
+    singleton.reset(new GlobalData());
+    singleton->Initialize();
+}
+
 GlobalData& Global()
 {
-    if (!singleton)
-        singleton.reset(new GlobalData());
     return *singleton;
 }
 
@@ -29,7 +34,17 @@ Ident GlobalData::addIdent(const std::string &str)
     return ret;
 }
 
-GlobalData::GlobalData()
+ast::Module* GlobalData::findModule(const std::string& name)
+{
+    for (auto mod : allModules)
+        if (mod->name == name)
+            return mod;
+    return nullptr;
+}
+
+//don't put this in the constructor so stuff we call can access Global (ie the singleton
+//is set already)
+void GlobalData::Initialize()
 {
     //add reserved identifiers
     reserved.null = addIdent("");
@@ -67,6 +82,7 @@ GlobalData::GlobalData()
 
 GlobalData::~GlobalData()
 {
-    delete reserved.undeclared_v;
-    delete reserved.intrin_v;
+    //universal declarations are not part of anyone's AST
+    for (auto decl : universal.varDefs)
+        delete decl.second;
 }

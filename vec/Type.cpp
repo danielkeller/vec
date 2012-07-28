@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Module.h"
 #include "Parser.h"
+#include "Global.h"
 
 #include <list>
 #include <algorithm>
@@ -85,7 +86,7 @@ struct NamedNode : public TypeNode<NamedNode>
     TypeNodeB* type;
     Ident name;
     //all of the args to the typedef
-    std::map<Ident, TypeNodeB*> args;
+    std::list<TypeNodeB*> args;
     TypeCompareResult compareTo(NamedNode*);
     bool insertCompareTo(NamedNode* other);
     TypeNodeB* clone(TypeManager*);
@@ -157,7 +158,11 @@ TypeCompareResult TypeNode<T>::compare (TypeNodeB* other)
         return TypeCompareResult::valid;
         
     TypeNodeB* realThis = this;
-        
+    
+    //FIXME: don't dename them at the same time, this could miss 
+    //type foo = bar;
+    //kind of situations
+    
     //only call compare again if either function did something, otherwise fall through
     TypeCompareResult penalty = dename(realThis) + dename(other);
     if (penalty != TypeCompareResult::valid)
@@ -176,7 +181,7 @@ bool TypeNode<T>::insertCompare (TypeNodeB* toAdd)
     // type foo?T = ?T;
     // type bar?T = foo!T;
     // ?T is set to sub for itself which is entirely valid, but it should stop there
-    //only sub in toAdd because we don't want to mess with this
+    //only sub in toAdd because we don't want to mess with this.
     //sub before doing equality comparison otherwise params will not work
     sub(toAdd);
 
@@ -184,7 +189,7 @@ bool TypeNode<T>::insertCompare (TypeNodeB* toAdd)
     //only call compare again if either function did something, otherwise fall through
     TypeNodeB* realThis = this;
 
-    if (T* toAddT = dynamic_cast<T*>(toAdd)) //see if it's one of us
+    if (T* toAddT = exact_cast<T*>(toAdd)) //see if it's one of us
         return static_cast<T*>(realThis)->insertCompareTo(toAddT); //keep comparing
     else
         return false;
@@ -333,7 +338,7 @@ TypeNodeB* NamedNode::clone(TypeManager* mgr)
 {
     NamedNode* copy = new NamedNode();
     for (auto t : args)
-        copy->args[t.first] = mgr->clone(t.second);
+        copy->args.push_back(mgr->clone(t));
     copy->name = name;
     copy->type = mgr->clone(type);
     return copy;
@@ -341,18 +346,20 @@ TypeNodeB* NamedNode::clone(TypeManager* mgr)
 
 void NamedNode::print(std::ostream &out)
 {
-    out << name;
+    out << Global().getIdent(name);
     if (!args.size())
         return;
 
     out << "!(";
     for (auto it = args.begin(); it != args.end();)
     {
-        it->second->print(out);
+        (*it)->print(out);
         if (++it != args.end())
             out << ", ";
     }
-    out << ')';
+    out << ")";
+
+    //TODO: print "aka" type
 }
 
 TypeCompareResult ParamNode::compareTo(ParamNode* other)
@@ -405,6 +412,7 @@ PrimitiveNode nany("?");
 PrimitiveNode nnull("void");
 PrimitiveNode noverload("<overload group>");
 PrimitiveNode nerror("<error type>");
+PrimitiveNode nundeclared("<undeclared type>");
 
 Type int8(nint8);
 Type int16(nint16);
@@ -420,6 +428,7 @@ Type any(nany);
 Type null(nnull);
 Type overload(noverload);
 Type error(nerror);
+Type undeclared(nundeclared);
 
 Type::Type()
     : node(&nnull)
@@ -478,13 +487,31 @@ Type TypeManager::makeRef(Type conts)
     return unique(n);
 }
 
-Type TypeManager::makeNamed(Type conts, Ident name, NamedBuilder& args)
+Type TypeManager::makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args)
 {
     NamedNode* n = new NamedNode();
     n->name = name;
     std::swap(n->args, args.namedConts);
-    n->type = substitute(conts, n->args);
+
+    std::map<Ident, TypeNodeB*> subs;
+    while (params.size() && args.namedConts.size())
+    {
+        subs[params.back()] = args.namedConts.back();
+        params.pop_back();
+        args.namedConts.pop_back();
+    }
+
+    n->type = substitute(conts, subs);
     return unique(n); //we still need to unique n, n != n->type
+}
+
+Type TypeManager::makeExternNamed(Ident name, NamedBuilder& args)
+{
+    NamedNode* n = new NamedNode();
+    n->name = name;
+    std::swap(n->args, args.namedConts);
+    n->type = undeclared;
+    return unique(n);
 }
 
 Type TypeManager::makeNamed(Type conts, Ident name)

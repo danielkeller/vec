@@ -4,14 +4,19 @@
 #include <vector>
 #include "Type.h"
 #include "SemaNodes.h"
+#include "Module.h"
 
 typedef std::vector<std::string> TblType;
 
+//TODO: make members private and use synchronization to better support threads
 class GlobalData
 {
-    GlobalData();
+    void Initialize();
 public:
     ~GlobalData();
+
+    //deterministically create singleton to avoid stupid circular dependencies with TypeManager
+    static void create();
 
     TblType stringTbl;
     TblType identTbl;
@@ -22,7 +27,7 @@ public:
     std::string & getStr(Str idx) {return stringTbl[idx];}
     std::string & getIdent(Ident idx) {return identTbl[idx];}
 
-    ast::Scope universal;
+    ast::NormalScope universal;
 
     //reserved identifiers. like keywords, but handled as identifiers
     //for ease of parsing. the struct is syntactic sugar
@@ -44,9 +49,17 @@ public:
         //use some sort of hungarian notation here for clarity
     } reserved;
 
+    std::list<ast::Module*> allModules;
+
+    ast::Module* findModule(const std::string& name);
+
     friend GlobalData& Global();
 };
 
+//this is outside of the class for brevity of use ie
+// Global().stuff
+// instead of something like
+// utl::GlobalData::Get().stuff
 GlobalData& Global();
 
 #endif

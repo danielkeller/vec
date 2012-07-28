@@ -4,7 +4,12 @@ int foo = 6;
 
 int:int test = 6;
 
-int:[int a, int b] operator- = 2;
+type food = int;
+type bard = food;
+
+bard bafd = food asfd;
+
+int:[int a, food b] operator- = 2;
 
 int:int one = __intrin:6;
 int:[int a, float b] one = 7;
@@ -17,9 +22,9 @@ foo:2;
 
 int:int main = 
 (
-    int bar;
+    bard bar;
     
-    bar - barf;
+    6 - bar;
 
     bar - float ffera;
 

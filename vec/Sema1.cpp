@@ -1,6 +1,7 @@
 #include "Sema.h"
 #include "SemaNodes.h"
 #include "Error.h"
+#include "Global.h"
 
 #include <cassert>
 
@@ -15,15 +16,6 @@ void Sema::Phase1()
     //if there's a lot of dynamic casting going on, try adding new ast walker
     //types that select child and descendent nodes for example.
     //if only a few steps need that, let them implement it
-
-    //insert overload group declarations into the tree so they get cleaned up
-    for(auto it : mod->pub.varDefs)
-        if (OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(it.second))
-        {
-            Ptr oldHead = mod->detachChildA();
-            Ptr newHead = Ptr(new ExprStmt(Ptr(oGroup)));
-            mod->setChildA(Ptr(new StmtPair(move(newHead), move(oldHead))));
-        }
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
@@ -85,7 +77,7 @@ void Sema::Phase1()
                 auto ide = MkNPtr(new IntrinDeclExpr(fde, (int)ice->value));
 
                 //now replace the function decl in the overload group
-                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(mod->global.getVarDef(fde->name));
+                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(Global().universal.getVarDef(fde->name));
                 assert(oGroup && "function decl not in group");
                 oGroup->functions.remove(fde);
                 oGroup->functions.push_back(ide.get());
@@ -195,16 +187,16 @@ void Sema::Phase1()
     });
     
     //create expr stmts for other things that contain expressions
-    //FIXME: put this back when we start using unique_ptr's
-    /*
-    AstWalk<CondStmt>([] (CondStmt* cs)
+    DynamicAstWalk<CondStmt>([] (CondStmt* cs)
     {
-        Node0* e = cs->getExpr();
-        TmpExpr* te = new TmpExpr(e);
-        cs->replaceChild(e, te);
+        Node0* parent = dynamic_cast<Node0*>(cs)->parent;
+        Ptr node = dynamic_cast<Node0*>(cs)->detachSelf();
+
+        Ptr expr = cs->getExpr()->detachSelf();
+        Ptr temp = Ptr(new TmpExpr(expr.get()));
+        node->replaceDetachedChild(move(temp));
         
-        Node0* parent = cs->parent;
-        StmtPair* sp = new StmtPair(new ExprStmt(e), cs);
-        parent->replaceChild(cs, sp);
-    });*/
+        Ptr sp = Ptr(new StmtPair(Ptr(new ExprStmt(move(expr))), move(node)));
+        parent->replaceDetachedChild(move(sp));
+    });
 }

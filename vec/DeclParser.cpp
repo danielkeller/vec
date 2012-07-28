@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Type.h"
 #include "Module.h"
+#include "Global.h"
 
 #include <cassert>
 
@@ -116,6 +117,31 @@ Node0* Parser::parseDecl()
     return parseDeclRHS();
 }
 
+//TODO: should this be here?
+//precondition: newDecl.Type() is actually a function type.
+//this function will segfault otherwise
+void OverloadGroupDeclExpr::Insert(FuncDeclExpr* newDecl)
+{
+    for (auto func : functions)
+    {
+        if (func->Type().getFunc().arg().compare(newDecl->Type().getFunc().arg())
+            == typ::TypeCompareResult::valid)
+        {
+            if (func->Type().getFunc().ret().compare(newDecl->Type().getFunc().ret())
+                == typ::TypeCompareResult::invalid)
+            {
+                err::Error(newDecl->loc) << "overloaded function differs only in return type"
+                    << err::underline << func->loc << err::note << "see previous declaration"
+                    << err::underline;
+            }
+            return; //already declared
+        }
+    }
+
+    //new!
+    functions.push_back(newDecl);
+}
+
 /*
 primary-expr
     : type IDENT
@@ -164,31 +190,14 @@ Node0* Parser::parseDeclRHS()
         else //we have to create the overload group
         {
             oGroup = new OverloadGroupDeclExpr(id, to.loc);
-            mod->pub.addVarDef(id, oGroup);
+            //overload groups are in the universal scope; the visibility of individual functions
+            //is sorted out in sema 3. global also cleans them up this way!
+            Global().universal.addVarDef(id, oGroup);
         }
 
         FuncDeclExpr* fde = new FuncDeclExpr(id, type, curScope, to.loc);
 
-        bool declared = false;
-
-        for (auto func : oGroup->functions)
-        {
-            if (func->Type().getFunc().arg().compare(type.getFunc().arg())
-                == typ::TypeCompareResult::valid)
-            {
-                if (func->Type().getFunc().ret().compare(type.getFunc().ret())
-                    != typ::TypeCompareResult::valid)
-                {
-                    err::Error(to.loc) << "overloaded function differs only in return type"
-                        << err::underline << func->loc << err::note << "see previous declaration"
-                        << err::underline;
-                }
-                declared = true;
-            }
-        }
-        
-        if (!declared)
-            oGroup->functions.push_back(fde);
+        oGroup->Insert(fde);
 
         //leave the decl expr hanging, it will get attached later
         //add argument definition to function's scope

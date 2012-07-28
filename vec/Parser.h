@@ -23,7 +23,7 @@ namespace par
         lex::Lexer *lexer;
 
         ast::Module *mod;
-        ast::Scope *curScope;
+        ast::NormalScope *curScope;
 
         typ::Type type;
 

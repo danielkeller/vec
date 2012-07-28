@@ -1,8 +1,8 @@
 #include "Lexer.h"
 #include "Error.h"
 #include "Module.h"
+#include "Global.h"
 
-#include <fstream>
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
@@ -17,35 +17,15 @@
 using namespace lex;
 
 
-Lexer::Lexer(std::string fname, ast::Module *mod)
-    : fileName(fname), mod(mod)
+Lexer::Lexer(ast::Module *mod)
+    : mod(mod)
 {
-    std::ifstream t(fileName.c_str(), std::ios_base::in | std::ios_base::binary); //to keep CR / CRLF from messing us up
-
-    if (!t.is_open())
-    {
-        //this doesnt work for some reason?
-        err::Error(tok::Location()) << "Could not open file '" << fileName << '\'';
-        exit(-1);
-    }
-
-    t.seekg(0, std::ios::end);
-    std::streamoff size = t.tellg();
-    buffer = new char[(size_t)size + 1];
-
-    t.seekg(0);
-    t.read(buffer, size);
-    buffer[size] = 0;
-
-    fileName = fileName.substr(fileName.find_last_of('\\') + 1);
-    fileName = fileName.substr(fileName.find_last_of('/') + 1); //portability!
-
-    curChr = buffer - 1; //will be incremented
+    curChr = mod->buffer - 1; //will be incremented
     nextTok.loc.firstCol = nextTok.loc.lastCol = -1; //will be incremented
     nextTok.loc.line = 1; //lines are 1 based
 
-    nextTok.loc.lineStr.assign(buffer);
-    nextTok.loc.fileName = fileName.c_str();
+    nextTok.loc.lineStr.assign(mod->buffer);
+    nextTok.loc.fileName = mod->fileName.c_str();
 
     Advance();
 }

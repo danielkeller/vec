@@ -4,6 +4,7 @@
 #include "Error.h"
 #include "Module.h"
 #include "Parser.h"
+#include "Global.h"
 
 #include <cstdlib>
 
@@ -301,19 +302,10 @@ void Parser::parseNamed()
     Ident typeName = id.value.ident_v;
     ast::TypeDef * td = curScope->getTypeDef(typeName);
 
-    if (!td)
-    {
-        //err::Error(id.loc) << "undefined type '"
-        //    << Global().getIdent(typeName) << '\'' << err::underline;
-        type = typ::int32; //recover
-        return;
-    }
-
     tok::Location argsLoc = lexer->Peek().loc;
 
-    size_t nargs = 0;
-
     typ::NamedBuilder builder;
+    unsigned int nargs = 0;
 
     //TODO: this is incorrect for an expression, right? can we disable backtracking?
     if (lexer->Expect(tok::bang))
@@ -325,9 +317,8 @@ void Parser::parseNamed()
                 if (backtrackStatus == IsBacktracking)
                     return;
 
-                if (nargs < td->params.size()) //otherwise, error
-                    builder.push_back(td->params[nargs], type);
-                ++nargs; //keep incrementing, we can detect the error that way
+                builder.push_back(type);
+                ++nargs;
             } while (lexer->Expect(tok::comma));
             if (!lexer->Expect(tok::rparen))
                 err::ExpectedAfter(lexer, ")", "list of types");
@@ -338,15 +329,23 @@ void Parser::parseNamed()
             if (backtrackStatus == IsBacktracking)
                 return;
 
-            if (td->params.size() == 1) //otherwise, error
-                builder.push_back(td->params[0], type);
+            builder.push_back(type);
             nargs = 1;
         }
     }
 
     argsLoc = argsLoc + lexer->Last().loc;
 
-    if (td && nargs && nargs != td->params.size())
+    //no type was found, it could be defined in another package, so save it off for sema 3 to worry about
+    if (!td)
+    {
+        type = typ::mgr.makeExternNamed(typeName, builder);
+        mod->externTypes[type] = argsLoc;
+        return;
+    }
+    //otherwise, deal with it now
+
+    if (nargs && nargs != td->params.size())
         err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline;
 
@@ -356,10 +355,10 @@ void Parser::parseNamed()
     {
         Ident alias = Global().addIdent(
             Global().getIdent(td->params[nargs]) + " in " + Global().getIdent(typeName));
-        builder.push_back(td->params[nargs++], typ::mgr.makeParam(alias));
+        builder.push_back(typ::mgr.makeParam(alias));
     }
 
-    type = typ::mgr.makeNamed(td->mapped, typeName, builder);
+    type = typ::mgr.makeNamed(td->mapped, typeName, td->params, builder);
 }
 
 /*
