@@ -33,9 +33,6 @@ void Sema::Import()
 
         DeclExpr* realDecl = mod->priv.getVarDef(evar->ename);
         if (realDecl) //found it!
-        //we can't replace it with a varExpr because there are TmpExprs pointing to it, so
-        //we do this instead. this is kind of fragile but should work because we're done doing
-        //any weird things with decl exprs by this point (hopefully)
             evar->var = realDecl;
         else //undeclared!
         {
