@@ -195,8 +195,8 @@ Node0* Parser::parsePrimaryExpr()
         lexer->Advance();
         DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
         if (decl == 0) //didn't find decl
-            return new DeclExpr(to.value.ident_v, typ::undeclared, to.loc);
-        //don't complain, it could be in another package. put in a fake decl instead
+            return new VarExpr(to.value.ident_v, to.loc);
+        //don't complain, it could be in another package. put in an extern var instead
 
         return new VarExpr(decl, to.loc);
     }

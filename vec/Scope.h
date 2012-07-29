@@ -22,6 +22,8 @@ namespace ast
         virtual TypeDef * getTypeDef(Ident name) = 0;
 
         virtual bool canSee(Scope* other) = 0;
+
+        virtual ~Scope() {};
     };
 
     class NormalScope : public Scope

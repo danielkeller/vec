@@ -3,7 +3,6 @@
 
 #include <vector>
 #include "Type.h"
-#include "SemaNodes.h"
 #include "Module.h"
 
 typedef std::vector<std::string> TblType;

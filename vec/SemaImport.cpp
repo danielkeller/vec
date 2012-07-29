@@ -22,27 +22,26 @@ void Sema::Import()
     //the highest one that it's reasonable to go looking for undeclared stuff. this lets us
     //put things in private or higher scope in any order which is nice.
 
-    AstWalk<DeclExpr>([this] (DeclExpr* decl)
+    AstWalk<VarExpr>([this] (VarExpr* evar)
     {
         //catch a few more non-extraneous types
-        if (mod->externTypes.count(decl->Type()))
-            mod->externTypes[decl->Type()].couldBeExtraneous = false;
+        if (mod->externTypes.count(evar->Type()))
+            mod->externTypes[evar->Type()].couldBeExtraneous = false;
 
-        //this is how we store undefined variables.
-        if (decl->Type().compare(typ::undeclared) != typ::TypeCompareResult::valid)
-            return;
+        if (evar->ename == 0)
+            return; //not external
 
-        DeclExpr* realDecl = mod->priv.getVarDef(decl->name);
+        DeclExpr* realDecl = mod->priv.getVarDef(evar->ename);
         if (realDecl) //found it!
         //we can't replace it with a varExpr because there are TmpExprs pointing to it, so
         //we do this instead. this is kind of fragile but should work because we're done doing
         //any weird things with decl exprs by this point (hopefully)
-            decl->var = realDecl;
+            evar->var = realDecl;
         else //undeclared!
         {
-            err::Error(decl->loc) << "undeclared variable '" << Global().getIdent(decl->name)
+            err::Error(evar->loc) << "undeclared variable '" << Global().getIdent(evar->ename)
                 << "'" << err::underline;
-            decl->Type() = typ::error;
+            evar->Type() = typ::error;
         }
         //fortunately we can sort of recover by leaving it the way it is, changing the type
         //to <error type>

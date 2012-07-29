@@ -1,6 +1,7 @@
 #ifndef EXPR_H
 #define EXPR_H
 
+#include "Global.h"
 #include "AstNode.h"
 #include "Scope.h"
 #include "Location.h"
@@ -21,8 +22,12 @@ namespace ast
     struct VarExpr : public Node0
     {
         DeclExpr* var; //the variable we belong to
+        Ident ename; //name of external variable
 
-        VarExpr(DeclExpr* v, tok::Location const &l) : Node0(l), var(v) {};
+        VarExpr(DeclExpr* v, tok::Location const &l)
+            : Node0(l), var(v), ename(0) {}
+        VarExpr(Ident n, tok::Location const &l)
+            : Node0(l), var(Global().reserved.undeclared_v), ename(n) {}
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
