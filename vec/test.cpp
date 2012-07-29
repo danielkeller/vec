@@ -82,6 +82,9 @@ int main ()
     processBuiltin("intrinsic");
     processFile(fileName);
 
+    //typ::mgr.printAll(std::cerr);
+    //std::cerr << std::endl;
+
     //TODO: sema3 will start with entry point and proceed recursively, via imports in the file with
     //the entry point, then called functions, etc.
     for (auto mod : Global().allModules)
@@ -90,6 +93,8 @@ int main ()
         s.Import();
         s.Phase3();
     }
+
+    //typ::mgr.printAll(std::cerr);
 
     //FIXME: this is not a good place for this
     for (auto mod : Global().allModules)

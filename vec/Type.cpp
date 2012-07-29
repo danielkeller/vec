@@ -297,6 +297,8 @@ void TupleNode::print(std::ostream &out)
     for (auto it = conts.begin(); it != conts.end();)
     {
         it->first->print(out);
+        if (it->second)
+            out << ' ' << Global().getIdent(it->second);
         if (++it != conts.end())
             out << ", ";
     }
@@ -384,7 +386,7 @@ TypeNodeB* ParamNode::clone(TypeManager*)
 
 void ParamNode::print(std::ostream &out)
 {
-    out << '?' << name;
+    out << '?' << Global().getIdent(name);
 }
 
 PrimitiveNode nint8("int!8");
@@ -540,17 +542,17 @@ Type TypeManager::fixExternNamed(NamedNode* n, Type conts, std::vector<Ident>& p
     while (n->args.size() < params.size())
     {
         Ident alias = Global().addIdent(
-            Global().getIdent(params[n->args.size() - 1]) + " in "
-            + Global().getIdent(n->name));
+            "<" + Global().getIdent(params[n->args.size()]) + " in "
+            + Global().getIdent(n->name) + ">");
         n->args.push_back(typ::mgr.makeParam(alias));
     }
 
     std::map<Ident, TypeNodeB*> subs;
-    while (params.size() && n->args.size())
+    auto it = n->args.begin();
+    for (unsigned int idx = 0; idx < params.size(); ++idx)
     {
-        subs[params.back()] = n->args.back();
-        params.pop_back();
-        n->args.pop_back();
+        subs[params[idx]] = *it;
+        ++it;
     }
 
     n->type = substitute(conts, subs);

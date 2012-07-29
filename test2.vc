@@ -1,19 +1,11 @@
 module dfsa;
 
-foo bar;
+type foo = bar!(int, float);
+type baz = bar;
 
 private:
 
-type foo = {float, int};
-
-bar = baz;
-
-int:int main = 
-(
-
-);
-
-int baz;
+type bar?(T,U) = {?T, [?U]}
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];
