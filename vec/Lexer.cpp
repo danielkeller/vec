@@ -210,10 +210,13 @@ inline void Lexer::lexNumber()
 
     while ((*end >= '0' && *end <= '9')
         || *end == 'e' || *end == 'E'
-        || *end == '+' || *end == '-'
         || *end == '.'
         || *end == 'x' || *end == 'X')
     {
+        //only accept +/- after e
+        if ((*end == 'e' || *end == 'E')
+            && (end[1] == '+' || end[1] == '-'))
+            ++end;
         ++end;
     }
 
