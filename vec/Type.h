@@ -66,13 +66,14 @@ namespace typ
         std::string to_str();
 
         //factory functions for derived types
-        FuncType getFunc();
-        ListType getList();
-        TupleType getTuple();
-        RefType getRef();
-        NamedType getNamed();
-        ParamType getParam();
-        PrimitiveType getPrimitive();
+        //the const is kind of a lie but it helps when you have types in maps
+        FuncType getFunc() const;
+        ListType getList() const;
+        TupleType getTuple() const;
+        RefType getRef() const;
+        NamedType getNamed() const;
+        ParamType getParam() const;
+        PrimitiveType getPrimitive() const;
 
         friend class TypeManager;
         friend class TupleBuilder;
@@ -127,6 +128,9 @@ namespace typ
         NamedNode* und_node;
     public:
         bool isValid() {return und_node != 0;}
+        Ident name();
+        Type realType();
+        unsigned int numArgs();
         friend class Type;
     };
 
@@ -189,6 +193,9 @@ namespace typ
         //creates a new type with params repaced by the specified types
         Type substitute(Type old, std::map<Ident, TypeNodeB*>& subs);
 
+        //internal version of this function
+        Type fixExternNamed(NamedNode* toFix, Type conts, std::vector<Ident>& params);
+
     public:
         ~TypeManager();
 
@@ -199,7 +206,10 @@ namespace typ
         Type makeTuple(TupleBuilder&);
         Type makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args);
         Type makeExternNamed(Ident name, NamedBuilder& args);
+        void fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params);
         Type makeNamed(Type conts, Ident name);
+
+        void printAll(std::ostream& os);
 
         //these functions aren't really part of the public interface but its simpler to make them public
 

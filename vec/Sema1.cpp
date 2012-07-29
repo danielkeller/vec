@@ -17,6 +17,8 @@ void Sema::Phase1()
     //types that select child and descendent nodes for example.
     //if only a few steps need that, let them implement it
 
+    //TODO: insert ScopeEntryExpr and ScopeExitExpr or somesuch
+
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
     AstWalk<Block>([] (Block *b)

@@ -110,8 +110,8 @@ void Sema::Phase3()
                 OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(call->func->var);
                 if (oGroup == 0)
                 {
-                    err::Error(call->func->loc) << "cannot call object of non-function type '"
-                        << call->func->Type().to_str() << '\'' << err::underline;
+                    err::Error(call->func->loc) << "cannot call object of non-function type "
+                        << call->func->Type().to_str() << err::underline;
                     call->Type() = call->func->Type(); //sorta recover
                     continue; //break out
                 }
@@ -132,8 +132,8 @@ void Sema::Phase3()
                     typ::FuncType ft = lhs->Type().getFunc();
                     if (!ft.isValid())
                     {
-                        err::Error(be->getChildA()->loc) << "cannot call object of non-function type '"
-                            << lhs->Type().to_str() << '\'' << err::underline
+                        err::Error(be->getChildA()->loc) << "cannot call object of non-function type "
+                            << lhs->Type().to_str() << err::underline
                             << be->opLoc << err::caret;
                         be->Type() = lhs->Type(); //sorta recover
                     }

@@ -136,6 +136,7 @@ TypeCompareResult dename(TypeNodeB*& node)
         node = realNode->type;
         return TypeCompareResult::valid + 1;
     }
+    
     if (TupleNode* realNode = dynamic_cast<TupleNode*>(node))
     {
         //conversion from [x] to x is considered denaming
@@ -145,6 +146,7 @@ TypeCompareResult dename(TypeNodeB*& node)
             node = realNode->conts.front().first;
             return TypeCompareResult::valid + 1;
         }
+
     }
     return TypeCompareResult::valid;
 }
@@ -158,10 +160,14 @@ TypeCompareResult TypeNode<T>::compare (TypeNodeB* other)
         return TypeCompareResult::valid;
         
     TypeNodeB* realThis = this;
-    
-    //FIXME: don't dename them at the same time, this could miss 
-    //type foo = bar;
-    //kind of situations
+
+    //hey i just found you, and this is crazy, but i'm a low importance bug, so FIXME maybe?
+    //denaming has to find either the lowest common ancestor in the (possibly bipartite)
+    //tree of type names, or the root for each node if no such ancestor exists. consider
+    //type foo = int;
+    //type bar = foo;
+    //type baf = foo;
+    //the correct cost for bar-baf conversion is 1, but the current algo will give 2
     
     //only call compare again if either function did something, otherwise fall through
     TypeCompareResult penalty = dename(realThis) + dename(other);
@@ -358,8 +364,6 @@ void NamedNode::print(std::ostream &out)
             out << ", ";
     }
     out << ")";
-
-    //TODO: print "aka" type
 }
 
 TypeCompareResult ParamNode::compareTo(ParamNode* other)
@@ -383,21 +387,6 @@ void ParamNode::print(std::ostream &out)
     out << '?' << name;
 }
 
-//get the node of this type (if it is that type) behind any typedefs
-//this is used to construct type category specific Type subclasses
-template<class T>
-T* underlying_node(TypeNodeB* curNode)
-{
-    NamedNode* nn;
-    //iterate past all named nodes
-    while ((nn = dynamic_cast<NamedNode*>(curNode)) != 0)
-    {
-        curNode = nn->type;
-    }
-    //cast to desired type
-    return dynamic_cast<T*>(curNode);
-}
-
 PrimitiveNode nint8("int!8");
 PrimitiveNode nint16("int!16");
 PrimitiveNode nint32("int!32");
@@ -412,7 +401,7 @@ PrimitiveNode nany("?");
 PrimitiveNode nnull("void");
 PrimitiveNode noverload("<overload group>");
 PrimitiveNode nerror("<error type>");
-PrimitiveNode nundeclared("<undeclared type>");
+PrimitiveNode nundeclared("<undefined type>");
 
 Type int8(nint8);
 Type int16(nint16);
@@ -442,13 +431,39 @@ TypeCompareResult Type::compare(const Type& other)
 std::string Type::to_str()
 {
     std::stringstream strstr;
+    strstr << "'";
     node->print(strstr);
+    strstr << "'";
+
+    if (getNamed().isValid())
+    {
+        strstr << " aka ";
+        strstr << getNamed().realType().to_str();
+    }
+
     return strstr.str();
+}
+
+//get the node of this type (if it is that type) behind any typedefs
+//this is used to construct type category specific Type subclasses
+template<class T>
+T* underlying_node(TypeNodeB* curNode)
+{
+    /*
+    NamedNode* nn;
+    //iterate past all named nodes
+    //FIXME: what?? why??
+    while ((nn = dynamic_cast<NamedNode*>(curNode)) != 0)
+    {
+        curNode = nn->type;
+    }*/
+    //cast to desired type
+    return exact_cast<T*>(curNode);
 }
 
 //make our lives a little easer with a macro
 #define ListSubGetter(T) \
-T ## Type Type::get ## T() \
+T ## Type Type::get ## T() const \
 { \
     T ## Type ret; \
     ret.node = ret.und_node = underlying_node<T ## Node>(node); \
@@ -465,6 +480,10 @@ ListSubGetter(Primitive);
 
 Type FuncType::arg() {return und_node->arg;}
 Type FuncType::ret() {return und_node->ret;}
+
+Ident NamedType::name() {return und_node->name;}
+Type NamedType::realType() {return und_node->type;}
+unsigned int NamedType::numArgs() {return und_node->args.size();}
 
 TypeManager::~TypeManager()
 {
@@ -493,16 +512,8 @@ Type TypeManager::makeNamed(Type conts, Ident name, std::vector<Ident>& params, 
     n->name = name;
     std::swap(n->args, args.namedConts);
 
-    std::map<Ident, TypeNodeB*> subs;
-    while (params.size() && args.namedConts.size())
-    {
-        subs[params.back()] = args.namedConts.back();
-        params.pop_back();
-        args.namedConts.pop_back();
-    }
-
-    n->type = substitute(conts, subs);
-    return unique(n); //we still need to unique n, n != n->type
+    //the common code is in this function
+    return fixExternNamed(n, conts, params);
 }
 
 Type TypeManager::makeExternNamed(Ident name, NamedBuilder& args)
@@ -512,6 +523,38 @@ Type TypeManager::makeExternNamed(Ident name, NamedBuilder& args)
     std::swap(n->args, args.namedConts);
     n->type = undeclared;
     return unique(n);
+}
+
+void TypeManager::fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params)
+{
+    //we can't re-unique this node because that could break references to it. so we end
+    //up with nodes that are the same this will break uniqueness a little but it's ok
+    //since that is more of an optimization than a correctess thing.
+    fixExternNamed(static_cast<NamedNode*>(toFix.node), conts, params);
+}
+
+Type TypeManager::fixExternNamed(NamedNode* n, Type conts, std::vector<Ident>& params)
+{
+    //recover as best we can. also do "aliasing" here.
+    //get the name of the param and replace ie '?T' with '?T in foo'
+    while (n->args.size() < params.size())
+    {
+        Ident alias = Global().addIdent(
+            Global().getIdent(params[n->args.size() - 1]) + " in "
+            + Global().getIdent(n->name));
+        n->args.push_back(typ::mgr.makeParam(alias));
+    }
+
+    std::map<Ident, TypeNodeB*> subs;
+    while (params.size() && n->args.size())
+    {
+        subs[params.back()] = n->args.back();
+        params.pop_back();
+        n->args.pop_back();
+    }
+
+    n->type = substitute(conts, subs);
+    return unique(n); //we still need to unique n, n != n->type
 }
 
 Type TypeManager::makeNamed(Type conts, Ident name)
@@ -570,6 +613,14 @@ TypeNodeB* TypeManager::unique(TypeNodeB* n)
 
     nodes.push_back(n);
     return n;
+}
+
+void TypeManager::printAll(std::ostream& os)
+{
+    for (auto node : nodes)
+    {
+        os << Type(node).to_str() << std::endl;
+    }
 }
 
 //ok here's how this works. whenever a named type is used, we run this fuction

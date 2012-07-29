@@ -32,7 +32,7 @@ public:
     //reserved identifiers. like keywords, but handled as identifiers
     //for ease of parsing. the struct is syntactic sugar
     //also, reserved things which aren't identifiers
-    struct
+    struct reserved
     {
         Ident null;
         Ident arg;

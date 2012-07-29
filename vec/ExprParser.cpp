@@ -164,6 +164,8 @@ Node0* Parser::parsePrimaryExpr()
     //any types. we then restore, and "try again" by parsing it as an expression instead.
     //TODO: maybe it would be better to only allow declarations at the beginning of expressions?
     //it would prevent the creation of lots of extraneous types
+    //assume its a type first because there are many fewer places in code to error out and
+    //need to backtrack from
     if (couldBeType(to))
     {
         //it must be a type. don't set backtracking in this case so we get better errors.
@@ -193,7 +195,8 @@ Node0* Parser::parsePrimaryExpr()
         lexer->Advance();
         DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
         if (decl == 0) //didn't find decl
-            decl = Global().reserved.undeclared_v; //don't complain, it could be in another package
+            return new DeclExpr(to.value.ident_v, typ::undeclared, to.loc);
+        //don't complain, it could be in another package. put in a fake decl instead
 
         return new VarExpr(decl, to.loc);
     }

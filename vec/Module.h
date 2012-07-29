@@ -31,7 +31,17 @@ namespace ast
         NormalScope priv;
         std::list<NormalScope> scopes;
 
-        std::map<typ::Type, tok::Location> externTypes;
+        struct ExternTypeInfo
+        {
+            tok::Location nameLoc;
+            tok::Location argsLoc;
+            bool couldBeExtraneous; //could it be a byproduct of backtracking?
+            ExternTypeInfo(tok::Location& nameLoc, tok::Location& argsLoc, bool couldBeExtraneous)
+                : nameLoc(nameLoc), argsLoc(argsLoc), couldBeExtraneous(couldBeExtraneous) {}
+            ExternTypeInfo() {}
+        };
+
+        std::map<typ::Type, ExternTypeInfo> externTypes;
 
         std::string myLbl() {return "Comp Unit";}
 

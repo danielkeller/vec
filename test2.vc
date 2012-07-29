@@ -1,42 +1,19 @@
 module dfsa;
 
-int foo = 6;
-
-int:int test = 6;
-
-type food = int;
-type bard = food;
-
-bard bafd = food asfd;
-
-int:[int a, food b] operator- = 2;
-
-int:int one = __intrin:6;
-int:[int a, float b] one = 7;
-
-one:[7, 8.8];
-int:int qwer;
+foo bar;
 
 private:
-foo:2;
+
+type foo = [float, int];
+
+bar = baz;
 
 int:int main = 
 (
-    bard bar;
-    
-    6 - bar;
 
-    bar - float ffera;
-
-	if (qwer:foo)
-	(
-		float asdf = 7.7;
-	)
-    else if (2)
-        bar = 6;
-    else
-	    int a = (15; 16; 17);
 );
+
+int baz;
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

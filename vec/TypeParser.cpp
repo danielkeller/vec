@@ -307,9 +307,11 @@ void Parser::parseNamed()
     typ::NamedBuilder builder;
     unsigned int nargs = 0;
 
-    //TODO: this is incorrect for an expression, right? can we disable backtracking?
     if (lexer->Expect(tok::bang))
     {
+        //this is incorrect for an expression, disable backtracking
+        backtrackStatus = CantBacktrack;
+
         if (lexer->Expect(tok::lparen))
         {
             do {
@@ -340,7 +342,22 @@ void Parser::parseNamed()
     if (!td)
     {
         type = typ::mgr.makeExternNamed(typeName, builder);
-        mod->externTypes[type] = argsLoc;
+
+        //only complain about the first instance. we only need one anyway to fix the type. 
+        //if the previous one could be extraneous but this one can't, replace it for better 
+        //errors
+
+        //an educated guess is the best way to do this because we can't exactly go back to 
+        //already parsed types and say "oh yeah we needed that." technically this could be 
+        //done by adding stuff to TypeManager but this is 90% of the meaty goodness for 
+        //10% of the work
+
+        bool thisCouldBeExtraneous = backtrackStatus == CanBacktrack;
+
+        if (!mod->externTypes.count(type)
+            || (mod->externTypes[type].couldBeExtraneous && !thisCouldBeExtraneous))
+            mod->externTypes[type]
+                = Module::ExternTypeInfo(id.loc, argsLoc, thisCouldBeExtraneous);
         return;
     }
     //otherwise, deal with it now
@@ -349,14 +366,7 @@ void Parser::parseNamed()
         err::Error(argsLoc) << "incorrect number of type arguments, expected 0 or " <<
             td->params.size() << ", got " << nargs << err::underline;
 
-    //recover as best we can. also do "aliasing" here.
-    //get the name of the param and replace ie '?T' with '?T in foo'
-    while (nargs < td->params.size())
-    {
-        Ident alias = Global().addIdent(
-            Global().getIdent(td->params[nargs]) + " in " + Global().getIdent(typeName));
-        builder.push_back(typ::mgr.makeParam(alias));
-    }
+    //don't worry about recovering, aliasing fixes this for us
 
     type = typ::mgr.makeNamed(td->mapped, typeName, td->params, builder);
 }

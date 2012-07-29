@@ -9,13 +9,14 @@ using namespace ast;
 
 Module::Module(std::string fname)
     : Node1(nullptr, tok::Location()),
-    fileName(fname),
     
     //set scope parents (private -> private import -> public -> public import -> universal)
     pub_import(&Global().universal),
     pub(&pub_import),
     priv_import(&pub),
-    priv(&priv_import)
+    priv(&priv_import),
+
+    fileName(fname)
 {
     std::ifstream t(fileName.c_str(), std::ios_base::in | std::ios_base::binary); //to keep CR / CRLF from messing us up
 
