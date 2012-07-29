@@ -192,11 +192,11 @@ inline void Lexer::lexOperator()
         err::Error(nextTok.loc) << nextTok.Name() << " cannot be overloaded" << err::underline;
         nextTok.type = tok::plus;
     }
-    else if (nextTok == tok::lbrace) //special case
+    else if (nextTok == tok::lsquare) //special case
     {
-        if (!Expect(tok::rbrace))
-            err::ExpectedAfter(this, "}", "{");
-        nextTok.type = tok::lbrace; //needed because expect reads a token
+        if (!Expect(tok::rsquare))
+            err::ExpectedAfter(this, "]", "[");
+        nextTok.type = tok::lsquare; //needed because expect reads a token
     }
 
     nextTok.value.ident_v = Global().reserved.opIdents[nextTok.type];

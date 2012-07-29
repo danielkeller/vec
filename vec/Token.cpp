@@ -37,7 +37,7 @@ bool tok::CanBeOverloaded(TokenType type)
         case equalsequals:
         case notequals:
         //case opequals: //overload indirectly?
-        case lbrace:
+        case lsquare:
         case bar:
         case barbar:
         //case colon:

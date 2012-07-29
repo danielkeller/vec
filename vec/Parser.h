@@ -9,8 +9,8 @@
 namespace par
 {
     //so we can easily change the syntax if needed
-    static const tok::TokenType listBegin = tok::lbrace, listEnd = tok::rbrace;
-    static const tok::TokenType tupleBegin = tok::lsquare, tupleEnd = tok::rsquare;
+    static const tok::TokenType listBegin = tok::lsquare, listEnd = tok::rsquare;
+    static const tok::TokenType tupleBegin = tok::lbrace, tupleEnd = tok::rbrace;
 
     bool couldBeType(tok::Token &t);
 

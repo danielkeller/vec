@@ -245,9 +245,9 @@ TypeNodeB* ListNode::clone(TypeManager* mgr)
 
 void ListNode::print(std::ostream &out)
 {
-    out << "{ ";
+    out << "[ ";
     contents->print(out);
-    out << " }";
+    out << " ]";
 }
 
 TypeCompareResult TupleNode::compareTo(TupleNode* other)
@@ -293,14 +293,14 @@ TypeNodeB* TupleNode::clone(TypeManager* mgr)
 
 void TupleNode::print(std::ostream &out)
 {
-    out << '[';
+    out << '{';
     for (auto it = conts.begin(); it != conts.end();)
     {
         it->first->print(out);
         if (++it != conts.end())
             out << ", ";
     }
-    out << ']';
+    out << '}';
 }
 
 TypeCompareResult RefNode::compareTo(RefNode* other)

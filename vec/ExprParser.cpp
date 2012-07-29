@@ -218,7 +218,7 @@ Node0* Parser::parsePrimaryExpr()
         return parseTuplify();
 
     default: //we're SOL
-        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret;
+        err::Error(to.loc) << "unexpected '" << to.Name() << "', expecting expression"  << err::caret;
         lexer->Advance(); //eat it so as not to loop forever
         return new NullExpr(to.loc);
     }

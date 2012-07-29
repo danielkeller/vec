@@ -202,7 +202,7 @@ namespace ast
         {
             loc = getChild(0)->loc;
         };
-        std::string myLbl() {return "\\{...\\}";}
+        std::string myLbl() {return "[...]";}
     };
 
     struct TuplifyExpr : public NodeN
@@ -212,7 +212,7 @@ namespace ast
         {
             loc = getChild(0)->loc;
         };
-        std::string myLbl() {return "[...]";}
+        std::string myLbl() {return "\\{...\\}";}
     };
 
     //postfix expressions
@@ -235,7 +235,7 @@ namespace ast
         {}
 
         bool isLval() {return getChildA()->isLval();}
-        std::string myLbl() {return "a[b]";}
+        std::string myLbl() {return "a{b}";}
     };
 
     struct ListAccExpr : public BinExpr
@@ -245,7 +245,7 @@ namespace ast
         {}
 
         bool isLval() {return getChildA()->isLval();}
-        std::string myLbl() {return "a{b}";}
+        std::string myLbl() {return "a[b]";}
     };
 }
 

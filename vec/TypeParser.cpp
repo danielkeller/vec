@@ -71,8 +71,8 @@ void Parser::parseTypeEnd()
 
 /*
 single-type
-    : '{' type '}'
-    | '[' type-list ']'
+    : '{' type-list '}'
+    | '[' type ']'
     | ('int' | 'float') ('!' int-const)?
     | '?' | '?' IDENT
     | '@' type
@@ -121,7 +121,7 @@ void Parser::parseSingle()
 
 /*
 single-type
-    : '{' type '}'
+    : '[' type ']'
     ;
 */
 void Parser::parseList()
@@ -135,7 +135,7 @@ void Parser::parseList()
     {
         //could be a declaration or something
         START_BACKTRACK;
-        err::ExpectedAfter(lexer, "'}'", "type");
+        err::ExpectedAfter(lexer, "']'", "type");
     }
 
     if (lexer->Expect(tok::bang))
@@ -157,7 +157,7 @@ void Parser::parseList()
 
 /*
 single-type
-    : '[' type-list ']'
+    : '{' type-list '}'
     ;
 type-list
     : type
@@ -186,7 +186,7 @@ void Parser::parseTuple()
     if (!lexer->Expect(tupleEnd))
     {
         START_BACKTRACK;
-        err::ExpectedAfter(lexer, tok::Name(tupleEnd), "type list");
+        err::ExpectedAfter(lexer, "'}'", "type list");
     }
 
     type = typ::mgr.makeTuple(builder);
