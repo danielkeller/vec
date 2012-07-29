@@ -43,6 +43,11 @@ void Module::PublicImport(Module* other)
     pub_import.Import(&other->pub);
 }
 
+void Module::PublicUnImport(Module* other)
+{
+    pub_import.UnImport(&other->pub);
+}
+
 void Module::PrivateImport(Module* other)
 {
     priv_import.Import(&other->pub);

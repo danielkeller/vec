@@ -21,6 +21,7 @@ namespace ast
         ~Module() {delete[] buffer;}
 
         void PublicImport(Module* other);
+        void PublicUnImport(Module* other);
         void PrivateImport(Module* other);
 
         std::string name;

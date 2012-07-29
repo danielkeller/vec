@@ -54,7 +54,7 @@ namespace ast
 
     class ImportScope : public Scope
     {
-        std::vector<Scope*> imports;
+        std::list<Scope*> imports;
         bool hasVisited; //to stop cycles
 
     public:
@@ -66,6 +66,11 @@ namespace ast
         void Import(Scope* other)
         {
             imports.push_back(other);
+        }
+
+        void UnImport(Scope* other)
+        {
+            imports.remove(other);
         }
 
         DeclExpr* getVarDef(Ident name);

@@ -22,18 +22,11 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 {
     ovr_queue result;
 
-    Scope* searchFrom = call->owner;
-
-    //patch so public code can see private functions. this is consistent with type and
-    //vairable treatment
-    if (searchFrom == &mod->pub)
-        searchFrom = &mod->priv;
-
     for (auto func : oGroup->functions)
     {
         //funcScope is the function's owning scope if its a decl, funcScope->parent is
         //if its a definition. TODO: this is kind of stupid
-        if (!searchFrom->canSee(func->funcScope) && !searchFrom->canSee(func->funcScope->getParent()))
+        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->getParent()))
             continue; //not visible in this scope
 
         result.push(
@@ -85,6 +78,12 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 //OR IS IT??
 void Sema::Phase3()
 {
+    //set the module to temporarily publicly import its own private scope.
+    //this lets overloaded calls in scopes inside the public scope see
+    //overloads in private or privately imported scopes
+    //TODO: will this support recursive sema 3? we could track the "current" module.
+    mod->pub_import.Import(&mod->priv);
+
     AstWalk<BasicBlock>([this] (BasicBlock* bb)
     {
         //we should be able to just go left to right here
@@ -197,7 +196,11 @@ void Sema::Phase3()
         //TuplifyExpr, ListifyExpr
         //PostExpr (just ++ and --)
         //TupAccExpr, ListAccExpr
+
     });
+    
+    //remove the temporary import
+    mod->pub_import.UnImport(&mod->priv);
 
     //now replace intrinsic calls with a special node type
 
