@@ -21,11 +21,19 @@ template<class T>
 void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType)
 {
     ovr_queue result;
+
+    Scope* searchFrom = call->owner;
+
+    //patch so public code can see private functions. this is consistent with type and
+    //vairable treatment
+    if (searchFrom == &mod->pub)
+        searchFrom = &mod->priv;
+
     for (auto func : oGroup->functions)
     {
         //funcScope is the function's owning scope if its a decl, funcScope->parent is
         //if its a definition. TODO: this is kind of stupid
-        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->getParent()))
+        if (!searchFrom->canSee(func->funcScope) && !searchFrom->canSee(func->funcScope->getParent()))
             continue; //not visible in this scope
 
         result.push(
