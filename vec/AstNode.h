@@ -138,6 +138,16 @@ namespace ast
             return parent->replaceChild(this, nullptr);
         }
 
+        //CRTP would fit here, but it would be annoying to have to do it 30+ times
+        template<class Node>
+        typename NPtr<Node>::type detachSelfAs()
+        {
+            if (exact_cast<Node*>(this))
+                return MkNPtr(static_cast<Node*>(detachSelf().release()));
+            else
+                return nullptr;
+        }
+
         virtual std::string myLbl()
         {
             return typeid(*this).name();

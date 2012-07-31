@@ -53,6 +53,28 @@ namespace ast
         const char *myColor() {return "8";};
     };
 
+    struct IntrinCallExpr : public NodeN
+    {
+        int intrin_id;
+        IntrinCallExpr(NPtr<OverloadCallExpr>::type orig, int intrin_id)
+            : NodeN(orig->loc),
+            intrin_id(intrin_id)
+        {
+            consume(move(orig));
+        }
+
+        IntrinCallExpr(NPtr<BinExpr>::type orig, int intrin_id)
+            : NodeN(orig->loc),
+            intrin_id(intrin_id)
+        {
+            appendChild(orig->detachChildA());
+            appendChild(orig->detachChildB());
+        }
+
+        std::string myLbl() {return utl::to_str(intrin_id) + ":";}
+        const char *myColor() {return "5";};
+    };
+
     struct FunctionDef : public Node1
     {
         FunctionDef(typ::Type t, Ptr s)

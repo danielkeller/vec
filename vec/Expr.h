@@ -103,10 +103,13 @@ namespace ast
         std::string myLbl() {return "str: " + utl::to_str(value);}
     };
 
+    struct IntrinCallExpr;
+
     struct OverloadableExpr
     {
         NormalScope* owner;
         FuncDeclExpr* ovrResult;
+        virtual NPtr<IntrinCallExpr>::type makeICall() = 0;
         OverloadableExpr(NormalScope* o)
             : owner(o), ovrResult(0) {}
     };
@@ -125,6 +128,8 @@ namespace ast
             Node2(move(lhs), move(rhs)), op(o)
         {};
         std::string myLbl() {return tok::Name(op);}
+
+        NPtr<IntrinCallExpr>::type makeICall();
     };
 
     struct AssignExpr : public BinExpr
@@ -149,6 +154,8 @@ namespace ast
         OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, NormalScope* o, const tok::Location & l)
             : OverloadableExpr(o), NodeN(move(rhs), l), func(move(lhs)) {}
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
+
+        NPtr<IntrinCallExpr>::type makeICall();
     };
 
     inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &op)

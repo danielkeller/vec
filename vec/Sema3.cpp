@@ -203,6 +203,51 @@ void Sema::Phase3()
     mod->pub_import.UnImport(&mod->priv);
 
     //now replace intrinsic calls with a special node type
+    //this is kind of annoying because we have to update TmpExprs as well.
+    //so we do it this way to avoid walking the tree tons of times
+    std::map<OverloadableExpr*, std::list<TmpExpr*>> intrins;
+
+    DynamicAstWalk<OverloadableExpr>([&intrins] (OverloadableExpr* expr)
+    {
+        if (exact_cast<IntrinDeclExpr*>(expr->ovrResult) != nullptr)
+            intrins[expr]; //add it to the map
+    });
+
+    AstWalk<TmpExpr>([&intrins] (TmpExpr* n)
+    {
+        OverloadableExpr* setBy = dynamic_cast<OverloadableExpr*>(n->setBy);
+
+        if (!setBy || !exact_cast<IntrinDeclExpr*>(setBy->ovrResult))
+            return;
+
+        intrins[setBy].push_back(n);
+    });
+
+    for (auto it : intrins)
+    {
+        Node0* parent = dynamic_cast<Node0*>(it.first)->parent;
+
+        auto iCall = it.first->makeICall();
+
+        for (auto tmp : it.second)
+            tmp->setBy = iCall.get();
+
+        parent->replaceDetachedChild(move(iCall));
+    }
 
     //now check stmts that want a specific type, ie return
+}
+
+NPtr<IntrinCallExpr>::type OverloadCallExpr::makeICall()
+{
+    IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
+    assert(intrin && "this is not an intrin");
+    return MkNPtr(new IntrinCallExpr(detachSelfAs<OverloadCallExpr>(), intrin->intrin_id));
+}
+
+NPtr<IntrinCallExpr>::type BinExpr::makeICall()
+{
+    IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
+    assert(intrin && "this is not an intrin");
+    return MkNPtr(new IntrinCallExpr(detachSelfAs<BinExpr>(), intrin->intrin_id));
 }

@@ -1,11 +1,16 @@
-module dfsa;
 
-type foo = bar!(int, float);
-type baz = bar;
+int foo = 6;
+int!64 bar = 7;
+int!64 baz = 8;
 
-private:
-
-type bar?(T,U) = {?T, [?U]}
+int:[String] main =
+(
+    if (foo < 8)
+        bar = (bar + baz);
+    else
+        foo * 7;
+    return bar;
+);
 
 //could do variadic templates:
 //ie type foo?[A, B, ...] = [A first, B second, {[...]}];

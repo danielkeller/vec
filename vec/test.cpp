@@ -92,6 +92,12 @@ int main ()
         sa::Sema s(mod);
         s.Import();
         s.Phase3();
+
+        std::ofstream dot4(mod->fileName + std::string(".4.dot"));
+        dot4 << "digraph G {\n";
+        mod->emitDot(dot4);
+        dot4 << '}';
+        dot4.close();
     }
 
     //typ::mgr.printAll(std::cerr);
