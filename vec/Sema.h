@@ -27,6 +27,8 @@ namespace sa
 
         template<class T>
         void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
+        void Sema::inferTypes (ast::BasicBlock* bb);
+        friend struct Sema3AstWalker;
         
     public:
         Sema(ast::Module* c) : mod(c) {};

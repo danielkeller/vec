@@ -9,6 +9,8 @@
 using namespace ast;
 using namespace sa;
 
+//Phase 3 is type inference, overload resolution, and template instantiation
+
 //convenience for overload resolution
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
 struct pairComp
@@ -74,8 +76,148 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     }
 }
 
-//Phase 3 is type inference, overload resolution, and template instantiation
-//OR IS IT??
+void Sema::inferTypes (BasicBlock* bb)
+{
+    //we should be able to just go left to right here
+    for (auto& it : bb->Children())
+    {
+        Node0* node = it.get();
+        //we could speed this up by doing it in order of decreasing frequency
+
+        //constants. these should do impicit casts
+        if (IntConstExpr* e = exact_cast<IntConstExpr*>(node))
+            e->Type() = typ::int32; //FIXME
+        else if (FloatConstExpr* e = exact_cast<FloatConstExpr*>(node))
+            e->Type() = typ::float32; //FIXME
+        else if (StringConstExpr* e = exact_cast<StringConstExpr*>(node))
+            e->Type() = Global().reserved.string_t;
+        else if (AssignExpr* ae = exact_cast<AssignExpr*>(node))
+        {
+            //try to merge types if its a decl
+            if (ae->Type().compare(ae->getChildB()->Type()) == typ::TypeCompareResult::invalid)
+            {
+                err::Error(ae->getChildA()->loc) << "cannot convert from "
+                    << ae->getChildB()->Type().to_str() << " to "
+                    << ae->getChildA()->Type().to_str() << " in assignment"
+                    << err::underline << ae->opLoc << err::caret
+                    << ae->getChildB()->loc << err::underline;
+                //whew!
+            }
+        }
+        else if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(node))
+        {
+            OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(call->func->var);
+            if (oGroup == 0)
+            {
+                err::Error(call->func->loc) << "cannot call object of non-function type "
+                    << call->func->Type().to_str() << err::underline;
+                call->Type() = call->func->Type(); //sorta recover
+                continue; //break out
+            }
+
+            typ::TupleBuilder builder;
+            for (auto& arg : call->Children())
+                builder.push_back(arg->Type(), Global().reserved.null);
+            typ::Type argType = typ::mgr.makeTuple(builder);
+
+            resolveOverload(oGroup, call, argType);
+        }
+        else if (BinExpr* be = exact_cast<BinExpr*>(node))
+        {
+            if (be->op == tok::colon) //"normal" function call
+            {
+                Node0* lhs = be->getChildA();
+                typ::FuncType ft = lhs->Type().getFunc();
+                if (!ft.isValid())
+                {
+                    err::Error(be->getChildA()->loc) << "cannot call object of non-function type "
+                        << lhs->Type().to_str() << err::underline
+                        << be->opLoc << err::caret;
+                    be->Type() = lhs->Type(); //sorta recover
+                }
+                else
+                {
+                    be->Type() = ft.ret();
+                    if (!ft.arg().compare(be->getChildB()->Type()).isValid())
+                        err::Error(be->getChildA()->loc)
+                            << "function arguments are inappropriate for function"
+                            << ft.arg().to_str() << " != " << be->getChildB()->Type().to_str()
+                            << err::underline << be->opLoc << err::caret
+                            << be->getChildB()->loc << err::underline;
+                }
+            }
+            else if (tok::CanBeOverloaded(be->op))
+            {
+                typ::TupleBuilder builder;
+                builder.push_back(be->getChildA()->Type(), Global().reserved.null);
+                builder.push_back(be->getChildB()->Type(), Global().reserved.null);
+                typ::Type argType = typ::mgr.makeTuple(builder);
+                DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[be->op]);
+                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(def);
+                assert(oGroup && "operator not overloaded properly");
+
+                resolveOverload(oGroup, be, argType);
+            }
+        }
+        else if (ListifyExpr* le = exact_cast<ListifyExpr*>(node))
+        {
+            typ::Type conts_t = le->getChild(0)->Type();
+            le->Type() = typ::mgr.makeList(conts_t, le->Children().size());
+            for (auto& c : le->Children())
+                if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
+                    err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
+                        << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
+        }
+        else if (TuplifyExpr* te = exact_cast<TuplifyExpr*>(node))
+        {
+            typ::TupleBuilder builder;
+            for (auto& c : te->Children())
+                builder.push_back(c->Type(), Global().reserved.null);
+            te->Type() = typ::mgr.makeTuple(builder);
+        }
+
+        //err::Error(err::warning, node->loc) << node->Type().to_str() << err::underline;
+    }
+    //types of exprs, for reference
+    //VarExpr -> DeclExpr -> FuncDeclExpr
+    //ConstExpr -> [IntConstExpr, FloatConstExpr, StringConstExpr] *
+    //BinExpr -> AssignExpr * -> OpAssignExpr
+    //UnExpr
+    //IterExpr, AggExpr
+    //TuplifyExpr, ListifyExpr
+    //PostExpr (just ++ and --)
+    //TupAccExpr, ListAccExpr
+
+}
+
+//have to implement this here because it doesn't walk the tree in a standard order
+namespace sa
+{
+    struct Sema3AstWalker : public AstWalker0
+    {
+        Sema* sema;
+        void call(ast::Node0* node);
+        Sema3AstWalker(ast::Node1* funcOrModule, Sema* sema)
+            : sema(sema)
+        {
+            call(funcOrModule->getChildA());
+        }
+    };
+}
+
+void Sema3AstWalker::call(ast::Node0* node)
+{
+    //don't enter function definitions
+    if (exact_cast<FunctionDef*>(node))
+        return;
+
+    BasicBlock * bb = exact_cast<BasicBlock*>(node);
+    if (bb)
+        sema->inferTypes(bb);
+    else
+        node->eachChild(this);
+}
+
 void Sema::Phase3()
 {
     //set the module to temporarily publicly import its own private scope.
@@ -84,120 +226,7 @@ void Sema::Phase3()
     //TODO: will this support recursive sema 3? we could track the "current" module.
     mod->pub_import.Import(&mod->priv);
 
-    AstWalk<BasicBlock>([this] (BasicBlock* bb)
-    {
-        //we should be able to just go left to right here
-        for (auto& it : bb->Children())
-        {
-            Node0* node = it.get();
-            //we could speed this up by doing it in order of decreasing frequency
-
-            //constants. these should do impicit casts
-            if (IntConstExpr* e = exact_cast<IntConstExpr*>(node))
-                e->Type() = typ::int32; //FIXME
-            else if (FloatConstExpr* e = exact_cast<FloatConstExpr*>(node))
-                e->Type() = typ::float32; //FIXME
-            else if (StringConstExpr* e = exact_cast<StringConstExpr*>(node))
-                e->Type() = Global().reserved.string_t;
-            else if (AssignExpr* ae = exact_cast<AssignExpr*>(node))
-            {
-                //try to merge types if its a decl
-                if (ae->Type().compare(ae->getChildB()->Type()) == typ::TypeCompareResult::invalid)
-                {
-                    err::Error(ae->getChildA()->loc) << "cannot convert from "
-                        << ae->getChildB()->Type().to_str() << " to "
-                        << ae->getChildA()->Type().to_str() << " in assignment"
-                        << err::underline << ae->opLoc << err::caret
-                        << ae->getChildB()->loc << err::underline;
-                    //whew!
-                }
-            }
-            else if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(node))
-            {
-                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(call->func->var);
-                if (oGroup == 0)
-                {
-                    err::Error(call->func->loc) << "cannot call object of non-function type "
-                        << call->func->Type().to_str() << err::underline;
-                    call->Type() = call->func->Type(); //sorta recover
-                    continue; //break out
-                }
-
-                typ::TupleBuilder builder;
-                for (auto& arg : call->Children())
-                    builder.push_back(arg->Type(), Global().reserved.null);
-                typ::Type argType = typ::mgr.makeTuple(builder);
-
-                resolveOverload(oGroup, call, argType);
-
-            }
-            else if (BinExpr* be = exact_cast<BinExpr*>(node))
-            {
-                if (be->op == tok::colon) //"normal" function call
-                {
-                    Node0* lhs = be->getChildA();
-                    typ::FuncType ft = lhs->Type().getFunc();
-                    if (!ft.isValid())
-                    {
-                        err::Error(be->getChildA()->loc) << "cannot call object of non-function type "
-                            << lhs->Type().to_str() << err::underline
-                            << be->opLoc << err::caret;
-                        be->Type() = lhs->Type(); //sorta recover
-                    }
-                    else
-                    {
-                        be->Type() = ft.ret();
-                        if (!ft.arg().compare(be->getChildB()->Type()).isValid())
-                            err::Error(be->getChildA()->loc)
-                                << "function arguments are inappropriate for function"
-                                << ft.arg().to_str() << " != " << be->getChildB()->Type().to_str()
-                                << err::underline << be->opLoc << err::caret
-                                << be->getChildB()->loc << err::underline;
-                    }
-                }
-                else if (tok::CanBeOverloaded(be->op))
-                {
-                    typ::TupleBuilder builder;
-                    builder.push_back(be->getChildA()->Type(), Global().reserved.null);
-                    builder.push_back(be->getChildB()->Type(), Global().reserved.null);
-                    typ::Type argType = typ::mgr.makeTuple(builder);
-                    DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[be->op]);
-                    OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(def);
-                    assert(oGroup && "operator not overloaded properly");
-
-                    resolveOverload(oGroup, be, argType);
-                }
-            }
-            else if (ListifyExpr* le = exact_cast<ListifyExpr*>(node))
-            {
-                typ::Type conts_t = le->getChild(0)->Type();
-                le->Type() = typ::mgr.makeList(conts_t, le->Children().size());
-                for (auto& c : le->Children())
-                    if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
-                        err::Error(le->getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
-                            << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
-            }
-            else if (TuplifyExpr* te = exact_cast<TuplifyExpr*>(node))
-            {
-                typ::TupleBuilder builder;
-                for (auto& c : te->Children())
-                    builder.push_back(c->Type(), Global().reserved.null);
-                te->Type() = typ::mgr.makeTuple(builder);
-            }
-
-            //err::Error(err::warning, node->loc) << node->Type().to_str() << err::underline;
-        }
-        //types of exprs, for reference
-        //VarExpr -> DeclExpr -> FuncDeclExpr
-        //ConstExpr -> [IntConstExpr, FloatConstExpr, StringConstExpr] *
-        //BinExpr -> AssignExpr * -> OpAssignExpr
-        //UnExpr
-        //IterExpr, AggExpr
-        //TuplifyExpr, ListifyExpr
-        //PostExpr (just ++ and --)
-        //TupAccExpr, ListAccExpr
-
-    });
+    Sema3AstWalker walker(mod, this);
     
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);

@@ -1,7 +1,7 @@
 
 int foo = 6;
-int!64 bar = 7;
-int!64 baz = 8;
+int!64 bar = 7+7;
+int!64 baz = (`(6+7); 9);
 
 int:[String] main =
 (
