@@ -33,17 +33,18 @@ void Sema::Phase1()
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (NodeN* ify)
     {
-        auto comma = ify->detachChildAs<BinExpr>(ify->Children().size() - 1);
-        while (comma && comma->op == tok::comma)
+        BinExpr* comma = exact_cast<BinExpr*>(ify->getChild(ify->Children().size() - 1));
+        while (comma != nullptr && comma->op == tok::comma)
         {
-            ify->popChild(); //remove comma
+            auto commaSave = comma->detachSelf(); //don't delete the subtree (yet)
+            ify->popChild();
             ify->appendChild(comma->detachChildA()); //add the left child
             ify->appendChild(comma->detachChildB()); //add the (potetially comma) right child
-            comma = ify->detachChildAs<BinExpr>(ify->Children().size() - 1);
         }
     };
     AstWalk<ListifyExpr>(ifyFlatten);
     AstWalk<TuplifyExpr>(ifyFlatten);
+
 
     //push flattened tuplify exprs into func calls
     AstWalk<OverloadCallExpr>([] (OverloadCallExpr* call)

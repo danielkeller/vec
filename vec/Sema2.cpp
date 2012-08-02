@@ -27,8 +27,8 @@ void Sema::Phase2()
         //start looking under current expr stmt, so we don't mix our expressions
         AnyAstWalker(es, [&curBB] (Node0* ex)
         {
-            if (!ex->isExpr() || exact_cast<TmpExpr*>(ex))
-                return; //only expressions, don't make a temp for a temp
+            if (!ex->isExpr() || exact_cast<TmpExpr*>(ex) || exact_cast<NullExpr*>(ex))
+                return; //only expressions, don't make a temp for a temp or null
 
             TmpExpr* te;
             

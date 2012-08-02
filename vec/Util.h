@@ -18,25 +18,14 @@ using std::move;
 //#define exact_cast dynamic_cast
 
 #ifndef exact_cast
-template<class To>
-struct exact_cast
+template<class To, class From>
+To exact_cast(From from)
 {
-    To result;
-
-    template<class From>
-    exact_cast(From* from)
-    {
-        if (from != nullptr && typeid(typename std::remove_pointer<To>::type) == typeid(*from))
-            result = static_cast<To>(from);
-        else
-            result = 0;
-    }
-
-    operator To() const
-    {
-        return result;
-    }
-};
+    if (from != nullptr && typeid(typename std::remove_pointer<To>::type) == typeid(*from))
+        return static_cast<To>(from);
+    else
+        return nullptr;
+}
 #endif
 
 namespace utl
