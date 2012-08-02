@@ -9,7 +9,7 @@ using namespace sa;
 
 //Phase two is where the AST is compacted into basic blocks. at some point in the future
 //it may also turn it into a CFG (control flow graph), but for now it maintains the
-//superstructure of the AST
+//superstructure of the AST. This is basically to support arbitrary nested statements.
 void Sema::Phase2()
 {
     //insert temporaries above all expressions
