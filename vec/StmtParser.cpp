@@ -166,15 +166,15 @@ Node0* Parser::parseStmt()
         exit(-1);
     default:
     {
-        Node0* ret = new ExprStmt(Ptr(parseExpression()));
+        ExprStmt* ret = new ExprStmt(Ptr(parseExpression()));
         //it's ok for regular ()'d expr and for empty blocks
         if (!lexer->Expect(tok::semicolon) && lexer->Peek() != tok::rparen && lexer->Last() != tok::rparen)
             err::ExpectedAfter(lexer, "';'", "expression");
         else if (lexer->Peek() == tok::rparen) // ie (foo;)
         {
             //hack so (`foo) + bar iterates on bar but (`foo;) + bar doesn't (but behaves as expected)
-            auto result = Ptr(new TmpExpr(ret));
-            ret = new StmtPair(Ptr(ret), Ptr(new ExprStmt(move(result))));
+            auto result = Ptr(new TmpExpr(ret->getChildA()));
+            return new StmtPair(Ptr(ret), Ptr(new ExprStmt(move(result))));
         }
         return ret;
     }
