@@ -190,21 +190,22 @@ void Sema::inferTypes (BasicBlock* bb)
 
 }
 
-//we want something that acts like this:
-/*
-void Sema3AstWalker::call(ast::Node0* node)
+void Sema::processFunc (ast::Node0* n)
 {
-    //don't enter function definitions
-    if (exact_cast<FunctionDef*>(node))
-        return;
-
-    BasicBlock * bb = exact_cast<BasicBlock*>(node);
-    if (bb)
-        sema->inferTypes(bb);
-    else
-        node->eachChild(this);
+    auto tree = Subtree<>(n).preorder();
+    auto treeEnd = tree.end();
+    for (auto it = tree.begin(); it != treeEnd;)
+    {
+        if (BasicBlock * bb = exact_cast<BasicBlock*>(*it))
+        {
+            std::cerr << bb->Children().size() << std::endl;
+            inferTypes(bb);
+            it.skipSubtree(); //don't enter function definitions, etc.
+        }
+        else
+            ++it;
+    }
 }
-*/
 
 void Sema::Phase3()
 {
@@ -214,19 +215,7 @@ void Sema::Phase3()
     //TODO: will this support recursive sema 3? we could track the "current" module.
     mod->pub_import.Import(&mod->priv);
     
-    auto tree = Subtree<>(mod).preorder();
-    auto treeEnd = tree.end();
-    for (auto it = tree.begin(); it != treeEnd; ++it)
-    {
-        if (exact_cast<FunctionDef*>(*it)) //don't enter function definitions
-            it.skipSubtree();
-
-        if (BasicBlock * bb = exact_cast<BasicBlock*>(*it))
-        {
-            inferTypes(bb);
-            it.skipSubtree();
-        }
-    }
+    processFunc(mod);
 
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);

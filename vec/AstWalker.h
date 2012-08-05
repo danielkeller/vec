@@ -151,6 +151,8 @@ namespace sa
         auto it = Subtree<f, c, o>(n).end();
         if (it.n != end) //don't pass the end of what we're iterating
             n = (++it).n;
+        else
+            n = end; //if we're waiting for the end node, don't loop forever
     }
 
     //go to next match or stop at end

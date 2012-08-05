@@ -5,8 +5,8 @@ int!64 baz = (`(6+7); 9);
 
 int:[String] main =
 (
-    if (foo < 8)
-        bar = (bar + baz);
+    if (foo < 8 + 1)
+        bar = (bar + -baz);
     else
         foo * 7;
     return bar;
