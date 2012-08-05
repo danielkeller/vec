@@ -190,21 +190,8 @@ void Sema::inferTypes (BasicBlock* bb)
 
 }
 
-//have to implement this here because it doesn't walk the tree in a standard order
-namespace sa
-{
-    struct Sema3AstWalker : public AstWalker0
-    {
-        Sema* sema;
-        void call(ast::Node0* node);
-        Sema3AstWalker(ast::Node1* funcOrModule, Sema* sema)
-            : sema(sema)
-        {
-            call(funcOrModule->getChildA());
-        }
-    };
-}
-
+//we want something that acts like this:
+/*
 void Sema3AstWalker::call(ast::Node0* node)
 {
     //don't enter function definitions
@@ -217,6 +204,7 @@ void Sema3AstWalker::call(ast::Node0* node)
     else
         node->eachChild(this);
 }
+*/
 
 void Sema::Phase3()
 {
@@ -225,9 +213,21 @@ void Sema::Phase3()
     //overloads in private or privately imported scopes
     //TODO: will this support recursive sema 3? we could track the "current" module.
     mod->pub_import.Import(&mod->priv);
-
-    Sema3AstWalker walker(mod, this);
     
+    auto tree = Subtree<>(mod).preorder();
+    auto treeEnd = tree.end();
+    for (auto it = tree.begin(); it != treeEnd; ++it)
+    {
+        if (exact_cast<FunctionDef*>(*it)) //don't enter function definitions
+            it.skipSubtree();
+
+        if (BasicBlock * bb = exact_cast<BasicBlock*>(*it))
+        {
+            inferTypes(bb);
+            it.skipSubtree();
+        }
+    }
+
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);
 
@@ -236,21 +236,21 @@ void Sema::Phase3()
     //so we do it this way to avoid walking the tree tons of times
     std::map<OverloadableExpr*, std::list<TmpExpr*>> intrins;
 
-    DynamicAstWalk<OverloadableExpr>([&intrins] (OverloadableExpr* expr)
+    for (auto expr : Subtree<OverloadableExpr, Cast::Dynamic>(mod))
     {
         if (exact_cast<IntrinDeclExpr*>(expr->ovrResult) != nullptr)
             intrins[expr]; //add it to the map
-    });
+    }
 
-    AstWalk<TmpExpr>([&intrins] (TmpExpr* n)
+    for (auto n : Subtree<TmpExpr>(mod))
     {
         OverloadableExpr* setBy = dynamic_cast<OverloadableExpr*>(n->setBy);
 
         if (!setBy || !exact_cast<IntrinDeclExpr*>(setBy->ovrResult))
-            return;
+            continue;
 
         intrins[setBy].push_back(n);
-    });
+    }
 
     for (auto it : intrins)
     {

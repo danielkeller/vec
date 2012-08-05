@@ -10,6 +10,7 @@
 #include <list>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 #ifdef _WIN32
 #pragma warning (disable: 4250 4127) //inherits via dominance, cond expr is constant
@@ -18,16 +19,6 @@
 namespace ast
 {
     class Node0;
-}
-
-namespace sa
-{
-    //allows us to call a template functor from a virtual function
-    class AstWalker0
-    {
-    public:
-        virtual void call(ast::Node0* node) = 0;
-    };
 }
 
 namespace ast
@@ -66,7 +57,6 @@ namespace ast
     //alternatively, we could use template magic to make this all work.
 
     //virtual Node base class for generic node classes ie expr, stmt
-
     class Node0
     {
     protected:
@@ -111,8 +101,15 @@ namespace ast
 
         tok::Location loc; //might not be set
         Node0 *parent;
-
-        virtual void eachChild(sa::AstWalker0*) {};
+        
+        //support for tree iteration. overriding functions call the one they inherit from.
+        //functions return null to mean "that was my child," their child if they null retuned
+        //to them, and the actual returned child otherwise
+        virtual Node0* childAfter(Node0* n)
+        {
+            assert(n == nullptr && "child not found!");
+            return nullptr;
+        }
 
         virtual void emitDot(std::ostream &os)
         {
@@ -183,9 +180,15 @@ namespace ast
 
     public:
 
-        void eachChild(sa::AstWalker0 *w)
+        Node0* childAfter(Node0* n)
         {
-            w->call(getChildA());
+            if (n == getChildA())
+                return nullptr;
+            Node0* child = Node0::childAfter(n);
+            if (child == nullptr)
+                return getChildA();
+            else
+                return child;
         }
 
         Ptr replaceChild(Node0* old, Ptr n)
@@ -255,10 +258,16 @@ namespace ast
         }
 
     public:
-        void eachChild(sa::AstWalker0 *w)
+
+        Node0* childAfter(Node0* n)
         {
-            Node1::eachChild(w);
-            w->call(getChildB());
+            if (n == getChildB())
+                return nullptr;
+            Node0* child = Node1::childAfter(n);
+            if (child == nullptr)
+                return getChildB();
+            else
+                return child;
         }
 
         Ptr replaceChild(Node0* old, Ptr n)
@@ -328,10 +337,16 @@ namespace ast
         }
 
     public:
-        void eachChild(sa::AstWalker0 *w)
+
+        Node0* childAfter(Node0* n)
         {
-            Node2::eachChild(w);
-            w->call(getChildC());
+            if (n == getChildC())
+                return nullptr;
+            Node0* child = Node2::childAfter(n);
+            if (child == nullptr)
+                return getChildC();
+            else
+                return child;
         }
 
         Ptr replaceChild(Node0* old, Ptr n)
@@ -399,10 +414,23 @@ namespace ast
         };
 
     public:
-        void eachChild(sa::AstWalker0 *w)
+
+        Node0* childAfter(Node0* n)
         {
-            for (Ptr& c : chld) //have to use ref type to not make a copy
-                w->call(c.get());
+            if (chld.size() == 0)
+                return nullptr;
+            if (n == nullptr)
+                return getChild(0);
+
+            auto loc = std::find_if(chld.begin(), chld.end(),
+                [n](const Ptr& cur) {return cur.get() == n;});
+
+            assert(loc != chld.end() && "child not found!");
+            ++loc;
+            if (loc == chld.end())
+                return nullptr;
+            else
+                return loc->get();
         }
 
         Ptr replaceChild(Node0* old, Ptr n)

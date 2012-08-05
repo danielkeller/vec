@@ -21,14 +21,14 @@ void Sema::Phase1()
 
     //eliminate () -> ExprStmt -> Expr form
     //this needs to happen before loop point addition so regular ()s don't interfere
-    AstWalk<Block>([] (Block *b)
+    for (auto b : Subtree<Block>(mod))
     {
         ExprStmt* es = exact_cast<ExprStmt*>(b->getChildA());
         if (es)
         {
             b->parent->replaceChild(b, es->detachChildA());
         }
-    });
+    }
 
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (NodeN* ify)
@@ -42,29 +42,32 @@ void Sema::Phase1()
             ify->appendChild(comma->detachChildB()); //add the (potetially comma) right child
         }
     };
-    AstWalk<ListifyExpr>(ifyFlatten);
-    AstWalk<TuplifyExpr>(ifyFlatten);
+
+    for (auto ify : Subtree<ListifyExpr>(mod))
+        ifyFlatten(ify);
+    for (auto ify : Subtree<TuplifyExpr>(mod))
+        ifyFlatten(ify);
 
 
     //push flattened tuplify exprs into func calls
-    AstWalk<OverloadCallExpr>([] (OverloadCallExpr* call)
+    for (auto call : Subtree<OverloadCallExpr>(mod))
     {
         auto args = call->detachChildAs<TuplifyExpr>(0);
         if (!args)
-            return;
+            continue;
         call->popChild();
         call->swap(args.get());
-    });
+    }
 
     //Package* pkg = new Package();
 
     //FIXME: memory leak when functions are declared & not defined
-    CachedAstWalk<AssignExpr>([this] (AssignExpr* ae)
+    for (auto ae : Subtree<AssignExpr>(mod).cached())
     {
         FuncDeclExpr* fde = exact_cast<FuncDeclExpr*>(ae->getChildA());
         //TODO: or varexpr?
         if (!fde)
-            return;
+            continue;
 
         //insert intrinsic declaration if that's what this is
         if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(ae->getChildB()))
@@ -86,7 +89,7 @@ void Sema::Phase1()
                 oGroup->functions.push_back(ide.get());
 
                 ae->parent->replaceChild(ae, move(ide));
-                return;
+                continue;
             }
         }
 
@@ -116,7 +119,7 @@ void Sema::Phase1()
         }
 
         ae->setChildB(move(fd));
-    });
+    }
 
     //after we do this, anything under root is global initialization code
     //so make the __init function for it
@@ -147,7 +150,8 @@ void Sema::Phase1()
 */
     //add loop points for ` expr
     //TODO: detect agg exprs
-    AstWalk<IterExpr>([] (IterExpr* ie)
+    //FIXME: putting ` in an if condition probably has unexpected results
+    for (auto ie : Subtree<IterExpr>(mod))
     {
         //find nearest exprStmt up the tree
         Node0* n;
@@ -165,32 +169,32 @@ void Sema::Phase1()
         }
         
         il->targets.push_back(ie);
-    });
+    }
 
     //replace variables that represent overloaded functions with the function that they
     //must represent, if there is only one such function
     //this makes function pointers & stuff easier
-    AstWalk<VarExpr>([] (VarExpr* ve)
+    for (auto ve : Subtree<VarExpr>(mod))
     {
         OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(ve->var);
         if (oGroup == 0)
-            return;
+            continue;
 
         if (oGroup->functions.size() == 1)
             ve->var = oGroup->functions.front();
-    });
+    }
 
     //remove null stmts under StmtPairs
-    AstWalk<StmtPair>([] (StmtPair* sp)
+    for (auto sp : Subtree<StmtPair>(mod).cached())
     {
         if (exact_cast<NullStmt*>(sp->getChildA()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildB());
         else if (exact_cast<NullStmt*>(sp->getChildB()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildA());
-    });
+    }
     
     //create expr stmts for other things that contain expressions
-    DynamicAstWalk<CondStmt>([] (CondStmt* cs)
+    for (auto cs : Subtree<CondStmt, Cast::Dynamic>(mod))
     {
         Node0* parent = dynamic_cast<Node0*>(cs)->parent;
         Ptr node = dynamic_cast<Node0*>(cs)->detachSelf();
@@ -201,5 +205,10 @@ void Sema::Phase1()
         
         Ptr sp = Ptr(new StmtPair(Ptr(new ExprStmt(move(expr))), move(node)));
         parent->replaceDetachedChild(move(sp));
-    });
+    }
+
+    //TODO: it might be worthwhile, after each stage of sema to validate the tree and check for
+    //null nodes. if there are any we can say 'could not recover from previous errors' and
+    //bail out. or we could check each time the iterator goes through. that might actually be a
+    //valid use case for exceptions...
 }

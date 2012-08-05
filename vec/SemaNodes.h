@@ -80,19 +80,13 @@ namespace ast
         FunctionDef(typ::Type t, Ptr s)
             : Node1(move(s)) {Type() = t;}
         std::string myLbl() {return Type().to_str();}
-        bool isExpr() {return false;}
+        bool isExpr() {return true;}
     };
 
     //basic block class that holds any number of instructions
     struct BasicBlock : public NodeN
     {
         std::string myLbl() {return "Block";}
-        bool isExpr() {return false;}
-    };
-
-    struct Package : public NodeN
-    {
-        std::string myLbl() {return "Package";}
         bool isExpr() {return false;}
     };
 }

@@ -7,11 +7,6 @@
 using namespace ast;
 using namespace sa;
 
-void Sema::AnyAstWalk(std::function<void(ast::Node0*)> action)
-{
-    AnyAstWalker aw(mod, action);
-}
-
 Node0* sa::findEndExpr(Node0* srch)
 {
     while (true)
@@ -31,7 +26,7 @@ Node0* sa::findEndExpr(Node0* srch)
 
 void Sema::validateTree()
 {
-    AnyAstWalk([] (Node0 *n)
+    for (auto n : Subtree<>(mod))
     {
         Node0* parent = n->parent;
         if (parent)
@@ -40,7 +35,7 @@ void Sema::validateTree()
             Ptr node = n->detachSelf(); //will fire assertion if n is not a child
             parent->replaceDetachedChild(move(node));
         }
-    });
+    }
 }
 
 //TODO: is this a good place for this?

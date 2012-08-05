@@ -20,15 +20,15 @@ void Sema::Phase2()
     //when we reach the end of an expression end the basic block
     //and start a new one. closure is used to save state (current BB) between calls
     std::map<ExprStmt*, Ptr> repl;
-    AstWalk<ExprStmt>([&repl] (ExprStmt* es)
+    for (auto es : Subtree<ExprStmt>(mod))
     {
         auto curBB = MkNPtr(new BasicBlock());
 
         //start looking under current expr stmt, so we don't mix our expressions
-        AnyAstWalker(es, [&curBB] (Node0* ex)
+        for (auto ex : Subtree<>(es).cached())
         {
             if (!ex->isExpr() || exact_cast<TmpExpr*>(ex))
-                return; //only expressions, don't make a temp for a temp or null
+                continue; //only expressions, don't make a temp for a temp or null
 
             TmpExpr* te;
             
@@ -55,10 +55,10 @@ void Sema::Phase2()
 
             //attach expression to the basic block
             curBB->appendChild(move(expr));
-        });
+        }
 
         repl[es] = move(curBB); //attach it
-    });
+    }
 
     //replace exprstmts with corresponding basic blocks
     for (auto& p : repl)
@@ -68,7 +68,7 @@ void Sema::Phase2()
     }
 
     //now split basic blocks where blocks occur inside them
-    AstWalk<BasicBlock>([this] (BasicBlock* bb)
+    for (auto bb : Subtree<BasicBlock>(mod).cached())
     {
         while (bb)
         {
@@ -79,7 +79,7 @@ void Sema::Phase2()
                     break;
 
             if (blkit == bb->Children().end())
-                return;
+                break; //continue outer loop
             
             Node0* bbParent = bb->parent;
 
@@ -104,19 +104,19 @@ void Sema::Phase2()
 
             bbParent->replaceDetachedChild(move(blk));
         }
-    });
+    }
     
     //now we can just delete all the rest of the blocks
-    AstWalk<Block>([this] (Block* b)
+    for (auto b : Subtree<Block>(mod).cached())
     {
         b->parent->replaceChild(b, b->detachChildA());
         validateTree();
-    });
+    }
 
     validateTree();
 
     //the tree of stmt pairs is pretty messed up by now, lets fix it
-    ReverseAstWalk<StmtPair>([] (StmtPair* upper)
+    for (auto upper : Subtree<StmtPair>(mod).preorder())
     {
         //is the left child also a stmt pair?
         //this has to be repeated in case lower->getChildA() is also a stmt pair
@@ -136,14 +136,14 @@ void Sema::Phase2()
             upper->setChildB(move(lower));
             //whew!
         }
-    });
+    }
 
     //combine adjacent BasicBlocks
-    AstWalk<StmtPair>([this] (StmtPair* upper)
+    for (auto upper : Subtree<StmtPair>(mod).cached()) 
     {
         auto lhs = upper->detachChildAAs<BasicBlock>();
         if (!lhs)
-            return;
+            continue;
 
         auto lower = upper->detachChildBAs<StmtPair>();
 
@@ -155,7 +155,7 @@ void Sema::Phase2()
                 lhs->consume(move(rhs));
                 upper->setChildB(lower->detachChildB());
                 upper->setChildA(move(lhs));
-                return;
+                continue;
             }
 
             upper->setChildB(move(lower));
@@ -167,10 +167,10 @@ void Sema::Phase2()
             {
                 lhs->consume(move(rhs));
                 upper->parent->replaceChild(upper, move(lhs));
-                return;
+                continue;
             }
         }
         
         upper->setChildA(move(lhs));
-    });
+    }
 }
