@@ -15,9 +15,6 @@ namespace sa
 
         void validateTree();
 
-        template<class T>
-        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
-        void inferTypes (ast::BasicBlock* bb);
         void processFunc (ast::Node0* n);
         
     public:
@@ -34,6 +31,8 @@ namespace sa
 
         //infer types
         void Phase3();
+        template<class T>
+        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
 
         //constant propigation
         void Phase4();

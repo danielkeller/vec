@@ -16,13 +16,15 @@
 #pragma warning (disable: 4250 4127) //inherits via dominance, cond expr is constant
 #endif
 
-namespace ast
+namespace sa
 {
-    class Node0;
+    class Sema;
 }
 
 namespace ast
 {
+    class Node0;
+
     struct deleter {inline void operator()(Node0* x);};
     template<class Node>
     struct NPtr
@@ -98,6 +100,7 @@ namespace ast
         virtual typ::Type& Type() {return type;} //sgetter. sget it?
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
+        virtual void inferType(sa::Sema& sema) {}
 
         tok::Location loc; //might not be set
         Node0 *parent;

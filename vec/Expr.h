@@ -87,6 +87,7 @@ namespace ast
         long long value;
         IntConstExpr(long long v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return utl::to_str(value);}
+        typ::Type& Type() {return typ::int64;}
     };
 
     struct FloatConstExpr : public ConstExpr
@@ -94,6 +95,7 @@ namespace ast
         long double value;
         FloatConstExpr(long double v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return utl::to_str(value);}
+        typ::Type& Type() {return typ::float80;}
     };
 
     struct StringConstExpr : public ConstExpr
@@ -101,6 +103,7 @@ namespace ast
         Str value;
         StringConstExpr(Str v, tok::Location &l) : ConstExpr(l), value(v) {};
         std::string myLbl() {return "str: " + utl::to_str(value);}
+        void inferType(sa::Sema&);
     };
 
     struct IntrinCallExpr;
@@ -130,6 +133,7 @@ namespace ast
         std::string myLbl() {return tok::Name(op);}
 
         NPtr<IntrinCallExpr>::type makeICall();
+        void inferType(sa::Sema&);
     };
 
     struct AssignExpr : public BinExpr
@@ -138,6 +142,7 @@ namespace ast
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
         typ::Type& Type() {return getChildA()->Type();}
+        void inferType(sa::Sema&);
     };
 
     struct OpAssignExpr : public AssignExpr
@@ -156,6 +161,7 @@ namespace ast
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
 
         NPtr<IntrinCallExpr>::type makeICall();
+        void inferType(sa::Sema&);
     };
 
     inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &op)
@@ -173,8 +179,10 @@ namespace ast
     {
         tok::TokenType op;
         UnExpr(Ptr arg, tok::Token &o)
-            : Node1(move(arg), o.loc + arg->loc), op(o.type)
-        {};
+            : Node1(move(arg)), op(o.type)
+        {
+            loc = o.loc + getChildA()->loc;
+        };
         std::string myLbl() {return tok::Name(op);}
     };
 
@@ -210,6 +218,7 @@ namespace ast
             loc = getChild(0)->loc;
         };
         std::string myLbl() {return "[...]";}
+        void inferType(sa::Sema&);
     };
 
     struct TuplifyExpr : public NodeN
@@ -220,6 +229,7 @@ namespace ast
             loc = getChild(0)->loc;
         };
         std::string myLbl() {return "\\{...\\}";}
+        void inferType(sa::Sema&);
     };
 
     //postfix expressions

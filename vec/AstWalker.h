@@ -201,7 +201,7 @@ namespace sa
         while (end->childAfter(nullptr))
         {
             //set n to its last child
-            Node0* temp = end->childAfter(nullptr);
+            ast::Node0* temp = end->childAfter(nullptr);
             while (end->childAfter(temp))
                 temp = end->childAfter(temp);
             end = temp;
