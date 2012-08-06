@@ -73,6 +73,19 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     {
         call->ovrResult = firstChoice.second;
         call->Type() = call->ovrResult->Type().getFunc().ret();
+
+        //if its an intrinsic, switch it to a special node
+        if (exact_cast<IntrinDeclExpr*>(call->ovrResult))
+        {
+            Node0* parent = call->parent;
+
+            auto iCall = call->makeICall();
+
+            for (auto tmp : intrins[call])
+                tmp->setBy = iCall.get();
+
+            parent->replaceDetachedChild(move(iCall));
+        }
     }
 }
 
@@ -182,6 +195,16 @@ void TuplifyExpr::inferType(Sema& sema)
 
 void Sema::processFunc (ast::Node0* n)
 {
+    intrins.clear();
+    //collect all temps set by overloadable exprs so they can be replaced
+    for (auto tmp : Subtree<TmpExpr>(n))
+    {
+        OverloadableExpr* setBy = dynamic_cast<OverloadableExpr*>(tmp->setBy);
+        if (!setBy)
+            continue;
+        intrins[setBy].push_back(tmp);
+    }
+
     auto tree = Subtree<>(n).preorder();
     auto treeEnd = tree.end();
     for (auto it = tree.begin(); it != treeEnd;)
@@ -193,6 +216,7 @@ void Sema::processFunc (ast::Node0* n)
 
             it.skipSubtree(); //don't enter function definitions, etc.
         }
+        //now check stmts that want a specific type, ie return
         else
             ++it;
     }
@@ -210,41 +234,6 @@ void Sema::Phase3()
 
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);
-
-    //now replace intrinsic calls with a special node type
-    //this is kind of annoying because we have to update TmpExprs as well.
-    //so we do it this way to avoid walking the tree tons of times
-    std::map<OverloadableExpr*, std::list<TmpExpr*>> intrins;
-
-    for (auto expr : Subtree<OverloadableExpr, Cast::Dynamic>(mod))
-    {
-        if (exact_cast<IntrinDeclExpr*>(expr->ovrResult) != nullptr)
-            intrins[expr]; //add it to the map
-    }
-
-    for (auto n : Subtree<TmpExpr>(mod))
-    {
-        OverloadableExpr* setBy = dynamic_cast<OverloadableExpr*>(n->setBy);
-
-        if (!setBy || !exact_cast<IntrinDeclExpr*>(setBy->ovrResult))
-            continue;
-
-        intrins[setBy].push_back(n);
-    }
-
-    for (auto it : intrins)
-    {
-        Node0* parent = dynamic_cast<Node0*>(it.first)->parent;
-
-        auto iCall = it.first->makeICall();
-
-        for (auto tmp : it.second)
-            tmp->setBy = iCall.get();
-
-        parent->replaceDetachedChild(move(iCall));
-    }
-
-    //now check stmts that want a specific type, ie return
 }
 
 NPtr<IntrinCallExpr>::type OverloadCallExpr::makeICall()

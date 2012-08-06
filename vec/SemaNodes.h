@@ -60,6 +60,7 @@ namespace ast
             : NodeN(orig->loc),
             intrin_id(intrin_id)
         {
+            Type() = orig->Type();
             consume(move(orig));
         }
 
@@ -67,6 +68,7 @@ namespace ast
             : NodeN(orig->loc),
             intrin_id(intrin_id)
         {
+            Type() = orig->Type();
             appendChild(orig->detachChildA());
             appendChild(orig->detachChildB());
         }

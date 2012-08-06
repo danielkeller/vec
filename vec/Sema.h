@@ -13,6 +13,8 @@ namespace sa
     {
         ast::Module* mod;
 
+        std::map<ast::OverloadableExpr*, std::list<ast::TmpExpr*>> intrins;
+
         void validateTree();
 
         void processFunc (ast::Node0* n);
