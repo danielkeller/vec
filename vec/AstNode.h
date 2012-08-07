@@ -100,7 +100,7 @@ namespace ast
         virtual typ::Type& Type() {return type;} //sgetter. sget it?
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
-        virtual void inferType(sa::Sema& sema) {}
+        virtual void inferType(sa::Sema&) {}
 
         tok::Location loc; //might not be set
         Node0 *parent;

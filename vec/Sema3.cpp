@@ -89,12 +89,14 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     }
 }
 
-void StringConstExpr::inferType(Sema& sema)
+//TODO: recover in a way that won't break values
+
+void StringConstExpr::inferType(Sema&)
 {
     Type() = Global().reserved.string_t;
 }
 
-void AssignExpr::inferType(Sema& sema)
+void AssignExpr::inferType(Sema&)
 {
     //try to merge types if its a decl
     if (Type().compare(getChildB()->Type()) == typ::TypeCompareResult::invalid)
@@ -165,7 +167,7 @@ void BinExpr::inferType(Sema& sema)
     }
 }
 
-void ListifyExpr::inferType(Sema& sema)
+void ListifyExpr::inferType(Sema&)
 {
     typ::Type conts_t = getChild(0)->Type();
     Type() = typ::mgr.makeList(conts_t, Children().size());
@@ -175,7 +177,7 @@ void ListifyExpr::inferType(Sema& sema)
                 << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
 }
 
-void TuplifyExpr::inferType(Sema& sema)
+void TuplifyExpr::inferType(Sema&)
 {
     typ::TupleBuilder builder;
     for (auto& c : Children())

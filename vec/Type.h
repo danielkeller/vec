@@ -103,6 +103,7 @@ namespace typ
     {
         ListNode* und_node;
     public:
+        Type conts();
         bool isValid() {return und_node != 0;}
         friend class Type;
     };
@@ -111,6 +112,7 @@ namespace typ
     {
         TupleNode* und_node;
     public:
+        Type elem(size_t pos);
         bool isValid() {return und_node != 0;}
         friend class Type;
     };
@@ -169,7 +171,7 @@ namespace typ
     class TupleBuilder
     {
         friend class TypeManager;
-        std::list<std::pair<TypeNodeB*, Ident>> tupleConts;
+        std::vector<std::pair<TypeNodeB*, Ident>> tupleConts;
     public:
         void push_back(Type elem, Ident name) {tupleConts.emplace_back(elem.node, name);}
     };

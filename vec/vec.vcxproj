@@ -86,6 +86,7 @@
     <ClInclude Include="Token.h" />
     <ClInclude Include="Type.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="Value.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include=".\Module.cpp" />
@@ -107,6 +108,7 @@
     <ClCompile Include="Type.cpp" />
     <ClCompile Include="TypeParser.cpp" />
     <ClCompile Include="Util.cpp" />
+    <ClCompile Include="Value.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\intrinsic" />

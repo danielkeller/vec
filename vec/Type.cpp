@@ -63,7 +63,7 @@ struct ListNode : public TypeNode<ListNode>
 
 struct TupleNode : public TypeNode<TupleNode>
 {
-    std::list<std::pair<TypeNodeB*, Ident>> conts;
+    std::vector<std::pair<TypeNodeB*, Ident>> conts;
     TypeCompareResult compareTo(TupleNode* other);
     bool insertCompareTo(TupleNode* other);
     TypeNodeB* clone(TypeManager*);
@@ -451,14 +451,12 @@ std::string Type::to_str()
 template<class T>
 T* underlying_node(TypeNodeB* curNode)
 {
-    /*
     NamedNode* nn;
-    //iterate past all named nodes
-    //FIXME: what?? why??
+    //iterate past all named nodes. this is so we can get the list type of string for example
     while ((nn = dynamic_cast<NamedNode*>(curNode)) != 0)
     {
         curNode = nn->type;
-    }*/
+    }
     //cast to desired type
     return exact_cast<T*>(curNode);
 }
@@ -476,12 +474,23 @@ ListSubGetter(Func);
 ListSubGetter(List);
 ListSubGetter(Tuple);
 ListSubGetter(Ref);
-ListSubGetter(Named);
 ListSubGetter(Param);
 ListSubGetter(Primitive);
 
+//don't use underlying_node for named nodes
+NamedType Type::getNamed() const
+{
+    NamedType ret;
+    ret.node = ret.und_node = exact_cast<NamedNode*>(node);
+    return ret;
+}
+
 Type FuncType::arg() {return und_node->arg;}
 Type FuncType::ret() {return und_node->ret;}
+
+Type ListType::conts() {return und_node->contents;}
+
+Type TupleType::elem(size_t pos) {return und_node->conts[pos].first;}
 
 Ident NamedType::name() {return und_node->name;}
 Type NamedType::realType() {return und_node->type;}
