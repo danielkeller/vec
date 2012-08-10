@@ -38,7 +38,7 @@ void Sema::Import()
         {
             err::Error(evar->loc) << "undeclared variable '" << Global().getIdent(evar->ename)
                 << "'" << err::underline;
-            evar->Type() = typ::error;
+            evar->Annotate(typ::error);
         }
         //fortunately we can sort of recover by leaving it the way it is, changing the type
         //to <error type>

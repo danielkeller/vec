@@ -14,7 +14,7 @@ namespace ast
         NullExpr(tok::Location const &l) : Node0(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
-        typ::Type& Type() {return typ::null;}
+        typ::Type Type() const {return typ::null;}
     };
 
     struct DeclExpr;
@@ -25,13 +25,13 @@ namespace ast
         Ident ename; //name of external variable
 
         VarExpr(DeclExpr* v, tok::Location const &l)
-            : Node0(l), var(v), ename(0) {}
+            : Node0(l), var(v), ename(Global().reserved.null) {}
         VarExpr(Ident n, tok::Location const &l)
             : Node0(l), var(Global().reserved.undeclared_v), ename(n) {}
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
-        inline typ::Type& Type();
+        inline typ::Type Type() const;
     };
 
     //could possibly have a weak_string of its name?
@@ -40,12 +40,12 @@ namespace ast
         Ident name; //for errors
 
         DeclExpr(Ident n, typ::Type t, tok::Location const &l)
-            : VarExpr(this, l),  name(n) {type = t;}
+            : VarExpr(this, l),  name(n) {Annotate(t);}
         DeclExpr(const DeclExpr& old) //this has to be specified because var must point to this
-            : VarExpr(this, old.loc), name(old.name) {type = old.type;}
+            : VarExpr(this, old.loc), name(old.name) {Annotate(old.Type());}
 
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
-        typ::Type& Type() {return type;} //have to re-override it back to the original
+        typ::Type Type() const {return DefaultType();} //have to re-override it back to the original
     };
 
     //put this here so it knows what a DeclExpr is
@@ -54,7 +54,7 @@ namespace ast
         return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
     }
 
-    typ::Type& VarExpr::Type()
+    typ::Type VarExpr::Type() const
     {
         return var->Type();
     }
@@ -69,7 +69,7 @@ namespace ast
     //declaration of an entire function overload group
     struct OverloadGroupDeclExpr : public DeclExpr
     {
-        typ::Type& Type() {return typ::overload;}
+        typ::Type Type() const {return typ::overload;}
         std::list<FuncDeclExpr*> functions;
         OverloadGroupDeclExpr(Ident n, tok::Location const &firstLoc)
             : DeclExpr(n, typ::error, firstLoc) {}
@@ -78,32 +78,11 @@ namespace ast
 
     struct ConstExpr : public Node0
     {
-        ConstExpr(tok::Location &l) : Node0(l) {};
+        ConstExpr(tok::Location &l)
+            : Node0(l)
+        {}
+
         const char *myColor() {return "7";};
-    };
-
-    struct IntConstExpr : public ConstExpr
-    {
-        long long value;
-        IntConstExpr(long long v, tok::Location &l) : ConstExpr(l), value(v) {};
-        std::string myLbl() {return utl::to_str(value);}
-        typ::Type& Type() {return typ::int64;}
-    };
-
-    struct FloatConstExpr : public ConstExpr
-    {
-        long double value;
-        FloatConstExpr(long double v, tok::Location &l) : ConstExpr(l), value(v) {};
-        std::string myLbl() {return utl::to_str(value);}
-        typ::Type& Type() {return typ::float80;}
-    };
-
-    struct StringConstExpr : public ConstExpr
-    {
-        Str value;
-        StringConstExpr(Str v, tok::Location &l) : ConstExpr(l), value(v) {};
-        std::string myLbl() {return "str: " + utl::to_str(value);}
-        void inferType(sa::Sema&);
     };
 
     struct IntrinCallExpr;
@@ -141,7 +120,7 @@ namespace ast
         AssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
-        typ::Type& Type() {return getChildA()->Type();}
+        typ::Type Type() const {return getChildA()->Type();}
         void inferType(sa::Sema&);
     };
 

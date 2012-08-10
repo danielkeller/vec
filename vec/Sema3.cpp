@@ -43,7 +43,7 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     {
         err::Error(call->loc) << "function '" << Global().getIdent(oGroup->name) << "' is not defined in this scope"
             << err::underline << call->loc << err::caret;
-        call->Type() = typ::error;
+        call->Annotate(typ::error);
         return;
     }
 
@@ -53,7 +53,7 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     {
         err::Error(call->loc) << "no accessible instance of overloaded function '" << Global().getIdent(oGroup->name)
             << "' matches arguments of type " << argType.to_str() << err::underline << call->loc << err::caret;
-        call->Type() = typ::error;
+        call->Annotate(typ::error);
     }
     else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
     {
@@ -67,12 +67,12 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             result.pop();
         }
         call->ovrResult = firstChoice.second; //recover
-        call->Type() = call->ovrResult->Type().getFunc().ret();
+        call->Annotate(call->ovrResult->Type().getFunc().ret());
     }
     else //success
     {
         call->ovrResult = firstChoice.second;
-        call->Type() = call->ovrResult->Type().getFunc().ret();
+        call->Annotate(call->ovrResult->Type().getFunc().ret());
 
         //if its an intrinsic, switch it to a special node
         if (exact_cast<IntrinDeclExpr*>(call->ovrResult))
@@ -87,13 +87,6 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             parent->replaceDetachedChild(move(iCall));
         }
     }
-}
-
-//TODO: recover in a way that won't break values
-
-void StringConstExpr::inferType(Sema&)
-{
-    Type() = Global().reserved.string_t;
 }
 
 void AssignExpr::inferType(Sema&)
@@ -117,7 +110,7 @@ void OverloadCallExpr::inferType(Sema& sema)
     {
         err::Error(func->loc) << "cannot call object of non-function type "
             << func->Type().to_str() << err::underline;
-        Type() = func->Type(); //sorta recover
+        Annotate(func->Type()); //sorta recover
         return;
     }
 
@@ -144,7 +137,7 @@ void BinExpr::inferType(Sema& sema)
         }
         else
         {
-            Type() = ft.ret();
+            Annotate(ft.ret());
             if (!ft.arg().compare(getChildB()->Type()).isValid())
                 err::Error(getChildA()->loc)
                     << "function arguments are inappropriate for function"
@@ -170,7 +163,7 @@ void BinExpr::inferType(Sema& sema)
 void ListifyExpr::inferType(Sema&)
 {
     typ::Type conts_t = getChild(0)->Type();
-    Type() = typ::mgr.makeList(conts_t, Children().size());
+    Annotate(typ::mgr.makeList(conts_t, Children().size()));
     for (auto& c : Children())
         if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
             err::Error(getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
@@ -182,7 +175,7 @@ void TuplifyExpr::inferType(Sema&)
     typ::TupleBuilder builder;
     for (auto& c : Children())
         builder.push_back(c->Type(), Global().reserved.null);
-    Type() = typ::mgr.makeTuple(builder);
+    Annotate(typ::mgr.makeTuple(builder));
 }
 
 //types of exprs, for reference

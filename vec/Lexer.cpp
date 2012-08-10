@@ -369,15 +369,17 @@ inline void Lexer::lexString()
     curChr++; //skip over "
     nextTok.loc.lastCol = nextTok.loc.firstCol + 1;
 
-    std::string strdata;
+    curVal = val::Value::scalarSeq(sizeof(char));
+    val::Value chr((char)0);
+
     while (*curChr != '\"' && *curChr != '\0')
-        strdata += consumeChar();
+    {
+        chr.getScalarAs<char>() = consumeChar();
+        curVal.appendSeqElem(chr);
+    }
 
     if (*curChr == '\0')
         err::Error(nextTok.loc) << "eof in string literal" << err::caret;
-
-    //insert string as new entry only if it's not already there
-    nextTok.value.int_v = Global().addString(strdata);
 }
 
 // the meat of the lexer

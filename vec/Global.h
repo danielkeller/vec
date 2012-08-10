@@ -20,10 +20,8 @@ public:
     TblType stringTbl;
     TblType identTbl;
 
-    Str addString(const std::string &str);
     Ident addIdent(const std::string &str);
 
-    std::string & getStr(Str idx) {return stringTbl[idx];}
     std::string & getIdent(Ident idx) {return identTbl[idx];}
 
     ast::NormalScope universal;

@@ -3,6 +3,7 @@
 
 #include "Token.h"
 #include "Util.h"
+#include "Value.h"
 
 #include <vector>
 
@@ -37,6 +38,8 @@ namespace lex
         void backtrackSet();
         void backtrackReset();
 
+        val::Value& getCurVal() {return curVal;}
+
     private:
 
         const char * curChr;
@@ -51,6 +54,8 @@ namespace lex
         } backtrack;
 
         ast::Module *mod;
+
+        val::Value curVal;
 
         inline void lexChar(tok::TokenType type); //consume single character
         inline void lexBinOp(tok::TokenType type); //consume x or x=

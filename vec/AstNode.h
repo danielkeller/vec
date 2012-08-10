@@ -3,6 +3,7 @@
 
 #include "Token.h"
 #include "Type.h"
+#include "Value.h"
 
 #include <functional>
 #include <ostream>
@@ -23,6 +24,31 @@ namespace sa
 
 namespace ast
 {
+    //various extra info about a node that may or may not be there
+    struct Annotation
+    {
+        typ::Type type;
+        val::Value value;
+        bool lval;
+
+        //add more as neccesary
+        void set (typ::Type t)
+        {
+            type = t;
+        }
+
+        void set (const val::Value& v)
+        {
+            value = v;
+        }
+
+        void set (typ::Type t, const val::Value& v)
+        {
+            type = t;
+            value = v;
+        }
+    };
+
     class Node0;
 
     struct deleter {inline void operator()(Node0* x);};
@@ -62,10 +88,6 @@ namespace ast
     class Node0
     {
     protected:
-        //type is private, and has a virtual "sgetter" so we can override its behavior
-        //when a derived Expr has some sort of deterministic type. wasted space isn't
-        //a big deal since it's only sizeof(void*) bytes
-        typ::Type type;
 
         //facility for creating unique_ptrs to ast node classes
         Node0(tok::Location const &l) : loc(l), parent(0) {};
@@ -96,8 +118,38 @@ namespace ast
                 n->emitDot(os);
         }
 
+        //avoid code duplication
+        typ::Type DefaultType() const
+        {
+            return annot ? annot->type : typ::error;
+        }
+
+        void makeAnnot()
+        {
+            if (!annot)
+                annot.reset(new Annotation());
+        }
+
     public:
-        virtual typ::Type& Type() {return type;} //sgetter. sget it?
+        
+        std::unique_ptr<Annotation> annot;
+
+        template<typename T>
+        void Annotate(const T& first)
+        {
+            makeAnnot();
+            annot->set(first);
+        }
+
+        template<typename T, typename U>
+        void Annotate(const T& first, const U& second)
+        {
+            makeAnnot();
+            annot->set(first, second);
+        }
+
+        //so we can override its behavior when a derived Expr has some sort of deterministic type.
+        virtual typ::Type Type() const {return DefaultType();}
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
         virtual void inferType(sa::Sema&) {}
@@ -203,7 +255,7 @@ namespace ast
                 return Node0::replaceChild(old, move(n));
         }
 
-        Node0* getChildA()
+        Node0* getChildA() const
         {
             return a.get();
         }
@@ -282,7 +334,7 @@ namespace ast
                 return Node1::replaceChild(old, move(n));
         }
 
-        Node0* getChildB()
+        Node0* getChildB() const
         {
             return b.get();
         }
@@ -361,7 +413,7 @@ namespace ast
                 return Node2::replaceChild(old, move(n));
         }
 
-        Node0* getChildC()
+        Node0* getChildC() const
         {
             return c.get();
         }
@@ -449,7 +501,7 @@ namespace ast
             return nullptr;
         }
 
-        Node0* getChild(int n)
+        Node0* getChild(int n) const
         {
             return chld[n].get();
         }

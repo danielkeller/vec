@@ -1,5 +1,5 @@
 
-int foo = 6;
+int foo = 6 * "oh hello there";
 int!64 bar = 7+7;
 int!64 baz = (`(6+7); 9);
 
@@ -8,7 +8,7 @@ int:[String] main =
     if (foo < 8 + 1)
         bar = (bar + -baz);
     else
-        foo * 7;
+        foo;
     return bar;
 );
 

@@ -78,9 +78,11 @@ void Sema::Phase1()
                 for (auto it : fde->funcScope->varDefs)
                     Ptr(it.second); //this is kind of dumb but it doesn't access the d'tor directly
 
-                IntConstExpr* ice = exact_cast<IntConstExpr*>(call->getChild(0));
-                assert(ice && "improper use of __intrin");
-                auto ide = MkNPtr(new IntrinDeclExpr(fde, (int)ice->value));
+                ConstExpr* ice = exact_cast<ConstExpr*>(call->getChild(0));
+                assert(ice && ice->Type() == typ::int64 && "improper use of __intrin");
+                auto ide = MkNPtr(
+                    new IntrinDeclExpr(fde, 
+                        (int)ice->annot->value.getScalarAs<long long>()));
 
                 //now replace the function decl in the overload group
                 OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(Global().universal.getVarDef(fde->name));

@@ -22,7 +22,7 @@ namespace ast
                 << " [style=dotted];\n";
         };
 
-        typ::Type& Type() {return setBy->Type();}
+        typ::Type Type() const {return setBy->Type();}
     };
 
     struct ImpliedLoopStmt : public Node1
@@ -60,7 +60,7 @@ namespace ast
             : NodeN(orig->loc),
             intrin_id(intrin_id)
         {
-            Type() = orig->Type();
+            Annotate(orig->Type());
             consume(move(orig));
         }
 
@@ -68,7 +68,7 @@ namespace ast
             : NodeN(orig->loc),
             intrin_id(intrin_id)
         {
-            Type() = orig->Type();
+            Annotate(orig->Type());
             appendChild(orig->detachChildA());
             appendChild(orig->detachChildB());
         }
@@ -80,7 +80,7 @@ namespace ast
     struct FunctionDef : public Node1
     {
         FunctionDef(typ::Type t, Ptr s)
-            : Node1(move(s)) {Type() = t;}
+            : Node1(move(s)) {Annotate(t);}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return true;}
     };

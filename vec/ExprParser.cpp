@@ -4,6 +4,7 @@
 #include "Module.h"
 #include "Stmt.h"
 #include "Global.h"
+#include "Type.h"
 
 using namespace par;
 using namespace ast;
@@ -200,15 +201,25 @@ Node0* Parser::parsePrimaryExpr()
 
         return new VarExpr(decl, to.loc);
     }
+    {
+        ConstExpr * ret;
+
     case tok::integer:
         lexer->Advance();
-        return new IntConstExpr(to.value.int_v, to.loc);
+        ret = new ConstExpr(to.loc);
+        ret->Annotate(typ::int64, val::Value(to.value.int_v));
+        return ret;
     case tok::floating:
         lexer->Advance();
-        return new FloatConstExpr(to.value.dbl_v, to.loc);
+        ret = new ConstExpr(to.loc);
+        ret->Annotate(typ::float80, val::Value(to.value.dbl_v));
+        return ret;
     case tok::stringlit:
         lexer->Advance();
-        return new StringConstExpr(to.value.ident_v, to.loc);
+        ret = new ConstExpr(to.loc);
+        ret->Annotate(Global().reserved.string_t, lexer->getCurVal());
+        return ret;
+    }
 
     case tok::lparen:
         return parseBlock();

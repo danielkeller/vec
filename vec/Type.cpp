@@ -593,7 +593,7 @@ Type TypeManager::makeFunc(Type ret, Type arg)
     else
     {
         typ::TupleBuilder builder;
-        builder.push_back(arg, 0); //is null ident == 0 a safe assumption?
+        builder.push_back(arg, Global().reserved.null);
         n->arg = makeTuple(builder);
     }
     return unique(n);

@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <array>
+#include <type_traits>
 
 //this is implemented similarly to types, except that is likely that we won't need values
 //for long after they're created. So, a reference counting implementation makes the most
@@ -18,26 +19,37 @@ namespace ast
 namespace val
 {
     struct ValNode;
-    typedef std::array<char, 8> byteVec;
 
     class Value
     {
+        //FIXME: this isn't good
         friend struct ScalarRefNode; //needs to access node
         friend struct Level1SeqNode;
         friend struct LevelNSeqNode;
-        friend Value fromNode(ValNode* n);
-        friend Value makeScalar();
-        friend Value seq(typ::Type t);
-        friend Value scalarSeq(typ::Type t);
 
         std::shared_ptr<ValNode> node; //I guess this is spimpl
 
-        byteVec& getBytes();
+        void* getBytes();
+
+        void makeScalar(); //needed because fromBytesOf is a template
 
     public:
         Value() {}
 
-        typ::Type& Type();
+        Value(ValNode* n); //for internal use
+        Value(const std::shared_ptr<ValNode>& n); //for internal use
+
+        template<typename T> //causes SF on non-arithmetic types
+        Value(T val, typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0)
+        {
+            makeScalar();
+            getScalarAs<T>() = val;
+        }
+
+        Value(std::unique_ptr<ast::FunctionDef> fd);
+
+        static Value seq();
+        static Value scalarSeq(size_t width);
 
         //create a copy that can be modifed independently
         Value Duplicate();
@@ -53,27 +65,11 @@ namespace val
         template<typename T>
         T& getScalarAs()
         {
-            return *reinterpret_cast<T*>(getBytes().data());
+            return *reinterpret_cast<T*>(getBytes());
         }
 
-        ast::FunctionDef*& getFunc();
+        std::unique_ptr<ast::FunctionDef>& getFunc();
     };
-
-    //factory functions
-
-    Value makeScalar(); //needed because fromBytesOf is a template
-
-    template<typename T>
-    Value fromBytesOf(typ::Type t, T val)
-    {
-        Value ret = makeScalar();
-        ret.getScalarAs<T>() = val;
-        ret.Type() = t;
-        return ret;
-    }
-
-    Value seq(typ::Type t);
-    Value scalarSeq(typ::Type t);
 }
         
 

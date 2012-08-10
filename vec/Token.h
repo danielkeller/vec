@@ -5,8 +5,22 @@
 
 #include <string>
 
-typedef int Ident;
-typedef int Str;
+
+//"strong typedef"
+class Ident
+{
+    friend Ident mkIdent(int v); //instead of c'tor
+    int val;
+public:
+    operator int() const {return val;}
+};
+
+inline Ident mkIdent(int v)
+{
+    Ident ret;
+    ret.val = v;
+    return ret;
+}
 
 namespace tok
 {
