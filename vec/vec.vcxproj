@@ -93,6 +93,7 @@
     <ClCompile Include="DeclParser.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="ExprParser.cpp" />
+    <ClCompile Include="Intrinsic.cpp" />
     <ClCompile Include="Lexer.cpp" />
     <ClCompile Include="Location.cpp" />
     <ClCompile Include=".\Global.cpp" />

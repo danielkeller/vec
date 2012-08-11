@@ -394,7 +394,6 @@ PrimitiveNode nint16("int!16");
 PrimitiveNode nint32("int!32");
 PrimitiveNode nint64("int!64");
     
-PrimitiveNode nfloat16("float!16");
 PrimitiveNode nfloat32("float!32");
 PrimitiveNode nfloat64("float!64");
 PrimitiveNode nfloat80("float!80");
@@ -410,7 +409,6 @@ Type int16(nint16);
 Type int32(nint32);
 Type int64(nint64);
 
-Type float16(nfloat16);
 Type float32(nfloat32);
 Type float64(nfloat64);
 Type float80(nfloat80);

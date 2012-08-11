@@ -54,6 +54,9 @@ namespace val
         //create a copy that can be modifed independently
         Value Duplicate();
 
+        bool isSet() const {return node;}
+        operator bool() const {return isSet();}
+
         //LLVMValue getLLVMValue();
 
         Value& getRefTarget();

@@ -1,7 +1,13 @@
 
+int:int!64 asdf;
+
 int foo = 6 * "oh hello there";
-int!64 bar = 7+7;
-int!64 baz = (`(6+7); 9);
+int!64 bar = 7 + 7 * 3 - 5;
+int!64 baz = 8;
+
+int:int!64 asdf = 7;
+
+asdf:5;
 
 int:[String] main =
 (

@@ -84,6 +84,8 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             for (auto tmp : intrins[call])
                 tmp->setBy = iCall.get();
 
+            iCall->inferType(*this);
+
             parent->replaceDetachedChild(move(iCall));
         }
     }
@@ -100,6 +102,11 @@ void AssignExpr::inferType(Sema&)
             << err::underline << opLoc << err::caret
             << getChildB()->loc << err::underline;
         //whew!
+    }
+    else if (getChildB()->Value())
+    {
+        Annotate(getChildB()->Value());
+        parent->replaceChild(this, Ptr(new NullExpr()));
     }
 }
 
@@ -208,6 +215,7 @@ void Sema::processFunc (ast::Node0* n)
         {
             for (auto& it : bb->Children())
                 it->inferType(*this);
+            //now get rid of nulls and things that don't set any temps
 
             it.skipSubtree(); //don't enter function definitions, etc.
         }

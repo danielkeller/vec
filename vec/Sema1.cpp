@@ -61,6 +61,8 @@ void Sema::Phase1()
 
     //Package* pkg = new Package();
 
+    int intrin_num = 0; //because of the way this works, all intrins need to be in one file
+
     //FIXME: memory leak when functions are declared & not defined
     for (auto ae : Subtree<AssignExpr>(mod).cached())
     {
@@ -70,19 +72,15 @@ void Sema::Phase1()
             continue;
 
         //insert intrinsic declaration if that's what this is
-        if (OverloadCallExpr* call = exact_cast<OverloadCallExpr*>(ae->getChildB()))
+        if (VarExpr* ve = exact_cast<VarExpr*>(ae->getChildB()))
         {
-            VarExpr* ve = call->func.get();
             if (ve->var == Global().reserved.intrin_v)
             {
                 for (auto it : fde->funcScope->varDefs)
                     Ptr(it.second); //this is kind of dumb but it doesn't access the d'tor directly
 
-                ConstExpr* ice = exact_cast<ConstExpr*>(call->getChild(0));
-                assert(ice && ice->Type() == typ::int64 && "improper use of __intrin");
-                auto ide = MkNPtr(
-                    new IntrinDeclExpr(fde, 
-                        (int)ice->annot->value.getScalarAs<long long>()));
+                auto ide = MkNPtr(new IntrinDeclExpr(fde, intrin_num));
+                ++intrin_num;
 
                 //now replace the function decl in the overload group
                 OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(Global().universal.getVarDef(fde->name));

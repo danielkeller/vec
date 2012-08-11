@@ -16,6 +16,8 @@ namespace ast
         {
             Annotate(typ::null); //could be void or <error type> or something
         };
+        NullExpr()
+            : Node0(tok::Location()) {}
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
     };
@@ -34,7 +36,7 @@ namespace ast
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
-        inline typ::Type Type() const;
+        inline std::unique_ptr<Annotation>& Annot();
     };
 
     //could possibly have a weak_string of its name?
@@ -44,11 +46,13 @@ namespace ast
 
         DeclExpr(Ident n, typ::Type t, tok::Location const &l)
             : VarExpr(this, l),  name(n) {Annotate(t);}
-        DeclExpr(const DeclExpr& old) //this has to be specified because var must point to this
+        DeclExpr(DeclExpr& old) //this has to be specified because var must point to this
             : VarExpr(this, old.loc), name(old.name) {Annotate(old.Type());}
 
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
-        typ::Type Type() const {return DefaultType();} //have to re-override it back to the original
+
+        //have to re-override it back to the original
+        std::unique_ptr<Annotation>& Annot() {return Node0::Annot();}
     };
 
     //put this here so it knows what a DeclExpr is
@@ -57,9 +61,9 @@ namespace ast
         return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
     }
 
-    typ::Type VarExpr::Type() const
+    std::unique_ptr<Annotation>& VarExpr::Annot()
     {
-        return var->Type();
+        return var->Annot();
     }
 
     struct FuncDeclExpr : public DeclExpr
@@ -72,10 +76,12 @@ namespace ast
     //declaration of an entire function overload group
     struct OverloadGroupDeclExpr : public DeclExpr
     {
-        typ::Type Type() const {return typ::overload;}
         std::list<FuncDeclExpr*> functions;
         OverloadGroupDeclExpr(Ident n, tok::Location const &firstLoc)
-            : DeclExpr(n, typ::error, firstLoc) {}
+            : DeclExpr(n, typ::error, firstLoc)
+        {
+            Annotate(typ::overload);
+        }
         void Insert(FuncDeclExpr* newDecl);
     };
 
@@ -85,7 +91,8 @@ namespace ast
             : Node0(l)
         {}
 
-        const char *myColor() {return "7";};
+        const char *myColor() {return "7";}
+        std::string myLbl() {return "const " + Type().to_str() + "";}
     };
 
     struct IntrinCallExpr;
@@ -123,7 +130,7 @@ namespace ast
         AssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
-        typ::Type Type() const {return getChildA()->Type();}
+        std::unique_ptr<Annotation>& Annot() {return getChildA()->Annot();}
         void inferType(sa::Sema&);
     };
 

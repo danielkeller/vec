@@ -254,9 +254,6 @@ void Parser::parsePrim()
 
         switch (to.value.int_v)
         {
-           case 16:
-                type = typ::float16;
-                break;
             case 32:
                 type = typ::float32;
                 break;

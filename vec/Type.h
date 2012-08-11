@@ -157,7 +157,6 @@ namespace typ
     extern Type int32;
     extern Type int64;
 
-    extern Type float16;
     extern Type float32;
     extern Type float64;
     extern Type float80;

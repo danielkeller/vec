@@ -25,8 +25,9 @@ namespace sa
 namespace ast
 {
     //various extra info about a node that may or may not be there
-    struct Annotation
+    class Annotation
     {
+        friend class Node0;
         typ::Type type;
         val::Value value;
         bool lval;
@@ -118,38 +119,38 @@ namespace ast
                 n->emitDot(os);
         }
 
-        //avoid code duplication
-        typ::Type DefaultType() const
-        {
-            return annot ? annot->type : typ::error;
-        }
-
         void makeAnnot()
         {
-            if (!annot)
-                annot.reset(new Annotation());
+            if (!Annot())
+                Annot().reset(new Annotation());
         }
 
-    public:
-        
+    private:
+
         std::unique_ptr<Annotation> annot;
+
+    public:
+
+        //so TempExprs can share an annotation
+        virtual std::unique_ptr<Annotation>& Annot() {return annot;}
 
         template<typename T>
         void Annotate(const T& first)
         {
             makeAnnot();
-            annot->set(first);
+            Annot()->set(first);
         }
 
         template<typename T, typename U>
         void Annotate(const T& first, const U& second)
         {
             makeAnnot();
-            annot->set(first, second);
+            Annot()->set(first, second);
         }
 
-        //so we can override its behavior when a derived Expr has some sort of deterministic type.
-        virtual typ::Type Type() const {return DefaultType();}
+        typ::Type Type() {return Annot() ? Annot()->type : typ::error;}
+        val::Value& Value() {return Annot() ? Annot()->value : Value();}
+
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
         virtual void inferType(sa::Sema&) {}

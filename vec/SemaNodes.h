@@ -22,7 +22,7 @@ namespace ast
                 << " [style=dotted];\n";
         };
 
-        typ::Type Type() const {return setBy->Type();}
+        std::unique_ptr<Annotation>& Annot() {return setBy->Annot();}
     };
 
     struct ImpliedLoopStmt : public Node1
@@ -74,7 +74,8 @@ namespace ast
         }
 
         std::string myLbl() {return utl::to_str(intrin_id) + ":";}
-        const char *myColor() {return "5";};
+        const char *myColor() {return "5";}
+        void inferType(sa::Sema&);
     };
 
     struct FunctionDef : public Node1
