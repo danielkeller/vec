@@ -62,7 +62,6 @@ struct SeqNode : public ValNode
 {
     virtual Value get(size_t pos, Value& me) = 0;
     virtual void append(Value v) = 0;
-    virtual void expand(size_t num) = 0;
     virtual ~SeqNode() {}
 };
 
@@ -74,12 +73,6 @@ struct Level1SeqNode : public SeqNode
 
     Level1SeqNode(size_t width)
         : width(width) {}
-
-    void expand(size_t num)
-    {
-        for (size_t n = 0; n < width * num; ++n)
-            val.push_back(0);
-    }
 
     Value get(size_t pos, Value& me)
     {
@@ -99,7 +92,9 @@ struct Level1SeqNode : public SeqNode
 
     void append(Value v)
     {
-        expand(1);
+        for (size_t n = 0; n < width; ++n)
+            val.push_back(0);
+
         memcpy(&val[val.size() - width], dynamic_cast<ScalarNode*>(v.node.get())->Get(), width);
     }
 
@@ -131,12 +126,6 @@ struct LevelNSeqNode : public SeqNode
     Value get(size_t pos, Value&)
     {
         return val[pos];
-    }
-
-    void expand(size_t num)
-    {
-        for (size_t n = 0; n < num; ++n)
-            val.emplace_back();
     }
 
     void append(Value v)
