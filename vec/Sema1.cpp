@@ -176,6 +176,7 @@ void Sema::Phase1()
     //replace variables that represent overloaded functions with the function that they
     //must represent, if there is only one such function
     //this makes function pointers & stuff easier
+    //TODO: won't this break things?
     for (auto ve : Subtree<VarExpr>(mod))
     {
         OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(ve->var);

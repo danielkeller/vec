@@ -96,3 +96,14 @@ int!8:{int!8, int!8} operator++ = __intrin:80;
 int!16:{int!16, int!16} operator++ = __intrin:81;
 int!32:{int!32, int!32} operator++ = __intrin:82;
 int!64:{int!64, int!64} operator++ = __intrin:83;
+
+int!8:{int!8, int!8} operator% = __intrin:84;
+int!16:{int!16, int!16} operator% = __intrin:85;
+int!32:{int!32, int!32} operator% = __intrin:86;
+int!64:{int!64, int!64} operator% = __intrin:87;
+
+[?T]:{[?T], [?T]} operator$ = __intrin:88;
+[?T]:{?T, [?T]} operator$ = __intrin:89;
+[?T]:{[?T], ?T} operator$ = __intrin:90;
+
+?T:{[?T], int!32} operator[] = __intrin:91;

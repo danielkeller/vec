@@ -229,12 +229,14 @@ Node0* Parser::parsePrimaryExpr()
         return parseTuplify();
 
         //TODO: it might be better to try parsing it, then only eat it if we come back here
-        //without advancing at all. as is, things like (1, ) will mess up the parser because
+        //without advancing at all. as is, things like (1, ) or 5+; will mess up the parser because
         //it will ignore the ) and get all confused.
     default: //we're SOL
         err::Error(to.loc) << "unexpected '" << to.Name() << "', expecting expression"  << err::caret;
         lexer->Advance(); //eat it so as not to loop forever
-        return new NullExpr(to.loc);
+        Node0* ret = new NullExpr(to.loc);
+        ret->Annotate(typ::error);
+        return ret;
     }
 }
 

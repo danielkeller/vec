@@ -457,14 +457,11 @@ lexMore: //more elegant, in this case, than a while(true)
     case ',':
         lexChar(tok::comma);
         return;
-    case '.':
-        if (curChr[1] >= '0' && curChr[1] <= '9') //number
-            lexNumber();
-        else //just a dot
-            lexChar(tok::dot);
-        return;
     case '?':
         lexChar(tok::question);
+        return;
+    case '%':
+        lexChar(tok::percent);
         return;
 
         //handle binary ops only ever followed by '='
@@ -503,7 +500,13 @@ lexMore: //more elegant, in this case, than a while(true)
         return;
 
         //handle special cases
-
+        
+    case '.':
+        if (curChr[1] >= '0' && curChr[1] <= '9') //number
+            lexNumber();
+        else //just a dot
+            lexChar(tok::dot);
+        return;
     case '<':
         if (curChr[1] == '=') //take care of this case here
             lexDouble(tok::notgreater);
@@ -563,6 +566,8 @@ lexMore: //more elegant, in this case, than a while(true)
         lexChar(tok::slash);
         return;
 
+            //handle strings/charss
+
     case '"':
         lexString();
         return;
@@ -571,7 +576,7 @@ lexMore: //more elegant, in this case, than a while(true)
         lexChar();
         return;
 
-            //handle keywords
+            //handle keywords / idents
 
     case 'a':
         lexKwOrIdent("agg", tok::k_agg);
@@ -637,8 +642,15 @@ lexMore: //more elegant, in this case, than a while(true)
     default:
         if (*curChr >= '0' && *curChr <= '9') //number
             lexNumber();
-        else //identifier
+        else if (*curChr >= 'a' && *curChr <= 'z'
+            || *curChr >= 'A' && *curChr <= 'Z'
+            || *curChr == '_') //identifier
             lexIdent();
+        else
+        {
+            err::Error(nextTok.loc) << "stray '" << *curChr << "' in program";
+            goto lexMore;
+        }
         return;
     }
 }

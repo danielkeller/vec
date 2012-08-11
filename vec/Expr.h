@@ -11,10 +11,13 @@ namespace ast
     //leaf expression type
     struct NullExpr : public Node0
     {
-        NullExpr(tok::Location const &l) : Node0(l) {};
+        NullExpr(tok::Location const &l)
+            : Node0(l)
+        {
+            Annotate(typ::null); //could be void or <error type> or something
+        };
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
-        typ::Type Type() const {return typ::null;}
     };
 
     struct DeclExpr;
