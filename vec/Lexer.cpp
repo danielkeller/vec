@@ -194,7 +194,8 @@ inline void Lexer::lexOperator()
     }
     else if (nextTok == tok::lsquare) //special case
     {
-        if (!Expect(tok::rsquare))
+        Advance();
+        if (Peek() != tok::rsquare)
             err::ExpectedAfter(this, "]", "[");
         nextTok.type = tok::lsquare; //needed because expect reads a token
     }
