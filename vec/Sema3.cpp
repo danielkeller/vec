@@ -82,11 +82,11 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             auto iCall = call->makeICall();
 
             for (auto tmp : intrins[call])
-                tmp->setBy = iCall.get();
+                tmp->setBy = iCall;
+
+            parent->replaceDetachedChild(Ptr(iCall));
 
             iCall->inferType(*this);
-
-            parent->replaceDetachedChild(move(iCall));
         }
     }
 }
@@ -104,10 +104,7 @@ void AssignExpr::inferType(Sema&)
         //whew!
     }
     else if (getChildB()->Value())
-    {
         Annotate(getChildB()->Value());
-        parent->replaceChild(this, Ptr(new NullExpr()));
-    }
 }
 
 void OverloadCallExpr::inferType(Sema& sema)
@@ -232,23 +229,23 @@ void Sema::Phase3()
     //overloads in private or privately imported scopes
     //TODO: will this support recursive sema 3? we could track the "current" module.
     mod->pub_import.Import(&mod->priv);
-    
+
     processFunc(mod);
 
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);
 }
 
-NPtr<IntrinCallExpr>::type OverloadCallExpr::makeICall()
+IntrinCallExpr* OverloadCallExpr::makeICall()
 {
     IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
     assert(intrin && "this is not an intrin");
-    return MkNPtr(new IntrinCallExpr(detachSelfAs<OverloadCallExpr>(), intrin->intrin_id));
+    return new IntrinCallExpr(detachSelfAs<OverloadCallExpr>(), intrin->intrin_id);
 }
 
-NPtr<IntrinCallExpr>::type BinExpr::makeICall()
+IntrinCallExpr* BinExpr::makeICall()
 {
     IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
     assert(intrin && "this is not an intrin");
-    return MkNPtr(new IntrinCallExpr(detachSelfAs<BinExpr>(), intrin->intrin_id));
+    return new IntrinCallExpr(detachSelfAs<BinExpr>(), intrin->intrin_id);
 }

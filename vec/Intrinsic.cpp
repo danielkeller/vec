@@ -11,6 +11,9 @@ using namespace sa;
 
 //This is for the section of Sema 3 that deals with intrinsics
 
+//This relies on nobody else using counter, and the intrinsics being in the right order
+//and all in one file
+
 #define ARITH(op, type) \
     case __COUNTER__: \
     Annotate(getChild(0)->Value().getScalarAs<type>() \
@@ -21,15 +24,6 @@ using namespace sa;
     case __COUNTER__: \
     Annotate(op getChild(0)->Value().getScalarAs<type>()); \
     break
-
-#define NUMERIC(op) \
-    ARITH(op, signed char); \
-    ARITH(op, short); \
-    ARITH(op, long); \
-    ARITH(op, long long); \
-    ARITH(op, float); \
-    ARITH(op, double); \
-    ARITH(op, long double)
 
 #define INTEGER(op) \
     ARITH(op, signed char); \
@@ -42,6 +36,12 @@ using namespace sa;
     U_ARITH(op, short); \
     U_ARITH(op, long); \
     U_ARITH(op, long long)
+
+#define NUMERIC(op) \
+    INTEGER(op); \
+    ARITH(op, float); \
+    ARITH(op, double); \
+    ARITH(op, long double)
 
 void IntrinCallExpr::inferType(Sema&)
 {
@@ -76,5 +76,4 @@ void IntrinCallExpr::inferType(Sema&)
     default:
         ;
     }
-
 }

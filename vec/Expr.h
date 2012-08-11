@@ -101,7 +101,7 @@ namespace ast
     {
         NormalScope* owner;
         FuncDeclExpr* ovrResult;
-        virtual NPtr<IntrinCallExpr>::type makeICall() = 0;
+        virtual IntrinCallExpr* makeICall() = 0;
         OverloadableExpr(NormalScope* o)
             : owner(o), ovrResult(0) {}
     };
@@ -121,7 +121,7 @@ namespace ast
         {};
         std::string myLbl() {return tok::Name(op);}
 
-        NPtr<IntrinCallExpr>::type makeICall();
+        IntrinCallExpr* makeICall();
         void inferType(sa::Sema&);
     };
 
@@ -149,7 +149,7 @@ namespace ast
             : OverloadableExpr(o), NodeN(move(rhs), l), func(move(lhs)) {}
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
 
-        NPtr<IntrinCallExpr>::type makeICall();
+        IntrinCallExpr* makeICall();
         void inferType(sa::Sema&);
     };
 
