@@ -44,6 +44,7 @@ namespace ast
 
     struct Block : public Node1
     {
+        //needed for scope entry&exit points
         NormalScope *scope;
         Block(Ptr conts, NormalScope *s, tok::Location const &l)
             : Node1(move(conts), l),

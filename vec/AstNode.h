@@ -3,7 +3,6 @@
 
 #include "Token.h"
 #include "Type.h"
-#include "Value.h"
 
 #include <functional>
 #include <ostream>
@@ -22,37 +21,18 @@ namespace sa
     class Sema;
 }
 
+namespace val
+{
+    class Value;
+}
+
 namespace ast
 {
-    //various extra info about a node that may or may not be there
-    class Annotation
-    {
-        friend class Node0;
-        typ::Type type;
-        val::Value value;
-        bool lval;
-
-        //add more as neccesary
-        void set (typ::Type t)
-        {
-            type = t;
-        }
-
-        void set (const val::Value& v)
-        {
-            value = v;
-        }
-
-        void set (typ::Type t, const val::Value& v)
-        {
-            type = t;
-            value = v;
-        }
-    };
+    class Annotation;
 
     class Node0;
 
-    struct deleter {inline void operator()(Node0* x);};
+    struct deleter {void operator()(Node0* x);};
     template<class Node>
     struct NPtr
     {
@@ -89,9 +69,8 @@ namespace ast
     class Node0
     {
     protected:
-
-        //facility for creating unique_ptrs to ast node classes
-        Node0(tok::Location const &l) : loc(l), parent(0) {};
+        Node0(tok::Location const &l)
+            : loc(l), parent(0) {}
         virtual ~Node0() {};
         friend struct deleter;
 
@@ -119,37 +98,34 @@ namespace ast
                 n->emitDot(os);
         }
 
-        void makeAnnot()
-        {
-            if (!Annot())
-                Annot().reset(new Annotation());
-        }
+        void makeAnnot();
 
     private:
 
-        std::unique_ptr<Annotation> annot;
+        //use a custom deleter so Annotation can be incomplete
+        struct AnnotDeleter
+        {
+            void operator()(Annotation* a);
+        };
+
+    protected:
+        typedef std::unique_ptr<Annotation, AnnotDeleter> annot_t;
+
+    private:
+        annot_t annot;
 
     public:
 
         //so TempExprs can share an annotation
-        virtual std::unique_ptr<Annotation>& Annot() {return annot;}
+        virtual annot_t& Annot() {return annot;}
 
-        template<typename T>
-        void Annotate(const T& first)
-        {
-            makeAnnot();
-            Annot()->set(first);
-        }
+        void Annotate(const val::Value& v);
+        void Annotate(typ::Type t);
 
-        template<typename T, typename U>
-        void Annotate(const T& first, const U& second)
-        {
-            makeAnnot();
-            Annot()->set(first, second);
-        }
+        void Annotate(typ::Type t, const val::Value& v);
 
-        typ::Type Type() {return Annot() ? Annot()->type : typ::error;}
-        val::Value& Value() {return Annot() ? Annot()->value : Value();}
+        typ::Type Type();
+        val::Value& Value();
 
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}

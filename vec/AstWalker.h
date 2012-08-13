@@ -73,6 +73,9 @@ namespace sa
             bool operator!=(const Iterator&) const;
             filter* operator*() {return doCast(castType());}
 
+            //this is an inconsistency, but it's convenient
+            filter* operator->() {return **this;}
+
             //skip over subtree below iterator
             void skipSubtree();
         };

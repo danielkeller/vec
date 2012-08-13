@@ -643,8 +643,8 @@ lexMore: //more elegant, in this case, than a while(true)
     default:
         if (*curChr >= '0' && *curChr <= '9') //number
             lexNumber();
-        else if (*curChr >= 'a' && *curChr <= 'z'
-            || *curChr >= 'A' && *curChr <= 'Z'
+        else if ((*curChr >= 'a' && *curChr <= 'z')
+            || (*curChr >= 'A' && *curChr <= 'Z')
             || *curChr == '_') //identifier
             lexIdent();
         else

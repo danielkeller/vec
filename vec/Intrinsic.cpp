@@ -2,6 +2,7 @@
 #include "SemaNodes.h"
 #include "Error.h"
 #include "Global.h"
+#include "Value.h"
 
 #include <cassert>
 #include <queue>

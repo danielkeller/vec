@@ -2,6 +2,7 @@
 #include "Global.h"
 #include "SemaNodes.h"
 #include <vector>
+#include <cstring>
 
 namespace val{
 
@@ -24,7 +25,7 @@ struct NullNode : public ValNode
 
 struct FuncNode : public ValNode
 {
-    std::unique_ptr<ast::FunctionDef> fd;
+    ast::NPtr<ast::FunctionDef>::type fd;
 
     //FIXME: should be able to clone, for functional stuff
     ValNode* clone() {return this;}
@@ -181,7 +182,7 @@ void* Value::getBytes()
     return dynamic_cast<ScalarNode*>(node.get())->Get();
 }
 
-std::unique_ptr<ast::FunctionDef>& Value::getFunc()
+ast::NPtr<ast::FunctionDef>::type& Value::getFunc()
 {
     return exact_cast<FuncNode*>(node.get())->fd;
 }
@@ -193,6 +194,13 @@ Value::Value(ValNode* n)
 
 Value::Value(const std::shared_ptr<ValNode>& n)
 {
+    node = n;
+}
+
+Value::Value(ast::NPtr<ast::FunctionDef>::type fd)
+{
+    auto n = std::make_shared<FuncNode>();
+    n->fd = move(fd);
     node = n;
 }
 
@@ -209,13 +217,6 @@ Value Value::seq()
 Value Value::scalarSeq(size_t width)
 {
     return new Level1SeqNode(width);
-}
-
-Value func(typ::Type t, std::unique_ptr<ast::FunctionDef> fd)
-{
-    auto node = new FuncNode();
-    node->fd = move(fd);
-    return node;
 }
 
 }

@@ -22,7 +22,7 @@ namespace ast
                 << " [style=dotted];\n";
         };
 
-        std::unique_ptr<Annotation>& Annot() {return setBy->Annot();}
+        annot_t& Annot() {return setBy->Annot();}
     };
 
     struct ImpliedLoopStmt : public Node1
@@ -84,13 +84,6 @@ namespace ast
             : Node1(move(s)) {Annotate(t);}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return true;}
-    };
-
-    //basic block class that holds any number of instructions
-    struct BasicBlock : public NodeN
-    {
-        std::string myLbl() {return "Block";}
-        bool isExpr() {return false;}
     };
 }
 

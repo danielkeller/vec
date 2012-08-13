@@ -98,9 +98,6 @@
     <ClCompile Include="Sema1.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Sema2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="StmtParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,9 +105,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TypeParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Sema3.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include=".\Module.cpp">
@@ -129,6 +123,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Intrinsic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include=".\SemaTypes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AstNode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -9,13 +9,20 @@ int:int!64 asdf = 7;
 
 asdf:5;
 
+`foo + 6;
+
+
+(`foo) + bar;
+(`foo;) + bar;
+
 int:[String] main =
 (
-    if (foo < 8 + 1)
-        bar = (bar + -baz);
-    else
-        foo;
-    return bar;
+    7 - (
+        if (foo < 8 + 1)
+            bar = (bar + -baz);
+        else
+            foo;
+    ) + 8;
 );
 
 //could do variadic templates:

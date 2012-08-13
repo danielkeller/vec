@@ -30,6 +30,10 @@ Parser::Parser(lex::Lexer *l)
     }
 
     mod->setChildA(Ptr(parseStmtList()));
+
+    tok::Token& end = lexer->Peek();
+    if (end != tok::end)
+        err::Error(end.loc) << "unexpected '" << end.Name() << "', expecting EOF" << err::caret;
 }
 
 /*
@@ -134,6 +138,8 @@ void OverloadGroupDeclExpr::Insert(FuncDeclExpr* newDecl)
                     << err::underline << func->loc << err::note << "see previous declaration"
                     << err::underline;
             }
+            //let it know about the 'actual' decl
+            newDecl->realDecl = func;
             return; //already declared
         }
     }

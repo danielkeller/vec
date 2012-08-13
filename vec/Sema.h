@@ -25,14 +25,10 @@ namespace sa
         //add/rearrange nodes in AST
         void Phase1();
 
-        //convert AST to basic block graph
-        void Phase2();
-
-        //phase 2.5. bring in external symbols.
         void Import();
 
         //infer types
-        void Phase3();
+        void Types();
         template<class T>
         void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
 

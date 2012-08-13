@@ -36,7 +36,7 @@ namespace ast
         bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
-        inline std::unique_ptr<Annotation>& Annot();
+        inline annot_t& Annot();
     };
 
     //could possibly have a weak_string of its name?
@@ -52,7 +52,7 @@ namespace ast
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
 
         //have to re-override it back to the original
-        std::unique_ptr<Annotation>& Annot() {return Node0::Annot();}
+        annot_t& Annot() {return Node0::Annot();}
     };
 
     //put this here so it knows what a DeclExpr is
@@ -61,7 +61,7 @@ namespace ast
         return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
     }
 
-    std::unique_ptr<Annotation>& VarExpr::Annot()
+    Node0::annot_t& VarExpr::Annot()
     {
         return var->Annot();
     }
@@ -69,8 +69,12 @@ namespace ast
     struct FuncDeclExpr : public DeclExpr
     {
         NormalScope* funcScope;
+        FuncDeclExpr* realDecl;
         FuncDeclExpr(Ident n, typ::Type t, NormalScope* s, tok::Location const &l)
-            : DeclExpr(n, t, l), funcScope(s) {}
+            : DeclExpr(n, t, l), funcScope(s), realDecl(nullptr) {}
+
+        //allows all declarations of functions to share the value
+        annot_t& Annot() {return realDecl ? realDecl->Annot() : Annot();}
     };
 
     //declaration of an entire function overload group
@@ -130,7 +134,7 @@ namespace ast
         AssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
-        std::unique_ptr<Annotation>& Annot() {return getChildA()->Annot();}
+        annot_t& Annot() {return getChildA()->Annot();}
         void inferType(sa::Sema&);
     };
 

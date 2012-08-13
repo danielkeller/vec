@@ -30,7 +30,6 @@ void processBuiltin(const char * path)
 
     sa::Sema s(mod);
     s.Phase1();
-    s.Phase2();
 }
 
 void processFile(const char * path)
@@ -62,14 +61,6 @@ void processFile(const char * path)
     mod->emitDot(dot2);
     dot2 << '}';
     dot2.close();
-
-    s.Phase2();
-
-    std::ofstream dot3(path + std::string(".3.dot"));
-    dot3 << "digraph G {\n";
-    mod->emitDot(dot3);
-    dot3 << '}';
-    dot3.close();
 }
 
 int main ()
@@ -91,13 +82,13 @@ int main ()
     {
         sa::Sema s(mod);
         s.Import();
-        s.Phase3();
+        s.Types();
 
-        std::ofstream dot4(mod->fileName + std::string(".4.dot"));
-        dot4 << "digraph G {\n";
-        mod->emitDot(dot4);
-        dot4 << '}';
-        dot4.close();
+        std::ofstream dot(mod->fileName + std::string(".3.dot"));
+        dot << "digraph G {\n";
+        mod->emitDot(dot);
+        dot << '}';
+        dot.close();
     }
 
     //typ::mgr.printAll(std::cerr);

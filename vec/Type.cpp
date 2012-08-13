@@ -468,12 +468,12 @@ T ## Type Type::get ## T() const \
     return ret; \
 }
 
-ListSubGetter(Func);
-ListSubGetter(List);
-ListSubGetter(Tuple);
-ListSubGetter(Ref);
-ListSubGetter(Param);
-ListSubGetter(Primitive);
+ListSubGetter(Func)
+ListSubGetter(List)
+ListSubGetter(Tuple)
+ListSubGetter(Ref)
+ListSubGetter(Param)
+ListSubGetter(Primitive)
 
 //don't use underlying_node for named nodes
 NamedType Type::getNamed() const

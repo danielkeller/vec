@@ -9,26 +9,10 @@ using namespace ast;
 using namespace sa;
 
 //Phase one is for insertion / modification of nodes in a way which
-//generally preserves the structure of the AST, and/or which need that
-//structure to not be compacted into basic blocks
+//generally preserves the structure of the AST
 void Sema::Phase1()
 {
-    //if there's a lot of dynamic casting going on, try adding new ast walker
-    //types that select child and descendent nodes for example.
-    //if only a few steps need that, let them implement it
-
     //TODO: insert ScopeEntryExpr and ScopeExitExpr or somesuch
-
-    //eliminate () -> ExprStmt -> Expr form
-    //this needs to happen before loop point addition so regular ()s don't interfere
-    for (auto b : Subtree<Block>(mod))
-    {
-        ExprStmt* es = exact_cast<ExprStmt*>(b->getChildA());
-        if (es)
-        {
-            b->parent->replaceChild(b, es->detachChildA());
-        }
-    }
 
     //flatten out listify and tuplify expressions
     auto ifyFlatten = [] (NodeN* ify)
@@ -58,8 +42,6 @@ void Sema::Phase1()
         call->popChild();
         call->swap(args.get());
     }
-
-    //Package* pkg = new Package();
 
     int intrin_num = 0; //because of the way this works, all intrins need to be in one file
 
@@ -93,42 +75,29 @@ void Sema::Phase1()
             }
         }
 
+        //exprStmt is needed so ` doesn't escape function decls
         Ptr conts = Ptr(new ExprStmt(ae->detachChildB()));
 
         //add decl exprs generated earlier to the AST
         for (auto it : fde->funcScope->varDefs)
         {
-            conts = Ptr(new StmtPair(Ptr(new ExprStmt(Ptr(it.second))), move(conts)));
+            conts = Ptr(new StmtPair(Ptr(it.second), move(conts)));
         }
 
         //create and insert function definition
         auto fd = MkNPtr(new FunctionDef(fde->Type(), move(conts)));
-        //if (fde->name == Global().reserved.main
-        //    && fde->Type().compare(typ::mgr.makeList(Global().reserved.string_t))
-        //        == typ::TypeCompareResult::valid)
-            //mod->entryPt = fd; //just reassign it if it's defined twice, there will already be an error
 
         //find expression in tail position
         Node0* end = findEndExpr(fd->getChildA());
         if (end) //if it's really there
         {
-            //we know its an expr stmt
-            ExprStmt* endParent = exact_cast<ExprStmt*>(end->parent);
+            Node0* endParent = end->parent;
             Ptr impliedRet = Ptr(new ReturnStmt(end->detachSelf()));
             endParent->parent->replaceChild(endParent, move(impliedRet)); //put in the implied return
         }
 
         ae->setChildB(move(fd));
     }
-
-    //after we do this, anything under root is global initialization code
-    //so make the __init function for it
-    //TODO: does this run at compile time or run time?
-    //typ::Type void_void = typ::mgr.makeFunc(typ::null, typ::mgr.makeTuple()); //empty tuple
-    //FuncDeclExpr* fde = new FuncDeclExpr(Global().reserved.init, void_void, &(mod->global), mod->treeHead->loc);
-    //FunctionDef* init = new FunctionDef(fde, mod->treeHead); //stick everything in there
-    //pkg->appendChild(init);
-    //mod->treeHead = pkg;
 
     //do this after types in case of ref types
 /*
@@ -171,6 +140,14 @@ void Sema::Phase1()
         il->targets.push_back(ie);
     }
 
+    //eliminate blocks and ExprStmts
+    //this needs to happen after loop point addition so (x;) works
+    for (auto es : Subtree<ExprStmt>(mod).cached())
+            es->parent->replaceChild(es, es->detachChildA());
+
+    for (auto b : Subtree<Block>(mod).cached())
+            b->parent->replaceChild(b, b->detachChildA());
+
     //replace variables that represent overloaded functions with the function that they
     //must represent, if there is only one such function
     //this makes function pointers & stuff easier
@@ -192,20 +169,6 @@ void Sema::Phase1()
             sp->parent->replaceChild(sp, sp->detachChildB());
         else if (exact_cast<NullStmt*>(sp->getChildB()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildA());
-    }
-    
-    //create expr stmts for other things that contain expressions
-    for (auto cs : Subtree<CondStmt, Cast::Dynamic>(mod))
-    {
-        Node0* parent = dynamic_cast<Node0*>(cs)->parent;
-        Ptr node = dynamic_cast<Node0*>(cs)->detachSelf();
-
-        Ptr expr = cs->getExpr()->detachSelf();
-        Ptr temp = Ptr(new TmpExpr(expr.get()));
-        node->replaceDetachedChild(move(temp));
-        
-        Ptr sp = Ptr(new StmtPair(Ptr(new ExprStmt(move(expr))), move(node)));
-        parent->replaceDetachedChild(move(sp));
     }
 
     //TODO: it might be worthwhile, after each stage of sema to validate the tree and check for

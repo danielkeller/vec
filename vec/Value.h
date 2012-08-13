@@ -2,6 +2,7 @@
 #define VALUE_H
 
 #include "Type.h"
+#include "AstNode.h"
 
 #include <memory>
 #include <array>
@@ -33,11 +34,12 @@ namespace val
 
         void makeScalar(); //needed because fromBytesOf is a template
 
+        Value(const std::shared_ptr<ValNode>& n); //for internal use
+
     public:
         Value() {}
 
         Value(ValNode* n); //for internal use
-        Value(const std::shared_ptr<ValNode>& n); //for internal use
 
         template<typename T> //causes SF on non-arithmetic types
         Value(T val, typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0)
@@ -46,7 +48,7 @@ namespace val
             getScalarAs<T>() = val;
         }
 
-        Value(std::unique_ptr<ast::FunctionDef> fd);
+        Value(ast::NPtr<ast::FunctionDef>::type fd);
 
         static Value seq();
         static Value scalarSeq(size_t width);
@@ -54,7 +56,7 @@ namespace val
         //create a copy that can be modifed independently
         Value Duplicate();
 
-        bool isSet() const {return node;}
+        bool isSet() const {return bool(node);}
         operator bool() const {return isSet();}
 
         //LLVMValue getLLVMValue();
@@ -71,7 +73,7 @@ namespace val
             return *reinterpret_cast<T*>(getBytes());
         }
 
-        std::unique_ptr<ast::FunctionDef>& getFunc();
+        ast::NPtr<ast::FunctionDef>::type& getFunc();
     };
 }
         

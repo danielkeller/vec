@@ -229,7 +229,7 @@ namespace typ
 
     public:
         TypeCompareResult(bool valid) {score = valid ? 0 : -1;}
-        bool isValid() {return score != -1;}
+        bool isValid() {return score != (unsigned int)-1;}
 
         TypeCompareResult& operator+=(int diff)
         {

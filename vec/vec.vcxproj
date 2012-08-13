@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include=".\Module.cpp" />
+    <ClCompile Include="AstNode.cpp" />
     <ClCompile Include="DeclParser.cpp" />
     <ClCompile Include="Error.cpp" />
     <ClCompile Include="ExprParser.cpp" />
@@ -100,8 +101,7 @@
     <ClCompile Include="Scope.cpp" />
     <ClCompile Include="Sema.cpp" />
     <ClCompile Include="Sema1.cpp" />
-    <ClCompile Include="Sema2.cpp" />
-    <ClCompile Include="Sema3.cpp" />
+    <ClCompile Include=".\SemaTypes.cpp" />
     <ClCompile Include="SemaImport.cpp" />
     <ClCompile Include="StmtParser.cpp" />
     <ClCompile Include="test.cpp" />

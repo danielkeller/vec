@@ -2,6 +2,7 @@
 #include "SemaNodes.h"
 #include "Error.h"
 #include "Global.h"
+#include "Value.h"
 
 #include <cassert>
 #include <queue>
@@ -182,16 +183,6 @@ void TuplifyExpr::inferType(Sema&)
     Annotate(typ::mgr.makeTuple(builder));
 }
 
-//types of exprs, for reference
-//VarExpr -> DeclExpr -> FuncDeclExpr
-//ConstExpr -> [IntConstExpr, FloatConstExpr, StringConstExpr] *
-//BinExpr -> AssignExpr * -> OpAssignExpr
-//UnExpr
-//IterExpr, AggExpr
-//TuplifyExpr, ListifyExpr
-//PostExpr (just ++ and --)
-//TupAccExpr, ListAccExpr
-
 void Sema::processFunc (ast::Node0* n)
 {
     intrins.clear();
@@ -204,31 +195,29 @@ void Sema::processFunc (ast::Node0* n)
         intrins[setBy].push_back(tmp);
     }
 
-    auto tree = Subtree<>(n).preorder();
-    auto treeEnd = tree.end();
-    for (auto it = tree.begin(); it != treeEnd;)
-    {
-        if (BasicBlock * bb = exact_cast<BasicBlock*>(*it))
-        {
-            for (auto& it : bb->Children())
-                it->inferType(*this);
-            //now get rid of nulls and things that don't set any temps
-
-            it.skipSubtree(); //don't enter function definitions, etc.
-        }
-        //now check stmts that want a specific type, ie return
-        else
-            ++it;
-    }
+    for (auto n : Subtree<>(n).cached())
+         n->inferType(*this);
+    //now get rid of nulls and things that don't set any temps
 }
 
-void Sema::Phase3()
+void Sema::Types()
 {
     //set the module to temporarily publicly import its own private scope.
     //this lets overloaded calls in scopes inside the public scope see
     //overloads in private or privately imported scopes
     //TODO: will this support recursive sema 3? we could track the "current" module.
     mod->pub_import.Import(&mod->priv);
+
+    //change functions into values so we don't enter them early
+    for (auto func : Subtree<FunctionDef>(mod).cached())
+    {
+        Node0* parent = func->parent;
+        ConstExpr* funcVal = new ConstExpr(func->loc);
+        typ::Type funcType = func->Type();
+
+        funcVal->Annotate(funcType, val::Value(func->detachSelfAs<FunctionDef>()));
+        parent->replaceDetachedChild(Ptr(funcVal));
+    }
 
     processFunc(mod);
 
