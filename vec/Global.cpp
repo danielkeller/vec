@@ -1,7 +1,11 @@
 #include "Global.h"
 #include "SemaNodes.h"
+#include "Lexer.h"
+#include "Parser.h"
+#include "Sema.h"
 
 #include <memory>
+#include <fstream>
 
 std::unique_ptr<GlobalData> singleton;
 
@@ -15,6 +19,74 @@ void GlobalData::create()
 GlobalData& Global()
 {
     return *singleton;
+}
+
+ast::Module* GlobalData::ParseFile(const char* path)
+{
+    ast::Module* mod = new ast::Module(path);
+
+    allModules.push_back(mod);
+
+    mod->name = path;
+    auto ext = mod->name.find_first_of(".vc");
+    if (ext != std::string::npos)
+        mod->name.resize(ext);
+
+    lex::Lexer l(mod);
+    par::Parser p(&l);
+
+    std::ofstream dot(path + std::string(".1.dot"));
+    dot << "digraph G {\n";
+    mod->emitDot(dot);
+    dot << '}';
+    dot.close();
+
+    sa::Sema s(mod);
+
+    s.Phase1();
+
+    std::ofstream dot2(path + std::string(".2.dot"));
+    dot2 << "digraph G {\n";
+    mod->emitDot(dot2);
+    dot2 << '}';
+    dot2.close();
+
+    return mod;
+}
+
+//don't output diagnostics
+//may add code later to suppress warnings
+void GlobalData::ParseBuiltin(const char* path)
+{
+    ast::Module* mod = new ast::Module(path);
+    Global().allModules.push_back(mod);
+    mod->name = path;
+
+    lex::Lexer l(mod);
+    par::Parser p(&l);
+
+    sa::Sema s(mod);
+    s.Phase1();
+}
+
+void GlobalData::ParseMainFile(const char* path)
+{
+    Global().ParseBuiltin("intrinsic");
+    ast::Module* mainMod = Global().ParseFile(path);
+
+    sa::Sema s(mainMod);
+    s.Import();
+    s.Types();
+
+    std::ofstream dot(mainMod->fileName + std::string(".3.dot"));
+    dot << "digraph G {\n";
+    mainMod->emitDot(dot);
+    dot << '}';
+    dot.close();
+
+    //FIXME: use RAII instead
+    for (auto mod : Global().allModules)
+        delete mod;
 }
 
 Ident GlobalData::addIdent(const std::string &str)

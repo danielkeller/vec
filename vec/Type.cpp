@@ -140,11 +140,11 @@ TypeCompareResult dename(TypeNodeB*& node)
     if (TupleNode* realNode = dynamic_cast<TupleNode*>(node))
     {
         //conversion from [x] to x is considered denaming
-        //TODO: should it be "free" or incur a penalty?
+        //it is "free" so we can change tuple element names for function args
         if (realNode->conts.size() == 1)
         {
             node = realNode->conts.front().first;
-            return TypeCompareResult::valid + 1;
+            return TypeCompareResult::valid;
         }
 
     }
@@ -228,7 +228,7 @@ void FuncNode::print(std::ostream &out)
 
 TypeCompareResult ListNode::compareTo(ListNode* other)
 {
-    return contents->compare(other);
+    return contents->compare(other->contents);
 }
 
 bool ListNode::insertCompareTo(ListNode* other)

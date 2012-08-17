@@ -23,7 +23,7 @@ Module::Module(std::string fname)
     if (!t.is_open())
     {
         err::Error(tok::Location()) << "Could not open file '" << fileName << '\'';
-        exit(-1);
+        throw err::FatalError(); //just give up instead of printing 100000 useless errors
     }
 
     t.seekg(0, std::ios::end);

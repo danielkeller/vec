@@ -183,8 +183,22 @@ void TuplifyExpr::inferType(Sema&)
     Annotate(typ::mgr.makeTuple(builder));
 }
 
-void Sema::processFunc (ast::Node0* n)
+void Sema::processFunc (ast::FuncDeclExpr* n)
 {
+    if (!n->Value())
+        err::Error(n->loc) << "function '" << Global().getIdent(n->name) << "' is never defined";
+    else
+        processSubtree(n->Value().getFunc().get());
+}
+
+void Sema::processSubtree (ast::Node0* n)
+{
+    //set the module to temporarily publicly import its own private scope.
+    //this lets overloaded calls in scopes inside the public scope see
+    //overloads in private or privately imported scopes
+    //TODO: will this support recursive sema 3? we could track the "current" module.
+    mod->pub_import.Import(&mod->priv);
+
     intrins.clear();
     //collect all temps set by overloadable exprs so they can be replaced
     for (auto tmp : Subtree<TmpExpr>(n))
@@ -197,17 +211,13 @@ void Sema::processFunc (ast::Node0* n)
 
     for (auto n : Subtree<>(n).cached())
          n->inferType(*this);
-    //now get rid of nulls and things that don't set any temps
+
+    //remove the temporary import
+    mod->pub_import.UnImport(&mod->priv);
 }
 
-void Sema::Types()
+void Sema::processMod()
 {
-    //set the module to temporarily publicly import its own private scope.
-    //this lets overloaded calls in scopes inside the public scope see
-    //overloads in private or privately imported scopes
-    //TODO: will this support recursive sema 3? we could track the "current" module.
-    mod->pub_import.Import(&mod->priv);
-
     //change functions into values so we don't enter them early
     for (auto func : Subtree<FunctionDef>(mod).cached())
     {
@@ -219,10 +229,43 @@ void Sema::Types()
         parent->replaceDetachedChild(Ptr(funcVal));
     }
 
-    processFunc(mod);
+    processSubtree(mod);
+}
 
-    //remove the temporary import
-    mod->pub_import.UnImport(&mod->priv);
+void Sema::Types()
+{
+    processMod();
+
+    //now find the entry point and go!!
+
+    DeclExpr* mainVar = mod->priv.getVarDef(Global().reserved.main);
+    if (!mainVar)
+    {
+        err::Error(err::fatal, mod->loc) << "variable 'main' undefined";
+        throw err::FatalError();
+    }
+    OverloadGroupDeclExpr* mainFunc = exact_cast<OverloadGroupDeclExpr*>(mainVar);
+    if (!mainFunc)
+    {
+        err::Error(err::fatal, mainVar->loc) << "variable 'main' must be a function" << err::underline;
+        throw err::FatalError();
+    }
+    Ptr args = MkNPtr(new ConstExpr(mainFunc->loc));
+    args->Annotate(typ::mgr.makeList(Global().reserved.string_t));
+
+    OverloadCallExpr entryPt(
+        MkNPtr(new VarExpr(mainFunc, mainFunc->loc)), move(args), &mod->priv, mainFunc->loc);
+
+    resolveOverload(mainFunc, &entryPt, typ::mgr.makeList(Global().reserved.string_t));
+
+    if (!entryPt.ovrResult)
+    {
+        err::Error(err::fatal, mainVar->loc) << "appropriate 'main' function not found" << err::underline;
+        throw err::FatalError();
+    }
+
+    Global().entryPt = entryPt.ovrResult;
+    processFunc(entryPt.ovrResult);
 }
 
 IntrinCallExpr* OverloadCallExpr::makeICall()

@@ -1,12 +1,9 @@
 #include "Module.h"
-#include "Lexer.h"
-#include "Parser.h"
-#include "Sema.h"
 #include "Global.h"
+#include "Error.h"
 
 #include <cstdio>
 #include <iostream>
-#include <fstream>
 
 #define MAX_PATH 256
 void openDlg(char * buf)
@@ -16,53 +13,6 @@ void openDlg(char * buf)
     return;
 }
 
-//don't output diagnostics
-//may add code later to suppress warnings
-//use unique_ptr to make cleanup easier
-void processBuiltin(const char * path)
-{
-    ast::Module* mod = new ast::Module(path);
-    Global().allModules.push_back(mod);
-    mod->name = path;
-
-    lex::Lexer l(mod);
-    par::Parser p(&l);
-
-    sa::Sema s(mod);
-    s.Phase1();
-}
-
-void processFile(const char * path)
-{
-    ast::Module* mod = new ast::Module(path);
-
-    Global().allModules.push_back(mod);
-
-    mod->name = path;
-    auto ext = mod->name.find_first_of(".vc");
-    if (ext != std::string::npos)
-        mod->name.resize(ext);
-
-    lex::Lexer l(mod);
-    par::Parser p(&l);
-
-    std::ofstream dot(path + std::string(".1.dot"));
-    dot << "digraph G {\n";
-    mod->emitDot(dot);
-    dot << '}';
-    dot.close();
-
-    sa::Sema s(mod);
-
-    s.Phase1();
-
-    std::ofstream dot2(path + std::string(".2.dot"));
-    dot2 << "digraph G {\n";
-    mod->emitDot(dot2);
-    dot2 << '}';
-    dot2.close();
-}
-
 int main ()
 {
     GlobalData::create();
@@ -70,34 +20,19 @@ int main ()
     char fileName[MAX_PATH] = "";
     openDlg(fileName);
 
-    processBuiltin("intrinsic");
-    processFile(fileName);
-
-    //typ::mgr.printAll(std::cerr);
-    //std::cerr << std::endl;
-
-    //TODO: sema3 will start with entry point and proceed recursively, via imports in the file with
-    //the entry point, then called functions, etc.
-    for (auto mod : Global().allModules)
+    try
     {
-        sa::Sema s(mod);
-        s.Import();
-        s.Types();
-
-        std::ofstream dot(mod->fileName + std::string(".3.dot"));
-        dot << "digraph G {\n";
-        mod->emitDot(dot);
-        dot << '}';
-        dot.close();
+        Global().ParseMainFile(fileName);
+    }
+    catch (err::FatalError)
+    {
+        err::Error(err::fatal, tok::Location()) << "could not recover from previous errors, aborting";
     }
 
-    //typ::mgr.printAll(std::cerr);
-
-    //FIXME: this is not a good place for this
-    for (auto mod : Global().allModules)
-        delete mod;
-
+    //pause in windoze for debuggin'
+#ifdef _WIN32
     getchar();
+#endif
 
     return 0;
 }

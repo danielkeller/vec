@@ -74,7 +74,7 @@ namespace ast
             : DeclExpr(n, t, l), funcScope(s), realDecl(nullptr) {}
 
         //allows all declarations of functions to share the value
-        annot_t& Annot() {return realDecl ? realDecl->Annot() : Annot();}
+        annot_t& Annot() {return realDecl ? realDecl->Annot() : Node0::Annot();}
     };
 
     //declaration of an entire function overload group
@@ -149,8 +149,8 @@ namespace ast
     struct OverloadCallExpr : public OverloadableExpr, public NodeN
     {
         NPtr<VarExpr>::type func; //so tree walker won't see it
-        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, NormalScope* o, const tok::Location & l)
-            : OverloadableExpr(o), NodeN(move(rhs), l), func(move(lhs)) {}
+        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, NormalScope* owner, const tok::Location & l)
+            : OverloadableExpr(owner), NodeN(move(rhs), l), func(move(lhs)) {}
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
 
         IntrinCallExpr* makeICall();

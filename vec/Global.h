@@ -7,15 +7,27 @@
 
 typedef std::vector<std::string> TblType;
 
+namespace ast
+{
+    struct FuncDeclExpr;
+}
+
 //TODO: make members private and use synchronization to better support threads
 class GlobalData
 {
     void Initialize();
+
 public:
     ~GlobalData();
 
     //deterministically create singleton to avoid stupid circular dependencies with TypeManager
     static void create();
+    
+    void ParseMainFile(const char* path);
+
+
+    ast::Module* ParseFile(const char* path);
+    void ParseBuiltin(const char* path);
 
     TblType stringTbl;
     TblType identTbl;
@@ -49,6 +61,8 @@ public:
     std::list<ast::Module*> allModules;
 
     ast::Module* findModule(const std::string& name);
+
+    ast::FuncDeclExpr* entryPt;
 
     friend GlobalData& Global();
 };

@@ -36,6 +36,9 @@ namespace err
 
     void ExpectedAfter(lex::Lexer *l, const char *expected, const char *after);
 
+    //to be thrown
+    class FatalError {};
+
     class Error
     {
         int posn;
@@ -50,6 +53,7 @@ namespace err
 
         ~Error();
 
+        //TODO: provide overloads for Ident and Type and such
         template<class T>
         Error & operator<< (T toPrint);
         

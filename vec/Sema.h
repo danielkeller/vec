@@ -17,7 +17,9 @@ namespace sa
 
         void validateTree();
 
-        void processFunc (ast::Node0* n);
+        void processFunc (ast::FuncDeclExpr* n);
+        void processSubtree (ast::Node0* n);
+        void processMod();
         
     public:
         Sema(ast::Module* c) : mod(c) {};
@@ -27,13 +29,10 @@ namespace sa
 
         void Import();
 
-        //infer types
+        //infer types. only called on main module
         void Types();
         template<class T>
         void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
-
-        //constant propigation
-        void Phase4();
     };
 
     //finds the last non-block expression in a list of them
