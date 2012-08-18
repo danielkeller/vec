@@ -1,27 +1,11 @@
 
-int:int!64 asdf;
-
-int foo = 6 * "oh hello there";
-int!64 bar = 7 + 7 * 3 - 5;
-int!64 baz = bar + 1;
-
-int:int!64 asdf = 7;
-
-asdf:5;
-
-`foo + 6;
-
-(`foo) + bar;
-(`foo;) + bar;
 
 int:[String] main =
 (
-    7 - (
-        if (foo < 8 + 1)
-            bar = (bar + -baz);
-        else
-            foo;
-    ) + 8;
+    int foo = 7;
+    int!64 bar = 8;
+
+    float baz = foo * bar;
 );
 
 //could do variadic templates:

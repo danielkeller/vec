@@ -97,12 +97,15 @@ void AssignExpr::inferType(Sema&)
     //try to merge types if its a decl
     if (Type().compare(getChildB()->Type()) == typ::TypeCompareResult::invalid)
     {
-        err::Error(getChildA()->loc) << "cannot convert from "
-            << getChildB()->Type().to_str() << " to "
-            << getChildA()->Type().to_str() << " in assignment"
-            << err::underline << opLoc << err::caret
-            << getChildB()->loc << err::underline;
-        //whew!
+        //first check if we can do arith conversion
+        if (Type().getPrimitive().isArith() && getChildB()->Type().getPrimitive().isArith())
+            setChildB(Ptr(new ArithCast(Type(), detachChildB())));
+        else
+            err::Error(getChildA()->loc) << "cannot convert from "
+                << getChildB()->Type().to_str() << " to "
+                << getChildA()->Type().to_str() << " in assignment"
+                << err::underline << opLoc << err::caret
+                << getChildB()->loc << err::underline;
     }
     else if (getChildB()->Value())
         Annotate(getChildB()->Value());
@@ -153,6 +156,45 @@ void BinExpr::inferType(Sema& sema)
     }
     else if (tok::CanBeOverloaded(op))
     {
+        typ::Type lhs_t = getChildA()->Type();
+        typ::Type rhs_t = getChildB()->Type();
+        //first do usual arithmetic conversions, if applicable
+        //these are stated in the c standard §6.3.1.8 (omitting unsigned types)
+        //if unsigned types are added, they should conform to the standard
+
+        Ptr childA = detachChildA();
+        Ptr childB = detachChildB();
+
+        if (lhs_t.getPrimitive().isArith() && rhs_t.getPrimitive().isArith() && lhs_t != rhs_t)
+        {
+            auto promoteOther = [&](typ::Type target) -> bool
+            {
+                if (lhs_t == target)
+                    childB = Ptr(new ArithCast(target, move(childB)));
+                else if (rhs_t == target)
+                    childA = Ptr(new ArithCast(target, move(childA)));
+                else
+                    return false;
+                return true; //if it did something
+            };
+
+            //this uses short-circuiting to avoid writing ugly nested/empty ifs
+
+            //convert to the largest floating point type of either operand
+            promoteOther(typ::float80)
+            || promoteOther(typ::float64)
+            || promoteOther(typ::float32)
+            //If the above three conditions are not met (none of the operands are of
+            //floating types), then integral conversions are performed on the operands as follows:
+            //convert to the largest integer type of either operand
+            || promoteOther(typ::int64)
+            || promoteOther(typ::int32)
+            || promoteOther(typ::int16); //deviate from the standard for consistency
+
+            setChildA(move(childA));
+            setChildB(move(childB));
+        }
+
         typ::TupleBuilder builder;
         builder.push_back(getChildA()->Type(), Global().reserved.null);
         builder.push_back(getChildB()->Type(), Global().reserved.null);

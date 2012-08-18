@@ -85,6 +85,14 @@ namespace ast
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return true;}
     };
+
+    struct ArithCast : public Node1
+    {
+        ArithCast(typ::Type to, Ptr node)
+            : Node1(move(node)) {Annotate(to);}
+        std::string myLbl() {return "(" + Type().to_str() + ")";}
+        bool isExpr() {return true;}
+    };
 }
 
 #endif

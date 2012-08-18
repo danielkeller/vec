@@ -494,6 +494,17 @@ Ident NamedType::name() {return und_node->name;}
 Type NamedType::realType() {return und_node->type;}
 unsigned int NamedType::numArgs() {return und_node->args.size();}
 
+bool PrimitiveType::isArith()
+{
+    return node == &nint8
+        || node == &nint16
+        || node == &nint32
+        || node == &nint64
+        || node == &nfloat32
+        || node == &nfloat64
+        || node == &nfloat80;
+}
+
 TypeManager::~TypeManager()
 {
     for (auto it : nodes)

@@ -59,6 +59,7 @@ namespace typ
 
         TypeCompareResult compare(const Type& other);
         bool operator==(const Type& other) const {return node == other.node;}
+        bool operator!=(const Type& other) const {return node != other.node;}
 
         //this allows use in stl map for example
         bool operator<(const Type& other) const {return node < other.node;}
@@ -149,6 +150,7 @@ namespace typ
         PrimitiveNode* und_node;
     public:
         bool isValid() {return und_node != 0;}
+        bool isArith(); //will return false for invalid types
         friend class Type;
     };
 
