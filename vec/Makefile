@@ -1,4 +1,4 @@
-CXXFLAGS = -g -Wall -pedantic -std=c++11
+CXXFLAGS = -g -D _DEBUG -Wall -pedantic -std=c++11
 CXX = clang++
 # REQUIRES clang 3.1 or later to compile
 

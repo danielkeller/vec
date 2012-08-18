@@ -6,6 +6,7 @@
 #include <sstream>
 #include <type_traits>
 #include <typeinfo>
+#include <cassert>
 
 namespace ast
 {
@@ -26,6 +27,26 @@ To exact_cast(From from)
     else
         return nullptr;
 }
+#endif
+
+#ifdef _DEBUG
+
+template<class To, class From>
+To assert_cast(From from, const char * message)
+{
+    To ret = exact_cast<To>(from);
+    assert(ret && message);
+    return ret;
+}
+
+#else
+
+template<class To, class From>
+To assert_cast(From from, const char *)
+{
+    return static_cast<To>(from);
+}
+
 #endif
 
 namespace utl

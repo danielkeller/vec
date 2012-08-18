@@ -158,8 +158,7 @@ void BinExpr::inferType(Sema& sema)
         builder.push_back(getChildB()->Type(), Global().reserved.null);
         typ::Type argType = typ::mgr.makeTuple(builder);
         DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[op]);
-        OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(def);
-        assert(oGroup && "operator not overloaded properly");
+        OverloadGroupDeclExpr* oGroup = assert_cast<OverloadGroupDeclExpr*>(def, "operator not overloaded properly");
 
         sema.resolveOverload(oGroup, this, argType);
     }
@@ -270,14 +269,12 @@ void Sema::Types()
 
 IntrinCallExpr* OverloadCallExpr::makeICall()
 {
-    IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
-    assert(intrin && "this is not an intrin");
+    IntrinDeclExpr* intrin = assert_cast<IntrinDeclExpr*>(ovrResult, "this is not an intrin");
     return new IntrinCallExpr(detachSelfAs<OverloadCallExpr>(), intrin->intrin_id);
 }
 
 IntrinCallExpr* BinExpr::makeICall()
 {
-    IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult);
-    assert(intrin && "this is not an intrin");
+    IntrinDeclExpr* intrin = assert_cast<IntrinDeclExpr*>(ovrResult, "this is not an intrin");
     return new IntrinCallExpr(detachSelfAs<BinExpr>(), intrin->intrin_id);
 }

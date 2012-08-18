@@ -65,8 +65,10 @@ void Sema::Phase1()
                 ++intrin_num;
 
                 //now replace the function decl in the overload group
-                OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(Global().universal.getVarDef(fde->name));
-                assert(oGroup && "function decl not in group");
+                OverloadGroupDeclExpr* oGroup = assert_cast<OverloadGroupDeclExpr*>(
+                    Global().universal.getVarDef(fde->name),
+                    "function decl not in group");
+
                 oGroup->functions.remove(fde);
                 oGroup->functions.push_back(ide.get());
 
