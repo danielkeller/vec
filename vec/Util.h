@@ -51,6 +51,8 @@ To assert_cast(From from, const char *)
 
 namespace utl
 {
+    //TODO: create file path object
+
     template <class T>
     inline std::string to_str (const T& t)
     {

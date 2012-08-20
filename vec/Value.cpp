@@ -35,13 +35,13 @@ struct FuncNode : public ValNode
 
 struct ScalarNode : public ValNode
 {
-    virtual void* Get() = 0;
+    virtual char* Get() = 0;
 };
 
 struct NormalScalarNode : public ScalarNode
 {
     std::array<char, 10> val;
-    void* Get() {return val.data();}
+    char* Get() {return val.data();}
     ValNode* clone() {return new NormalScalarNode(*this);}
 };
 
@@ -55,7 +55,7 @@ struct ScalarRefNode : public ScalarNode
 
     ScalarRefNode(Value& v, size_t o);
 
-    void* Get();
+    char* Get();
 
     ValNode* clone();
 };
@@ -109,7 +109,7 @@ ScalarRefNode::ScalarRefNode(Value& v, size_t o)
     offset(o)
 {}
 
-void* ScalarRefNode::Get()
+char* ScalarRefNode::Get()
 {
     return &memOwner->val[offset * memOwner->width];
 }
@@ -179,7 +179,7 @@ void Value::appendSeqElem(const Value& v)
     dynamic_cast<SeqNode*>(node.get())->append(v);
 }
 
-void* Value::getBytes()
+char* Value::getBytes()
 {
     return dynamic_cast<ScalarNode*>(node.get())->Get();
 }

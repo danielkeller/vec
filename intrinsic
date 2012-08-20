@@ -30,36 +30,36 @@ float!32:{float!32, float!32} operator/ = __intrin;
 float!64:{float!64, float!64} operator/ = __intrin;
 float!80:{float!80, float!80} operator/ = __intrin;
 
-int!8:{int!8, int!8} operator< = __intrin;
-int!16:{int!16, int!16} operator< = __intrin;
-int!32:{int!32, int!32} operator< = __intrin;
-int!64:{int!64, int!64} operator< = __intrin;
-float!32:{float!32, float!32} operator< = __intrin;
-float!64:{float!64, float!64} operator< = __intrin;
-float!80:{float!80, float!80} operator< = __intrin;
+bool:{int!8, int!8} operator< = __intrin;
+bool:{int!16, int!16} operator< = __intrin;
+bool:{int!32, int!32} operator< = __intrin;
+bool:{int!64, int!64} operator< = __intrin;
+bool:{float!32, float!32} operator< = __intrin;
+bool:{float!64, float!64} operator< = __intrin;
+bool:{float!80, float!80} operator< = __intrin;
 
-int!8:{int!8, int!8} operator<= = __intrin;
-int!16:{int!16, int!16} operator<= = __intrin;
-int!32:{int!32, int!32} operator<= = __intrin;
-int!64:{int!64, int!64} operator<= = __intrin;
+bool:{int!8, int!8} operator<= = __intrin;
+bool:{int!16, int!16} operator<= = __intrin;
+bool:{int!32, int!32} operator<= = __intrin;
+bool:{int!64, int!64} operator<= = __intrin;
 
-int!8:{int!8, int!8} operator> = __intrin;
-int!16:{int!16, int!16} operator> = __intrin;
-int!32:{int!32, int!32} operator> = __intrin;
-int!64:{int!64, int!64} operator> = __intrin;
-float!32:{float!32, float!32} operator> = __intrin;
-float!64:{float!64, float!64} operator> = __intrin;
-float!80:{float!80, float!80} operator> = __intrin;
+bool:{int!8, int!8} operator> = __intrin;
+bool:{int!16, int!16} operator> = __intrin;
+bool:{int!32, int!32} operator> = __intrin;
+bool:{int!64, int!64} operator> = __intrin;
+bool:{float!32, float!32} operator> = __intrin;
+bool:{float!64, float!64} operator> = __intrin;
+bool:{float!80, float!80} operator> = __intrin;
 
-int!8:{int!8, int!8} operator>= = __intrin;
-int!16:{int!16, int!16} operator>= = __intrin;
-int!32:{int!32, int!32} operator>= = __intrin;
-int!64:{int!64, int!64} operator>= = __intrin;
+bool:{int!8, int!8} operator>= = __intrin;
+bool:{int!16, int!16} operator>= = __intrin;
+bool:{int!32, int!32} operator>= = __intrin;
+bool:{int!64, int!64} operator>= = __intrin;
 
-int!8:{int!8, int!8} operator== = __intrin;
-int!16:{int!16, int!16} operator== = __intrin;
-int!32:{int!32, int!32} operator== = __intrin;
-int!64:{int!64, int!64} operator== = __intrin;
+bool:{int!8, int!8} operator== = __intrin;
+bool:{int!16, int!16} operator== = __intrin;
+bool:{int!32, int!32} operator== = __intrin;
+bool:{int!64, int!64} operator== = __intrin;
 
 int!8:{int!8, int!8} operator& = __intrin;
 int!16:{int!16, int!16} operator& = __intrin;

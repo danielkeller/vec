@@ -69,6 +69,9 @@
     <ClInclude Include="LLVM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CodeGen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Token.cpp">
@@ -132,6 +135,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AstNode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CodeGen.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

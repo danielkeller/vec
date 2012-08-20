@@ -583,6 +583,8 @@ lexMore: //more elegant, in this case, than a while(true)
         lexKwOrIdent("agg", tok::k_agg);
         return;
     case 'b':
+        if (lexKw("bool", tok::k_bool))
+            return;
         lexKwOrIdent("break", tok::k_break);
         return;
     case 'c':

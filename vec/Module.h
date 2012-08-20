@@ -36,9 +36,8 @@ namespace ast
         {
             tok::Location nameLoc;
             tok::Location argsLoc;
-            bool couldBeExtraneous; //could it be a byproduct of backtracking?
-            ExternTypeInfo(tok::Location& nameLoc, tok::Location& argsLoc, bool couldBeExtraneous)
-                : nameLoc(nameLoc), argsLoc(argsLoc), couldBeExtraneous(couldBeExtraneous) {}
+            ExternTypeInfo(tok::Location& nameLoc, tok::Location& argsLoc)
+                : nameLoc(nameLoc), argsLoc(argsLoc) {}
             ExternTypeInfo() {}
         };
 

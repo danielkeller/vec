@@ -84,6 +84,7 @@ namespace ast
             : Node1(move(s)) {Annotate(t);}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return true;}
+        llvm::Value* generate(cg::CodeGen&);
     };
 
     struct ArithCast : public Node1

@@ -30,7 +30,8 @@ namespace val
 
         std::shared_ptr<ValNode> node; //I guess this is spimpl
 
-        void* getBytes();
+        //must be char to avoid undefined aliasing behavior
+        char* getBytes();
 
         void makeScalar(); //needed because fromBytesOf is a template
 

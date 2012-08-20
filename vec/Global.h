@@ -13,6 +13,8 @@ namespace ast
 }
 
 //TODO: make members private and use synchronization to better support threads
+//it should be divided between members that are read-only, read-write, and
+//ones that are only used in single threaded code
 class GlobalData
 {
     void Initialize();

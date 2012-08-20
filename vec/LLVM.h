@@ -1,3 +1,6 @@
+#ifndef LLVM_H
+#define LLVM_H
+
 //disable all warnings for llvm on windows
 #ifdef _WIN32
 #pragma warning( push, 0 )
@@ -16,4 +19,6 @@
 
 #ifdef _WIN32
 #pragma warning( pop )
+#endif
+
 #endif

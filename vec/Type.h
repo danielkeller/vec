@@ -17,6 +17,11 @@ namespace par
     class TupleContsParser;
 }
 
+namespace llvm
+{
+    class Type;
+}
+
 namespace typ
 {
     struct TypeNodeB;
@@ -65,6 +70,9 @@ namespace typ
         bool operator<(const Type& other) const {return node < other.node;}
 
         std::string to_str();
+
+        //do not call this before calling typ::mgr.makeLLVMTypes()
+        llvm::Type* toLLVM();
 
         //factory functions for derived types
         //the const is kind of a lie but it helps when you have types in maps
@@ -134,6 +142,7 @@ namespace typ
         Ident name();
         Type realType();
         unsigned int numArgs();
+        bool isExternal();
         friend class Type;
     };
 
@@ -163,6 +172,8 @@ namespace typ
     extern Type float64;
     extern Type float80;
 
+    extern Type boolean;
+
     extern Type any;
     extern Type null;
     extern Type overload;
@@ -189,6 +200,10 @@ namespace typ
     {
         std::list<TypeNodeB*> nodes;
 
+        //set this flag after making llvm types so they get created if we need to add
+        //new types
+        bool makeLLVMImmediately;
+
         //either add n to the list of known nodes
         //or delete n and return an identical node from the list
         TypeNodeB* unique(TypeNodeB* n);
@@ -197,9 +212,11 @@ namespace typ
         Type substitute(Type old, std::map<Ident, TypeNodeB*>& subs);
 
         //internal version of this function
-        Type fixExternNamed(NamedNode* toFix, Type conts, std::vector<Ident>& params);
+        Type makeNamed(Type conts, Ident name, std::vector<Ident>& params, std::list<TypeNodeB*>& args);
 
     public:
+        TypeManager()
+            : makeLLVMImmediately(false) {}
         ~TypeManager();
 
         Type makeList(Type conts, int length = 0);
@@ -207,10 +224,14 @@ namespace typ
         Type makeParam(Ident name);
         Type makeFunc(Type ret, Type arg);
         Type makeTuple(TupleBuilder&);
-        Type makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args);
+        Type makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args)
+        {return makeNamed(conts, name, params, args.namedConts);}
         Type makeExternNamed(Ident name, NamedBuilder& args);
-        void fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params);
+        Type fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params);
         Type makeNamed(Type conts, Ident name);
+
+        //these must be made after importing so all types are complete
+        void makeLLVMTypes();
 
         void printAll(std::ostream& os);
 

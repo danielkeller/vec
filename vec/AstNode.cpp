@@ -1,4 +1,4 @@
-#include "AstNode.h"
+#include "SemaNodes.h"
 #include "Value.h"
 
 namespace ast
@@ -67,6 +67,20 @@ val::Value& Node0::Value()
 void Node0::AnnotDeleter::operator()(Annotation* a)
 {
     delete a;
+}
+
+//print function value if it exists
+//needs to be here because it uses Value
+void ConstExpr::emitDot(std::ostream& os)
+{
+    Node0::emitDot(os);
+    if (Type().getFunc().isValid())
+    {
+        Value().getFunc()->emitDot(os);
+        os << 'n' << static_cast<Node0*>(this) << " -> n"
+            << static_cast<Node0*>(Value().getFunc().get())
+            << " [style=dotted, dir=back];\n";
+    }
 }
 
 }

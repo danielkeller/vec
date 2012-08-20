@@ -1,11 +1,11 @@
-
+int:[String] main = 8;
 
 int:[String] main =
 (
     int foo = 7;
     int!64 bar = 8;
 
-    float baz = foo * bar;
+    float baz = 5 / foo * bar + 6;
 );
 
 //could do variadic templates:

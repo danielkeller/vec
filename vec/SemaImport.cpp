@@ -24,10 +24,6 @@ void Sema::Import()
 
     for (auto evar : Subtree<VarExpr>(mod))
     {
-        //catch a few more non-extraneous types
-        if (mod->externTypes.count(evar->Type()))
-            mod->externTypes[evar->Type()].couldBeExtraneous = false;
-
         if (evar->ename == 0)
             return; //not external
 
@@ -44,10 +40,8 @@ void Sema::Import()
         //to <error type>
     }
 
-    //unfortunately it is not currently possible to emit errors for all undefined types. this is 
-    //because it would involve emitting errors for extraneous types that are actually variables. 
-    //however we can emit errors for things that must be types and get errors like 
-    //"can't convert from 'foo' aka '<undeclared type>' to 'int'" for the rest
+    //now we have to go in and replace all uses of external types with their actual type
+    std::map<typ::Type, typ::Type> typeReplace;
 
     for (auto& externType : mod->externTypes)
     {
@@ -56,13 +50,8 @@ void Sema::Import()
 
         TypeDef* td = mod->priv.getTypeDef(type.name());
 
-        if (!td)
-        {
-            if (!externType.second.couldBeExtraneous) //whine away!
-                err::Error(externType.second.nameLoc) << "type '" << Global().getIdent(type.name())
-                    << "' is undefined" << err::underline;
+        if (!td) //don't complain just yet, it could be extraneous
             continue;
-        }
 
         //if there are arguments, it's not extraneous
         if (type.numArgs() && type.numArgs() != td->params.size())
@@ -70,6 +59,23 @@ void Sema::Import()
                 << "incorrect number of type arguments, expected 0 or "
                 << td->params.size() << ", got " << type.numArgs() << err::underline;
 
-        typ::mgr.fixExternNamed(type, td->mapped, td->params);
+        typeReplace[type] = typ::mgr.fixExternNamed(type, td->mapped, td->params);
+    }
+
+    for (auto n : Subtree<>(mod))
+    {
+        typ::NamedType type = n->Type().getNamed();
+        if (type.isExternal())
+        {
+            if (typeReplace.count(type))
+                n->Annotate(typeReplace[type]);
+            //remove it from externTypes so as not to emit multiple errors
+            else if (mod->externTypes.count(type))
+            {
+                err::Error(mod->externTypes[type].nameLoc) << "type '"
+                    << Global().getIdent(type.name()) << "' is undefined" << err::underline;
+                mod->externTypes.erase(type);
+            }
+        }
     }
 }

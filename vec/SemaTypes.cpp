@@ -92,6 +92,7 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     }
 }
 
+//TODO: remove constant code
 void AssignExpr::inferType(Sema&)
 {
     //try to merge types if its a decl
@@ -162,11 +163,12 @@ void BinExpr::inferType(Sema& sema)
         //these are stated in the c standard §6.3.1.8 (omitting unsigned types)
         //if unsigned types are added, they should conform to the standard
 
-        Ptr childA = detachChildA();
-        Ptr childB = detachChildB();
-
+        //TODO: integer-only cases (==, %, etc)
         if (lhs_t.getPrimitive().isArith() && rhs_t.getPrimitive().isArith() && lhs_t != rhs_t)
         {
+            Ptr childA = detachChildA();
+            Ptr childB = detachChildB();
+
             auto promoteOther = [&](typ::Type target) -> bool
             {
                 if (lhs_t == target)
@@ -275,6 +277,8 @@ void Sema::processMod()
 
 void Sema::Types()
 {
+    typ::mgr.makeLLVMTypes();
+
     processMod();
 
     //now find the entry point and go!!

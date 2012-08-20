@@ -30,6 +30,7 @@ bool par::couldBeType(tok::Token &t)
     case tupleBegin:
     case tok::k_int:
     case tok::k_float:
+    case tok::k_bool:
     case tok::question:
     case tok::at:
     case tok::identifier:
@@ -94,6 +95,7 @@ void Parser::parseSingle()
 
     case tok::k_int:
     case tok::k_float:
+    case tok::k_bool:
         parsePrim();
         break;
 
@@ -199,7 +201,7 @@ single-type
 */
 void Parser::parsePrim()
 {
-    if (lexer->Next() == tok::k_int)
+    if (lexer->Expect(tok::k_int))
     {
         if (!lexer->Expect(tok::bang))
         {
@@ -236,7 +238,7 @@ void Parser::parsePrim()
             break;
         }
     }
-    else 
+    else if (lexer->Expect(tok::k_float))
     {
         if (!lexer->Expect(tok::bang))
         {
@@ -269,6 +271,11 @@ void Parser::parsePrim()
                 type = typ::float32;
                 break;
         }
+    }
+    else //bool
+    {
+        lexer->Advance();
+        type = typ::boolean;
     }
 }
 
@@ -335,7 +342,8 @@ void Parser::parseNamed()
 
     argsLoc = argsLoc + lexer->Last().loc;
 
-    //no type was found, it could be defined in another package, so save it off for sema 3 to worry about
+    //no type was found, it could be defined in another package, so save it off for
+    //importing to worry about
     if (!td)
     {
         type = typ::mgr.makeExternNamed(typeName, builder);
@@ -344,17 +352,8 @@ void Parser::parseNamed()
         //if the previous one could be extraneous but this one can't, replace it for better 
         //errors
 
-        //an educated guess is the best way to do this because we can't exactly go back to 
-        //already parsed types and say "oh yeah we needed that." technically this could be 
-        //done by adding stuff to TypeManager but this is 90% of the meaty goodness for 
-        //10% of the work
-
-        bool thisCouldBeExtraneous = backtrackStatus == CanBacktrack;
-
-        if (!mod->externTypes.count(type)
-            || (mod->externTypes[type].couldBeExtraneous && !thisCouldBeExtraneous))
-            mod->externTypes[type]
-                = Module::ExternTypeInfo(id.loc, argsLoc, thisCouldBeExtraneous);
+        if (!mod->externTypes.count(type))
+            mod->externTypes[type] = Module::ExternTypeInfo(id.loc, argsLoc);
         return;
     }
     //otherwise, deal with it now

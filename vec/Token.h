@@ -5,14 +5,20 @@
 
 #include <string>
 
+namespace llvm
+{
+    class StringRef;
+}
 
 //"strong typedef"
 class Ident
 {
     friend Ident mkIdent(int v); //instead of c'tor
     int val;
+    //int prefix; //add for qualified names, ie foo.bar.baz
 public:
     operator int() const {return val;}
+    operator llvm::StringRef() const; //implemented in Global.cpp
 };
 
 inline Ident mkIdent(int v)
@@ -107,6 +113,7 @@ namespace tok
 
         k_agg,
         k_break,
+        k_bool,
         k_case,
         k_continue,
         k_c_call,

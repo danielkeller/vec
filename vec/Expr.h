@@ -97,6 +97,8 @@ namespace ast
 
         const char *myColor() {return "7";}
         std::string myLbl() {return "const " + Type().to_str() + "";}
+
+        void emitDot(std::ostream& os);
     };
 
     struct IntrinCallExpr;

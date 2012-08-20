@@ -26,6 +26,16 @@ namespace val
     class Value;
 }
 
+namespace llvm
+{
+    class Value;
+}
+
+namespace cg
+{
+    struct CodeGen;
+}
+
 namespace ast
 {
     class Annotation;
@@ -130,6 +140,7 @@ namespace ast
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
         virtual void inferType(sa::Sema&) {}
+        virtual llvm::Value* generate(cg::CodeGen&) {return nullptr;}
 
         tok::Location loc; //might not be set
         Node0 *parent;

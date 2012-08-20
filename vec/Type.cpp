@@ -4,6 +4,7 @@
 #include "Module.h"
 #include "Parser.h"
 #include "Global.h"
+#include "LLVM.h"
 
 #include <list>
 #include <algorithm>
@@ -32,6 +33,13 @@ struct TypeNodeB
     virtual void print(std::ostream&) = 0;
 
     virtual ~TypeNodeB() {};
+
+    //we could have some fancy stuff with virtual functions, but the only type that
+    //needs to be "special" is function
+    llvm::Type* llvm_t;
+
+    //requires all referenced nodes to have complete type
+    virtual void createLLVMType() = 0;
 };
 
 template <class T>
@@ -49,6 +57,7 @@ struct FuncNode : public TypeNode<FuncNode>
     bool insertCompareTo(FuncNode* other);
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
+    void createLLVMType();
 };
 
 struct ListNode : public TypeNode<ListNode>
@@ -59,6 +68,7 @@ struct ListNode : public TypeNode<ListNode>
     bool insertCompareTo(ListNode* other);
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
+    void createLLVMType();
 };
 
 struct TupleNode : public TypeNode<TupleNode>
@@ -68,6 +78,7 @@ struct TupleNode : public TypeNode<TupleNode>
     bool insertCompareTo(TupleNode* other);
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
+    void createLLVMType();
 };
 
 struct RefNode : public TypeNode<RefNode>
@@ -77,6 +88,7 @@ struct RefNode : public TypeNode<RefNode>
     bool insertCompareTo(RefNode* other);
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
+    void createLLVMType();
 };
 
 //this represents the USE of a named type
@@ -91,6 +103,7 @@ struct NamedNode : public TypeNode<NamedNode>
     bool insertCompareTo(NamedNode* other);
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
+    void createLLVMType();
 };
 
 struct ParamNode : public TypeNode<ParamNode>
@@ -102,16 +115,22 @@ struct ParamNode : public TypeNode<ParamNode>
     TypeNodeB* clone(TypeManager*);
     void print(std::ostream&);
     ParamNode() : sub(0) {}
+    void createLLVMType();
 };
 
 struct PrimitiveNode : public TypeNode<PrimitiveNode>
 {
     const char * name;
-    PrimitiveNode(const char * n) : name(n) {}
+    PrimitiveNode(const char * n, llvm::Type* t) : name(n) {llvm_t = t;}
+    PrimitiveNode(const char * n) : name(n) //for special types
+    {
+        llvm_t = llvm::Type::getVoidTy(llvm::getGlobalContext());
+    }
     TypeCompareResult compareTo(PrimitiveNode* other) {return this == other;}
     bool insertCompareTo(PrimitiveNode* other) {return this == other;}
     TypeNodeB* clone(TypeManager*) {return this;}
     void print(std::ostream& os) {os << name;}
+    void createLLVMType() {}
 };
 
 //get a version of this with temporary param subs
@@ -219,6 +238,20 @@ TypeNodeB* FuncNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void FuncNode::createLLVMType()
+{
+    llvm::SmallVector<llvm::Type*, 5> llvm_args;
+    
+    TupleNode* allArgs = exact_cast<TupleNode*>(arg);
+    if (allArgs)
+        for (auto a : allArgs->conts)
+            llvm_args.push_back(a.first->llvm_t);
+    else
+        llvm_args.push_back(arg->llvm_t);
+
+    llvm_t = llvm::FunctionType::get(ret->llvm_t, llvm_args, false);
+}
+
 void FuncNode::print(std::ostream &out)
 {
     ret->print(out);
@@ -241,6 +274,15 @@ TypeNodeB* ListNode::clone(TypeManager* mgr)
     ListNode* copy = new ListNode(*this);
     copy->contents = mgr->clone(contents);
     return copy;
+}
+
+void ListNode::createLLVMType()
+{
+    llvm_t = llvm::StructType::get(
+        llvm::Type::getInt32Ty(llvm::getGlobalContext()),
+        llvm::PointerType::getUnqual(contents->llvm_t),
+        nullptr
+        );
 }
 
 void ListNode::print(std::ostream &out)
@@ -291,6 +333,14 @@ TypeNodeB* TupleNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void TupleNode::createLLVMType()
+{
+    llvm::SmallVector<llvm::Type*, 5> llvm_conts;
+    for (auto t : conts)
+        llvm_conts.push_back(t.first->llvm_t);
+    llvm_t = llvm::StructType::get(llvm::getGlobalContext(), llvm_conts);
+}
+
 void TupleNode::print(std::ostream &out)
 {
     out << '{';
@@ -322,6 +372,11 @@ TypeNodeB* RefNode::clone(TypeManager* mgr)
     return copy;
 }
 
+void RefNode::createLLVMType()
+{
+    llvm_t = llvm::PointerType::getUnqual(contents->llvm_t);
+}
+
 void RefNode::print(std::ostream &out)
 {
     out << '@';
@@ -350,6 +405,27 @@ TypeNodeB* NamedNode::clone(TypeManager* mgr)
     copy->name = name;
     copy->type = mgr->clone(type);
     return copy;
+}
+
+void NamedNode::createLLVMType()
+{
+    llvm::Type* conts_t = type->llvm_t;
+    llvm::StructType* struct_t = llvm::dyn_cast<llvm::StructType>(conts_t);
+
+    //llvm can only make named structs
+    if (!struct_t)
+    {
+        llvm_t = conts_t;
+        return;
+    }
+
+    std::vector<llvm::Type*> type_conts;
+    type_conts.reserve(struct_t->getNumElements());
+
+    for (auto it = struct_t->element_begin(); it != struct_t->element_end(); ++it)
+        type_conts.push_back(*it);
+
+    llvm_t = llvm::StructType::create(type_conts, name);
 }
 
 void NamedNode::print(std::ostream &out)
@@ -384,20 +460,29 @@ TypeNodeB* ParamNode::clone(TypeManager*)
     return sub;
 }
 
+void ParamNode::createLLVMType()
+{
+    //this should probably not be used for anything
+    llvm_t = llvm::StructType::create(llvm::getGlobalContext(), "_P_" + Global().getIdent(name));
+}
+
 void ParamNode::print(std::ostream &out)
 {
     out << '?' << Global().getIdent(name);
 }
 
-PrimitiveNode nint8("int!8");
-PrimitiveNode nint16("int!16");
-PrimitiveNode nint32("int!32");
-PrimitiveNode nint64("int!64");
+PrimitiveNode nint8("int!8", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
+PrimitiveNode nint16("int!16", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
+PrimitiveNode nint32("int!32", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
+PrimitiveNode nint64("int!64", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
     
-PrimitiveNode nfloat32("float!32");
-PrimitiveNode nfloat64("float!64");
-PrimitiveNode nfloat80("float!80");
+PrimitiveNode nfloat32("float!32", llvm::Type::getFloatTy(llvm::getGlobalContext()));
+PrimitiveNode nfloat64("float!64", llvm::Type::getDoubleTy(llvm::getGlobalContext()));
+PrimitiveNode nfloat80("float!80", llvm::Type::getX86_FP80Ty(llvm::getGlobalContext()));
 
+PrimitiveNode nboolean("bool", llvm::Type::getInt1Ty(llvm::getGlobalContext()));
+
+//special types
 PrimitiveNode nany("?");
 PrimitiveNode nnull("void");
 PrimitiveNode noverload("<overload group>");
@@ -412,6 +497,8 @@ Type int64(nint64);
 Type float32(nfloat32);
 Type float64(nfloat64);
 Type float80(nfloat80);
+
+Type boolean(nboolean);
 
 Type any(nany);
 Type null(nnull);
@@ -442,6 +529,11 @@ std::string Type::to_str()
     }
 
     return strstr.str();
+}
+
+llvm::Type* Type::toLLVM()
+{
+    return node->llvm_t;
 }
 
 //get the node of this type (if it is that type) behind any typedefs
@@ -493,6 +585,7 @@ Type TupleType::elem(size_t pos) {return und_node->conts[pos].first;}
 Ident NamedType::name() {return und_node->name;}
 Type NamedType::realType() {return und_node->type;}
 unsigned int NamedType::numArgs() {return und_node->args.size();}
+bool NamedType::isExternal() {return und_node->type == &nundeclared;}
 
 bool PrimitiveType::isArith()
 {
@@ -526,35 +619,12 @@ Type TypeManager::makeRef(Type conts)
     return unique(n);
 }
 
-Type TypeManager::makeNamed(Type conts, Ident name, std::vector<Ident>& params, NamedBuilder& args)
+Type TypeManager::makeNamed(Type conts, Ident name, std::vector<Ident>& params, std::list<TypeNodeB*>& args)
 {
     NamedNode* n = new NamedNode();
     n->name = name;
-    std::swap(n->args, args.namedConts);
+    std::swap(n->args, args);
 
-    //the common code is in this function
-    return fixExternNamed(n, conts, params);
-}
-
-Type TypeManager::makeExternNamed(Ident name, NamedBuilder& args)
-{
-    NamedNode* n = new NamedNode();
-    n->name = name;
-    std::swap(n->args, args.namedConts);
-    n->type = undeclared;
-    return unique(n);
-}
-
-void TypeManager::fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params)
-{
-    //we can't re-unique this node because that could break references to it. so we end
-    //up with nodes that are the same this will break uniqueness a little but it's ok
-    //since that is more of an optimization than a correctess thing.
-    fixExternNamed(static_cast<NamedNode*>(toFix.node), conts, params);
-}
-
-Type TypeManager::fixExternNamed(NamedNode* n, Type conts, std::vector<Ident>& params)
-{
     //recover as best we can. also do "aliasing" here.
     //get the name of the param and replace ie '?T' with '?T in foo'
     while (n->args.size() < params.size())
@@ -574,7 +644,7 @@ Type TypeManager::fixExternNamed(NamedNode* n, Type conts, std::vector<Ident>& p
     }
 
     n->type = substitute(conts, subs);
-    return unique(n); //we still need to unique n, n != n->type
+    return unique(n);
 }
 
 Type TypeManager::makeNamed(Type conts, Ident name)
@@ -583,6 +653,22 @@ Type TypeManager::makeNamed(Type conts, Ident name)
     n->name = name;
     n->type = conts;
     return unique(n); //we still need to unique n, n != n->type
+}
+
+Type TypeManager::makeExternNamed(Ident name, NamedBuilder& args)
+{
+    NamedNode* n = new NamedNode();
+    n->name = name;
+    std::swap(n->args, args.namedConts);
+    n->type = undeclared;
+    return unique(n);
+}
+
+Type TypeManager::fixExternNamed(NamedType toFix, Type conts, std::vector<Ident>& params)
+{
+    //create new, unique type
+    NamedNode* n = static_cast<NamedNode*>(toFix.node);
+    return makeNamed(conts, n->name, params, n->args);
 }
 
 Type TypeManager::makeParam(Ident name)
@@ -632,7 +718,22 @@ TypeNodeB* TypeManager::unique(TypeNodeB* n)
     }
 
     nodes.push_back(n);
+
+    if (makeLLVMImmediately)
+        n->createLLVMType();
+
     return n;
+}
+
+
+void TypeManager::makeLLVMTypes()
+{
+    //if we do this in order, all nodes will have defined types to refer to,
+    //because all nodes only refer to nodes before them
+    for (auto node : nodes)
+        node->createLLVMType();
+
+    makeLLVMImmediately = true;
 }
 
 void TypeManager::printAll(std::ostream& os)

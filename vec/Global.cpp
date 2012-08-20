@@ -3,9 +3,17 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "Sema.h"
+#include "CodeGen.h"
+
+#include "LLVM.h"
 
 #include <memory>
 #include <fstream>
+
+Ident::operator llvm::StringRef() const
+{
+    return llvm::StringRef(Global().getIdent(*this));
+}
 
 std::unique_ptr<GlobalData> singleton;
 
@@ -83,6 +91,10 @@ void GlobalData::ParseMainFile(const char* path)
     mainMod->emitDot(dot);
     dot << '}';
     dot.close();
+
+    std::string outfile = mainMod->name + ".ll";
+
+    cg::CodeGen gen(outfile);
 
     //FIXME: use RAII instead
     for (auto mod : Global().allModules)
