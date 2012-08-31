@@ -212,7 +212,8 @@ Node0* Parser::parsePrimaryExpr()
     case tok::floating:
         lexer->Advance();
         ret = new ConstExpr(to.loc);
-        ret->Annotate(typ::float80, val::Value(to.value.dbl_v));
+        //could use float!80, but use float!64 for compatibility
+        ret->Annotate(typ::float64, val::Value(to.value.dbl_v));
         return ret;
     case tok::stringlit:
         lexer->Advance();

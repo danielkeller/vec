@@ -99,6 +99,7 @@ void AssignExpr::inferType(Sema&)
     if (Type().compare(getChildB()->Type()) == typ::TypeCompareResult::invalid)
     {
         //first check if we can do arith conversion
+        //FIXME: this should go in copy constructor code
         if (Type().getPrimitive().isArith() && getChildB()->Type().getPrimitive().isArith())
             setChildB(Ptr(new ArithCast(Type(), detachChildB())));
         else
@@ -226,12 +227,38 @@ void TuplifyExpr::inferType(Sema&)
     Annotate(typ::mgr.makeTuple(builder));
 }
 
+void ReturnStmt::inferType(Sema&)
+{
+    //first check if we can do arith conversion
+    //FIXME: this should go in copy constructor code
+    //TODO: this
+ /*
+    if (Type().getPrimitive().isArith() && getChildA()->Type().getPrimitive().isArith())
+        setChildA(Ptr(new ArithCast(Type(), detachChildA())));
+    else
+        err::Error(getChildA()->loc) << "cannot convert from "
+            << getChildB()->Type().to_str() << " to "
+            << getChildA()->Type().to_str() << " in assignment"
+            << err::underline << opLoc << err::caret
+            << getChildB()->loc << err::underline;
+            */
+}
+
 void Sema::processFunc (ast::FuncDeclExpr* n)
 {
     if (!n->Value())
         err::Error(n->loc) << "function '" << Global().getIdent(n->name) << "' is never defined";
     else
-        processSubtree(n->Value().getFunc().get());
+    {
+        FunctionDef* def = n->Value().getFunc().get();
+
+        processSubtree(def);
+        for (auto ret : Subtree<ReturnStmt>(def))
+            if (n->Type().getFunc().ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
+                err::Error(ret->getChildA()->loc) << "cannot convert from "
+                    << ret->getChildA()->Type().to_str() << " to " << n->Type().getFunc().ret().to_str()
+                    << " in function return" << err::underline;
+    }
 }
 
 void Sema::processSubtree (ast::Node0* n)

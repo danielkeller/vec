@@ -40,6 +40,7 @@ namespace ast
             os << 'n' << static_cast<Node0*>(this)
                << " [label=\";|<p0>|<p1>\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct Block : public Node1
@@ -121,8 +122,11 @@ namespace ast
             : Node1(move(arg))
         {}
         std::string myLbl() {return "return";}
+        annot_t& Annot() {return getChildA()->Annot();}
+        void inferType(sa::Sema&);
         Node0* getExpr() {return getChildA();}
         bool isExpr() {return false;}
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 }
 

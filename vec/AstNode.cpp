@@ -1,5 +1,12 @@
 #include "SemaNodes.h"
 #include "Value.h"
+#include "Type.h"
+#include "LLVM.h"
+
+namespace llvm
+{
+    class Value;
+}
 
 namespace ast
 {
@@ -10,7 +17,7 @@ class Annotation
     friend class Node0;
     typ::Type type;
     val::Value value;
-    bool lval;
+    llvm::Value* address; //for lvalues
 
     //add more as neccesary
     void set (typ::Type t)
@@ -23,11 +30,21 @@ class Annotation
         value = v;
     }
 
+    void set (llvm::Value* a)
+    {
+        address = a;
+    }
+
     void set (typ::Type t, const val::Value& v)
     {
         type = t;
         value = v;
     }
+
+    Annotation()
+        : type(typ::error),
+        address(nullptr)
+    {}
 };
 
 void Node0::makeAnnot()
@@ -48,6 +65,12 @@ void Node0::Annotate(const typ::Type t)
     Annot()->set(t);
 }
 
+void Node0::Annotate(llvm::Value* a)
+{
+    makeAnnot();
+    Annot()->set(a);
+}
+
 void Node0::Annotate(typ::Type t, const val::Value& v)
 {
     makeAnnot();
@@ -62,6 +85,17 @@ typ::Type Node0::Type()
 val::Value& Node0::Value()
 {
     return Annot() ? Annot()->value : Value();
+}
+
+llvm::Value* Node0::Address()
+{
+    return Annot() ? Annot()->address : nullptr;
+}
+
+llvm::Value* Node0::generate(cg::CodeGen&)
+{
+    assert(false && "generate not implemented");
+    return nullptr;
 }
 
 void Node0::AnnotDeleter::operator()(Annotation* a)

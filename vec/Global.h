@@ -47,6 +47,7 @@ public:
     {
         Ident null;
         Ident arg;
+        Ident ret; //__ret
         Ident main;
         Ident init; //really __init but __names are reserved
         Ident string;

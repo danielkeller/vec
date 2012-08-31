@@ -76,12 +76,14 @@ namespace ast
         std::string myLbl() {return utl::to_str(intrin_id) + ":";}
         const char *myColor() {return "5";}
         void inferType(sa::Sema&);
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct FunctionDef : public Node1
     {
         FunctionDef(typ::Type t, Ptr s)
-            : Node1(move(s)) {Annotate(t);}
+            : Node1(move(s))
+        {Annotate(t);}
         std::string myLbl() {return Type().to_str();}
         bool isExpr() {return true;}
         llvm::Value* generate(cg::CodeGen&);
@@ -93,6 +95,7 @@ namespace ast
             : Node1(move(node)) {Annotate(to);}
         std::string myLbl() {return "(" + Type().to_str() + ")";}
         bool isExpr() {return true;}
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 }
 

@@ -160,6 +160,8 @@ namespace typ
     public:
         bool isValid() {return und_node != 0;}
         bool isArith(); //will return false for invalid types
+        bool isInt(); //will return false for invalid types
+        bool isFloat(); //will return false for invalid types
         friend class Type;
     };
 

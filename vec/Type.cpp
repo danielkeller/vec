@@ -211,6 +211,7 @@ bool TypeNode<T>::insertCompare (TypeNodeB* toAdd)
     sub(toAdd);
 
     //don't early out
+    //TODO: can't we early out if no subs are set?
     //only call compare again if either function did something, otherwise fall through
     TypeNodeB* realThis = this;
 
@@ -472,9 +473,9 @@ void ParamNode::print(std::ostream &out)
 }
 
 PrimitiveNode nint8("int!8", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
-PrimitiveNode nint16("int!16", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
-PrimitiveNode nint32("int!32", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
-PrimitiveNode nint64("int!64", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
+PrimitiveNode nint16("int!16", llvm::Type::getInt16Ty(llvm::getGlobalContext()));
+PrimitiveNode nint32("int!32", llvm::Type::getInt32Ty(llvm::getGlobalContext()));
+PrimitiveNode nint64("int!64", llvm::Type::getInt64Ty(llvm::getGlobalContext()));
     
 PrimitiveNode nfloat32("float!32", llvm::Type::getFloatTy(llvm::getGlobalContext()));
 PrimitiveNode nfloat64("float!64", llvm::Type::getDoubleTy(llvm::getGlobalContext()));
@@ -589,11 +590,20 @@ bool NamedType::isExternal() {return und_node->type == &nundeclared;}
 
 bool PrimitiveType::isArith()
 {
+    return isInt() || isFloat();
+}
+
+bool PrimitiveType::isInt()
+{
     return node == &nint8
         || node == &nint16
         || node == &nint32
-        || node == &nint64
-        || node == &nfloat32
+        || node == &nint64;
+}
+
+bool PrimitiveType::isFloat()
+{
+    return node == &nfloat32
         || node == &nfloat64
         || node == &nfloat80;
 }

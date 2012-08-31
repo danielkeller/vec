@@ -31,11 +31,12 @@ To exact_cast(From from)
 
 #ifdef _DEBUG
 
+//FIXME: user won't see the message w/o a debugger
 template<class To, class From>
-To assert_cast(From from, const char * message)
+To assert_cast(From from, const char *)
 {
     To ret = exact_cast<To>(from);
-    assert(ret && message);
+    assert(ret);
     return ret;
 }
 

@@ -125,6 +125,7 @@ void GlobalData::Initialize()
     //add reserved identifiers
     reserved.null = addIdent("");
     reserved.arg = addIdent("arg");
+    reserved.ret = addIdent("__ret");
     reserved.main = addIdent("main");
     reserved.init = addIdent("__init");
     reserved.string = addIdent("String");

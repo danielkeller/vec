@@ -78,6 +78,7 @@
     <ClInclude Include="CodeGen.h" />
     <ClInclude Include="Error.h" />
     <ClInclude Include="Expr.h" />
+    <ClInclude Include="Intrinsic.h" />
     <ClInclude Include="Lexer.h" />
     <ClInclude Include="LLVM.h" />
     <ClInclude Include="Location.h" />

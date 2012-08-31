@@ -8,9 +8,11 @@ namespace cg
     struct CodeGen
     {
         //for now, all code goes into one file
-        CodeGen(std::string outfile);
+        CodeGen(std::string& outfile);
 
         llvm::BasicBlock* curBB;
+        llvm::Function* curFunc;
+        llvm::Module* curMod;
     };
 }
 

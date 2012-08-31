@@ -131,16 +131,18 @@ namespace ast
 
         void Annotate(const val::Value& v);
         void Annotate(typ::Type t);
+        void Annotate(llvm::Value* addr);
 
         void Annotate(typ::Type t, const val::Value& v);
 
         typ::Type Type();
         val::Value& Value();
+        llvm::Value* Address();
 
         virtual bool isLval() {return false;}
         virtual bool isExpr() {return true;}
         virtual void inferType(sa::Sema&) {}
-        virtual llvm::Value* generate(cg::CodeGen&) {return nullptr;}
+        virtual llvm::Value* generate(cg::CodeGen&);
 
         tok::Location loc; //might not be set
         Node0 *parent;

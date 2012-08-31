@@ -13,3 +13,7 @@ vc
 tags
 *.dot
 *.jpg
+llvm-lib-debug/*.lib
+llvm-lib-release/*.lib
+include/llvm/*
+*.ll

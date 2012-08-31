@@ -5,7 +5,11 @@ int:[String] main =
     int foo = 7;
     int!64 bar = 8;
 
-    float baz = 5 / foo * bar + 6;
+    float baz = 5 / foo * bar + 6.1;
+
+    bool stuff = baz < foo || bar != 7;
+
+    foo;
 );
 
 //could do variadic templates:

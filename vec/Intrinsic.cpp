@@ -3,46 +3,47 @@
 #include "Error.h"
 #include "Global.h"
 #include "Value.h"
+#include "Intrinsic.h"
 
 #include <cassert>
 #include <queue>
 
 using namespace ast;
 using namespace sa;
+using namespace intr;
 
 //This is for the section of Sema 3 that deals with intrinsics
 
-//This relies on nobody else using counter, and the intrinsics being in the right order
-//and all in one file
+//This relies on the intrinsics being in the right order and all in one file
 
-#define ARITH(op, type) \
-    case __COUNTER__: \
-    Annotate(getChild(0)->Value().getScalarAs<type>() \
-        op getChild(1)->Value().getScalarAs<type>()); \
+#define ARITH(op, type, opid, typid) \
+    case (opid) + (typid): \
+        Annotate(getChild(0)->Value().getScalarAs<type>() \
+            op getChild(1)->Value().getScalarAs<type>()); \
     break
 
-#define U_ARITH(op, type) \
-    case __COUNTER__: \
-    Annotate(op getChild(0)->Value().getScalarAs<type>()); \
+#define U_ARITH(op, type, opid, typid) \
+    case (opid) + (typid): \
+        Annotate(op getChild(0)->Value().getScalarAs<type>()); \
     break
 
-#define INTEGER(op) \
-    ARITH(op, signed char); \
-    ARITH(op, short); \
-    ARITH(op, long); \
-    ARITH(op, long long)
+#define INTEGER(op, opid) \
+    ARITH(op, signed char, opid, TYPES::INT8); \
+    ARITH(op, short,       opid, TYPES::INT16); \
+    ARITH(op, long,        opid, TYPES::INT32); \
+    ARITH(op, long long,   opid, TYPES::INT64)
 
-#define U_INTEGER(op) \
-    U_ARITH(op, signed char); \
-    U_ARITH(op, short); \
-    U_ARITH(op, long); \
-    U_ARITH(op, long long)
+#define U_INTEGER(op, opid) \
+    U_ARITH(op, signed char, opid, TYPES::INT8); \
+    U_ARITH(op, short,       opid, TYPES::INT16); \
+    U_ARITH(op, long,        opid, TYPES::INT32); \
+    U_ARITH(op, long long,   opid, TYPES::INT64)
 
-#define NUMERIC(op) \
-    INTEGER(op); \
-    ARITH(op, float); \
-    ARITH(op, double); \
-    ARITH(op, long double)
+#define NUMERIC(op, opid) \
+    INTEGER(op, opid); \
+    ARITH(op, float,       opid, TYPES::FLOAT); \
+    ARITH(op, double,      opid, TYPES::DOUBLE); \
+    ARITH(op, long double, opid, TYPES::LONG_DOUBLE)
 
 void IntrinCallExpr::inferType(Sema&)
 {
@@ -55,25 +56,29 @@ void IntrinCallExpr::inferType(Sema&)
     {
         //numeric intrinsics
 
-        NUMERIC(+);
-        NUMERIC(-);
-        NUMERIC(*);
-        NUMERIC(/);
+        NUMERIC(+, OPS::PLUS);
+        NUMERIC(-, OPS::MINUS);
+        NUMERIC(*, OPS::TIMES);
+        NUMERIC(/, OPS::DIVIDE);
         
-        NUMERIC(<);
-        INTEGER(<=);
-        NUMERIC(>);
-        INTEGER(<=);
-        INTEGER(==);
-        INTEGER(!=);
+        NUMERIC(<, OPS::LESS);
+        INTEGER(<=, OPS::NOGREATER);
+        NUMERIC(>, OPS::GREATER);
+        INTEGER(<=, OPS::NOLESS);
+        INTEGER(==, OPS::EQUAL);
+        INTEGER(!=, OPS::NOTEQUAL);
 
-        INTEGER(&);
-        INTEGER(|);
-        INTEGER(^);
-        INTEGER(%);
+        INTEGER(&, OPS::BITAND);
+        INTEGER(|, OPS::BITOR);
+        INTEGER(^, OPS::BITXOR);
+        INTEGER(%, OPS::MOD);
 
-        U_INTEGER(++);
-        U_INTEGER(--);
+        U_INTEGER(++, OPS::INCREMENT);
+        U_INTEGER(--, OPS::DECREMENT);
+
+        ARITH(&&, bool, OPS::AND, 0);
+        ARITH(||, bool, OPS::OR, 0);
+        U_ARITH(!, bool, OPS::NOT, 0);
     default:
         ;
     }

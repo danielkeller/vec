@@ -37,6 +37,7 @@ namespace ast
         inline std::string myLbl();
         const char *myColor() {return "5";};
         inline annot_t& Annot();
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     //could possibly have a weak_string of its name?
@@ -53,6 +54,7 @@ namespace ast
 
         //have to re-override it back to the original
         annot_t& Annot() {return Node0::Annot();}
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     //put this here so it knows what a DeclExpr is
@@ -75,6 +77,7 @@ namespace ast
 
         //allows all declarations of functions to share the value
         annot_t& Annot() {return realDecl ? realDecl->Annot() : Node0::Annot();}
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     //declaration of an entire function overload group
@@ -99,6 +102,7 @@ namespace ast
         std::string myLbl() {return "const " + Type().to_str() + "";}
 
         void emitDot(std::ostream& os);
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct IntrinCallExpr;
@@ -138,6 +142,7 @@ namespace ast
         std::string myLbl() {return "'='";}
         annot_t& Annot() {return getChildA()->Annot();}
         void inferType(sa::Sema&);
+        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct OpAssignExpr : public AssignExpr
