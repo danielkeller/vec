@@ -42,7 +42,7 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
     //TODO: now try template functions
     if (result.size() == 0)
     {
-        err::Error(call->loc) << "function '" << Global().getIdent(oGroup->name) << "' is not defined in this scope"
+        err::Error(call->loc) << "function '" << oGroup->name << "' is not defined in this scope"
             << err::underline << call->loc << err::caret;
         call->Annotate(typ::error);
         return;
@@ -52,14 +52,14 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 
     if (!firstChoice.first.isValid())
     {
-        err::Error(call->loc) << "no accessible instance of overloaded function '" << Global().getIdent(oGroup->name)
-            << "' matches arguments of type " << argType.to_str() << err::underline << call->loc << err::caret;
+        err::Error(call->loc) << "no accessible instance of overloaded function '" << oGroup->name
+            << "' matches arguments of type " << argType << err::underline << call->loc << err::caret;
         call->Annotate(typ::error);
     }
     else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
     {
         err::Error ambigErr(call->loc);
-        ambigErr << "overloaded call to '" << Global().getIdent(oGroup->name) << "' is ambiguous" << err::underline
+        ambigErr << "overloaded call to '" << oGroup->name << "' is ambiguous" << err::underline
             << call->loc << err::caret << firstChoice.second->loc << err::note << "could be" << err::underline;
 
         while (result.size() && firstChoice.first == result.top().first)
@@ -104,8 +104,8 @@ void AssignExpr::inferType(Sema&)
             setChildB(Ptr(new ArithCast(Type(), detachChildB())));
         else
             err::Error(getChildA()->loc) << "cannot convert from "
-                << getChildB()->Type().to_str() << " to "
-                << getChildA()->Type().to_str() << " in assignment"
+                << getChildB()->Type() << " to "
+                << getChildA()->Type() << " in assignment"
                 << err::underline << opLoc << err::caret
                 << getChildB()->loc << err::underline;
     }
@@ -119,7 +119,7 @@ void OverloadCallExpr::inferType(Sema& sema)
     if (oGroup == 0)
     {
         err::Error(func->loc) << "cannot call object of non-function type "
-            << func->Type().to_str() << err::underline;
+            << func->Type() << err::underline;
         Annotate(func->Type()); //sorta recover
         return;
     }
@@ -141,7 +141,7 @@ void BinExpr::inferType(Sema& sema)
         if (!ft.isValid())
         {
             err::Error(lhs->loc) << "cannot call object of non-function type "
-                << lhs->Type().to_str() << err::underline
+                << lhs->Type() << err::underline
                 << opLoc << err::caret;
             Type() = lhs->Type(); //sorta recover
         }
@@ -151,7 +151,7 @@ void BinExpr::inferType(Sema& sema)
             if (!ft.arg().compare(getChildB()->Type()).isValid())
                 err::Error(getChildA()->loc)
                     << "function arguments are inappropriate for function"
-                    << ft.arg().to_str() << " != " << getChildB()->Type().to_str()
+                    << ft.arg().to_str() << " != " << getChildB()->Type()
                     << err::underline << opLoc << err::caret
                     << getChildB()->loc << err::underline;
         }
@@ -215,8 +215,8 @@ void ListifyExpr::inferType(Sema&)
     Annotate(typ::mgr.makeList(conts_t, Children().size()));
     for (auto& c : Children())
         if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
-            err::Error(getChild(0)->loc) << "list contents must be all the same type, " << conts_t.to_str()
-                << " != " << c->Type().to_str() << err::underline << c->loc << err::underline;
+            err::Error(getChild(0)->loc) << "list contents must be all the same type, " << conts_t
+                << " != " << c->Type() << err::underline << c->loc << err::underline;
 }
 
 void TuplifyExpr::inferType(Sema&)
@@ -237,8 +237,8 @@ void ReturnStmt::inferType(Sema&)
         setChildA(Ptr(new ArithCast(Type(), detachChildA())));
     else
         err::Error(getChildA()->loc) << "cannot convert from "
-            << getChildB()->Type().to_str() << " to "
-            << getChildA()->Type().to_str() << " in assignment"
+            << getChildB()->Type() << " to "
+            << getChildA()->Type() << " in assignment"
             << err::underline << opLoc << err::caret
             << getChildB()->loc << err::underline;
             */
@@ -247,7 +247,7 @@ void ReturnStmt::inferType(Sema&)
 void Sema::processFunc (ast::FuncDeclExpr* n)
 {
     if (!n->Value())
-        err::Error(n->loc) << "function '" << Global().getIdent(n->name) << "' is never defined";
+        err::Error(n->loc) << "function '" << n->name << "' is never defined";
     else
     {
         FunctionDef* def = n->Value().getFunc().get();
@@ -256,7 +256,7 @@ void Sema::processFunc (ast::FuncDeclExpr* n)
         for (auto ret : Subtree<ReturnStmt>(def))
             if (n->Type().getFunc().ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
                 err::Error(ret->getChildA()->loc) << "cannot convert from "
-                    << ret->getChildA()->Type().to_str() << " to " << n->Type().getFunc().ret().to_str()
+                    << ret->getChildA()->Type() << " to " << n->Type().getFunc().ret()
                     << " in function return" << err::underline;
     }
 }

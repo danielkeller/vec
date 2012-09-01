@@ -21,6 +21,9 @@ public:
     operator llvm::StringRef() const; //implemented in Global.cpp
 };
 
+//defined in Global.cpp
+std::ostream& operator<<(std::ostream& lhs, Ident& rhs);
+
 inline Ident mkIdent(int v)
 {
     Ident ret;

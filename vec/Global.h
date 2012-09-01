@@ -67,6 +67,8 @@ public:
 
     ast::FuncDeclExpr* entryPt;
 
+    int numErrors;
+
     friend GlobalData& Global();
 };
 

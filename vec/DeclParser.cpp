@@ -60,7 +60,7 @@ void Parser::parseTypeDecl()
 
     if (curScope->getTypeDef(name))
     {
-        err::Error(t.loc) << "redefinition of type '" << Global().getIdent(name) << '\'' << err::underline;
+        err::Error(t.loc) << "redefinition of type '" << name << '\'' << err::underline;
         lexer->ErrUntil(tok::semicolon);
         return;
     }
@@ -225,7 +225,7 @@ Node0* Parser::parseDeclRHS()
             }
             else
             {
-                err::Error(to.loc) << "redefinition of variable '" << Global().getIdent(id)
+                err::Error(to.loc) << "redefinition of variable '" << id
                     << '\'' << err::underline;
             }
 

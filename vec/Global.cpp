@@ -110,6 +110,11 @@ Ident GlobalData::addIdent(const std::string &str)
     return ret;
 }
 
+std::ostream& operator<<(std::ostream& lhs, Ident& rhs)
+{
+    return lhs << Global().getIdent(rhs);
+}
+
 ast::Module* GlobalData::findModule(const std::string& name)
 {
     for (auto mod : allModules)
@@ -143,6 +148,8 @@ void GlobalData::Initialize()
 
     reserved.intrin_v = new ast::DeclExpr(reserved.intrin, typ::error, tok::Location());
     universal.addVarDef(reserved.intrin, reserved.intrin_v);
+
+    numErrors = 0;
 
     //HACK HACK
     for (tok::TokenType tt = tok::tilde; tt < tok::integer; tt = tok::TokenType(tt + 1))

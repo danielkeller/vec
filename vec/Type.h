@@ -89,6 +89,8 @@ namespace typ
         friend class NamedBuilder;
     };
 
+    std::ostream& operator<<(std::ostream& lhs, Type& rhs);
+
     struct FuncNode;
     struct ListNode;
     struct TupleNode;

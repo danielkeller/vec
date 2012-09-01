@@ -25,14 +25,14 @@ void Sema::Import()
     for (auto evar : Subtree<VarExpr>(mod))
     {
         if (evar->ename == 0)
-            return; //not external
+            continue; //not external
 
         DeclExpr* realDecl = mod->priv.getVarDef(evar->ename);
         if (realDecl) //found it!
             evar->var = realDecl;
         else //undeclared!
         {
-            err::Error(evar->loc) << "undeclared variable '" << Global().getIdent(evar->ename)
+            err::Error(evar->loc) << "undeclared variable '" << evar->ename
                 << "'" << err::underline;
             evar->Annotate(typ::error);
         }
@@ -65,7 +65,7 @@ void Sema::Import()
     for (auto n : Subtree<>(mod))
     {
         typ::NamedType type = n->Type().getNamed();
-        if (type.isExternal())
+        if (type.isValid() && type.isExternal())
         {
             if (typeReplace.count(type))
                 n->Annotate(typeReplace[type]);
@@ -73,7 +73,7 @@ void Sema::Import()
             else if (mod->externTypes.count(type))
             {
                 err::Error(mod->externTypes[type].nameLoc) << "type '"
-                    << Global().getIdent(type.name()) << "' is undefined" << err::underline;
+                    << type.name() << "' is undefined" << err::underline;
                 mod->externTypes.erase(type);
             }
         }

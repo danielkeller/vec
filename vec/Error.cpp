@@ -1,6 +1,7 @@
 #include "Error.h"
 #include "Location.h"
 #include "Lexer.h"
+#include "Global.h"
 #include <iostream>
 
 using namespace err;
@@ -32,6 +33,8 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 
 void Error::init(Level lvl)
 {
+    ++Global().numErrors;
+
     posn = 0;
 
     std::cerr << loc << ": ";

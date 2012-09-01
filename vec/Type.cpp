@@ -349,7 +349,7 @@ void TupleNode::print(std::ostream &out)
     {
         it->first->print(out);
         if (it->second)
-            out << ' ' << Global().getIdent(it->second);
+            out << ' ' << it->second;
         if (++it != conts.end())
             out << ", ";
     }
@@ -431,7 +431,7 @@ void NamedNode::createLLVMType()
 
 void NamedNode::print(std::ostream &out)
 {
-    out << Global().getIdent(name);
+    out << name;
     if (!args.size())
         return;
 
@@ -469,7 +469,7 @@ void ParamNode::createLLVMType()
 
 void ParamNode::print(std::ostream &out)
 {
-    out << '?' << Global().getIdent(name);
+    out << '?' << name;
 }
 
 PrimitiveNode nint8("int!8", llvm::Type::getInt8Ty(llvm::getGlobalContext()));
@@ -526,10 +526,15 @@ std::string Type::to_str()
     if (getNamed().isValid())
     {
         strstr << " aka ";
-        strstr << getNamed().realType().to_str();
+        strstr << getNamed().realType();
     }
 
     return strstr.str();
+}
+
+std::ostream& operator<<(std::ostream& lhs, Type& rhs)
+{
+    return lhs << rhs.to_str();
 }
 
 llvm::Type* Type::toLLVM()

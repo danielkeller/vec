@@ -4,6 +4,7 @@
 #include "Value.h"
 #include "Global.h"
 #include "Intrinsic.h"
+#include "Error.h"
 
 #include <set>
 
@@ -13,6 +14,12 @@ using namespace llvm;
 CodeGen::CodeGen(std::string& outfile)
     : curBB(nullptr), curFunc(nullptr)
 {
+    if (Global().numErrors != 0) //cannot generate code if there are errors
+    {
+        err::Error(err::fatal, tok::Location()) << Global().numErrors << " errors have occured";
+        throw err::FatalError();
+    }
+
     curMod = new Module(outfile + ".bc", getGlobalContext());
 
     //gather up all functions
@@ -43,6 +50,8 @@ CodeGen::CodeGen(std::string& outfile)
 
 Value* ast::FuncDeclExpr::generate(CodeGen& gen)
 {
+    //TODO: name mangling?
+
     //get or create function
     gen.curFunc = gen.curMod->getFunction(Global().getIdent(name));
 
