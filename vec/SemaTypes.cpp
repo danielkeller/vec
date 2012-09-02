@@ -109,7 +109,9 @@ void AssignExpr::inferType(Sema&)
                 << err::underline << opLoc << err::caret
                 << getChildB()->loc << err::underline;
     }
-    else if (getChildB()->Value())
+    //FIXME: this will miss some opportunities for assignment, but will prevent initializers from
+    //being overwitten
+    else if (getChildB()->Value() && dynamic_cast<DeclExpr*>(getChildA()))
         Annotate(getChildB()->Value());
 }
 
@@ -242,6 +244,43 @@ void ReturnStmt::inferType(Sema&)
             << err::underline << opLoc << err::caret
             << getChildB()->loc << err::underline;
             */
+    Annotate(getChildA()->Type());
+}
+
+void IfStmt::inferType(sa::Sema&)
+{
+    //constant...
+    if (getChildA()->Value())
+    {
+        if (getChildA()->Value().getScalarAs<bool>()) //...and true
+            parent->replaceChild(this, detachChildB());
+        else //...and false
+            parent->replaceChild(this, Ptr(new NullExpr(loc)));
+    }
+    else
+        Annotate(typ::error);
+}
+
+void IfElseStmt::inferType(sa::Sema&)
+{
+    //constant...
+    if (getChildA()->Value())
+    {
+        if (getChildA()->Value().getScalarAs<bool>()) //...and true
+            parent->replaceChild(this, detachChildB());
+        else //...and false
+            parent->replaceChild(this, detachChildC());
+    }
+    else
+    {
+        //can't do it at runtime. unfortunately we can't tell if the value is ignored and if
+        //we should emit an error
+        if (getChildB()->Type().compare(getChildC()->Type()) == typ::TypeCompareResult::invalid)
+            Annotate(typ::error);
+        else
+            Annotate(getChildB()->Type());
+    }
+        
 }
 
 void Sema::processFunc (ast::FuncDeclExpr* n)

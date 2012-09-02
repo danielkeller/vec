@@ -13,8 +13,25 @@ void openDlg(char * buf)
     return;
 }
 
+#ifdef _WIN32
+#ifdef _DEBUG
+void __cdecl pause()
+{
+    printf("Press enter...");
+    getchar();
+}
+#endif
+#endif
+
 int main ()
 {
+    //pause in windoze for debuggin'
+#ifdef _WIN32
+#ifdef _DEBUG
+    atexit(pause);
+#endif
+#endif
+
     GlobalData::create();
 
     char fileName[MAX_PATH] = "";
@@ -28,11 +45,6 @@ int main ()
     {
         err::Error(err::fatal, tok::Location()) << "could not recover from previous errors, aborting";
     }
-
-    //pause in windoze for debuggin'
-#ifdef _WIN32
-    getchar();
-#endif
 
     return 0;
 }

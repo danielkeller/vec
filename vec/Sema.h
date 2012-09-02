@@ -34,9 +34,6 @@ namespace sa
         template<class T>
         void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
     };
-
-    //finds the last non-block expression in a list of them
-    ast::Node0* findEndExpr(ast::Node0* srch);
 }
 
 #endif

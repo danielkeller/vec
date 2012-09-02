@@ -11,6 +11,11 @@
 using namespace cg;
 using namespace llvm;
 
+#define IGNORED nullptr //denotes an llvm::Value* that should be ignored
+
+//IMPORTANT: the order of evaluation of function arguments is not defined.
+//DO NOT CALL GENERATE IN AN ARGUMENT LIST. BAD THINGS WILL HAPPEN.
+
 CodeGen::CodeGen(std::string& outfile)
     : curBB(nullptr), curFunc(nullptr)
 {
@@ -39,9 +44,9 @@ CodeGen::CodeGen(std::string& outfile)
     llvm::raw_fd_ostream fout(outfile.c_str(), errors);
 
 	PassManager pm;
-    pm.add(createVerifierPass(llvm::VerifierFailureAction::PrintMessageAction));
-    pm.add(createDeadCodeEliminationPass());
+    //pm.add(createDeadCodeEliminationPass());
 	pm.add(createPrintModulePass(&fout));
+    pm.add(createVerifierPass(llvm::VerifierFailureAction::PrintMessageAction));
 	pm.run(*curMod);
 }
 
@@ -75,7 +80,13 @@ Value* ast::FuncDeclExpr::generate(CodeGen& gen)
 
 Value* ast::FunctionDef::generate(CodeGen& gen)
 {
-    return getChildA()->generate(gen);
+    llvm::Value* body = getChildA()->generate(gen);
+
+    //don't make two returns
+    if (!gen.curBB->getTerminator())
+        ReturnInst::Create(getGlobalContext(), body, gen.curBB);
+
+    return IGNORED;
 }
 
 Value* ast::StmtPair::generate(CodeGen& gen)
@@ -87,7 +98,55 @@ Value* ast::StmtPair::generate(CodeGen& gen)
 Value* ast::ReturnStmt::generate(CodeGen& gen)
 {
     llvm::Value* retVal = getChildA()->generate(gen);
-    return ReturnInst::Create(getGlobalContext(), retVal, gen.curBB);
+    ReturnInst::Create(getGlobalContext(), retVal, gen.curBB);
+    //return the value so a function with a return at the end doesn't cause an error
+    return retVal;
+}
+
+Value* ast::IfStmt::generate(CodeGen& gen)
+{
+    llvm::Value* test = getChildA()->generate(gen);
+
+    BasicBlock* iftrue = BasicBlock::Create(getGlobalContext(), "if-true", gen.curFunc);
+    BasicBlock* iffalse = BasicBlock::Create(getGlobalContext(), "if-false", gen.curFunc);
+    BranchInst::Create(iftrue, iffalse, test, gen.curBB);
+
+    gen.curBB = iftrue;
+    getChildB()->generate(gen);
+
+    BranchInst::Create(iffalse, iftrue);
+    gen.curBB = iffalse;
+
+    return IGNORED;
+}
+
+Value* ast::IfElseStmt::generate(CodeGen& gen)
+{
+    BasicBlock* iftrue = BasicBlock::Create(getGlobalContext(), "if-true", gen.curFunc);
+    BasicBlock* iffalse = BasicBlock::Create(getGlobalContext(), "if-false", gen.curFunc);
+    BasicBlock* after = BasicBlock::Create(getGlobalContext(), "if-after", gen.curFunc);
+
+    llvm::Value* test = getChildA()->generate(gen);
+    BranchInst::Create(iftrue, iffalse, test, gen.curBB);
+
+    gen.curBB = iftrue;
+    llvm::Value* trueVal = getChildB()->generate(gen);
+    BranchInst::Create(after, iftrue);
+
+    gen.curBB = iffalse;
+    llvm::Value* falseVal = getChildC()->generate(gen);
+    BranchInst::Create(after, iffalse);
+
+    gen.curBB = after;
+
+    if (Type() == typ::error) //don't return anything
+        return IGNORED;
+
+    //return appropiate value
+    PHINode* ifelseVal = PHINode::Create(Type().toLLVM(), 2, "if-else-phi", after);
+    ifelseVal->addIncoming(trueVal, iftrue);
+    ifelseVal->addIncoming(falseVal, iffalse);
+    return ifelseVal;
 }
 
 //---------------------------------------------------
@@ -199,9 +258,9 @@ Value* ast::IntrinCallExpr::generate(CodeGen& gen)
 
     if (binOp != otherOp)
     {
-        return BinaryOperator::Create(binOp,
-            getChild(0)->generate(gen), getChild(1)->generate(gen),
-            "", gen.curBB);
+        llvm::Value* lhs = getChild(0)->generate(gen);
+        llvm::Value* rhs = getChild(1)->generate(gen);
+        return BinaryOperator::Create(binOp, lhs, rhs, "", gen.curBB);
     }
 
 
@@ -227,13 +286,13 @@ Value* ast::IntrinCallExpr::generate(CodeGen& gen)
 
     if (pred != otherPr)
     {
+        llvm::Value* lhs = getChild(0)->generate(gen);
+        llvm::Value* rhs = getChild(1)->generate(gen);
         return CmpInst::Create(
             getChild(0)->Type().getPrimitive().isInt()
                 ? Instruction::OtherOps::ICmp
                 : Instruction::OtherOps::FCmp,
-            (unsigned short)pred,
-            getChild(0)->generate(gen), getChild(1)->generate(gen),
-            "", gen.curBB);
+            (unsigned short)pred, lhs, rhs, "", gen.curBB);
     }
 
     //now the short-circuiting operators

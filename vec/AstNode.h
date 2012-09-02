@@ -139,8 +139,6 @@ namespace ast
         val::Value& Value();
         llvm::Value* Address();
 
-        virtual bool isLval() {return false;}
-        virtual bool isExpr() {return true;}
         virtual void inferType(sa::Sema&) {}
         virtual llvm::Value* generate(cg::CodeGen&);
 

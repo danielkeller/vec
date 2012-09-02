@@ -32,7 +32,6 @@ namespace ast
             : Node1(move(arg))
         {};
         std::string myLbl() {return "for (`)";}
-        bool isExpr() {return false;}
 
         void emitDot(std::ostream& os)
         {
@@ -85,7 +84,6 @@ namespace ast
             : Node1(move(s))
         {Annotate(t);}
         std::string myLbl() {return Type().to_str();}
-        bool isExpr() {return true;}
         llvm::Value* generate(cg::CodeGen&);
     };
 
@@ -94,7 +92,6 @@ namespace ast
         ArithCast(typ::Type to, Ptr node)
             : Node1(move(node)) {Annotate(to);}
         std::string myLbl() {return "(" + Type().to_str() + ")";}
-        bool isExpr() {return true;}
         llvm::Value* generate(cg::CodeGen& gen);
     };
 }

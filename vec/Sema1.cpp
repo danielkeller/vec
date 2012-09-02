@@ -89,15 +89,6 @@ void Sema::Phase1()
         //create and insert function definition
         auto fd = MkNPtr(new FunctionDef(fde->Type(), move(conts)));
 
-        //find expression in tail position
-        Node0* end = findEndExpr(fd->getChildA());
-        if (end) //if it's really there
-        {
-            Node0* endParent = end->parent;
-            Ptr impliedRet = Ptr(new ReturnStmt(end->detachSelf()));
-            endParent->parent->replaceChild(endParent, move(impliedRet)); //put in the implied return
-        }
-
         ae->setChildB(move(fd));
     }
 

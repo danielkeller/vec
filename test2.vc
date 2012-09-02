@@ -7,9 +7,15 @@ int:[String] main =
 
     float baz = 5 / foo * bar + 6.1;
 
-    bool stuff = baz < foo || bar != 7;
+    if ( baz < foo || bar != 7)
+        foo = 8;
 
-    foo;
+    foo + (
+    if (1 < foo)
+        foo = 9;
+    else
+        foo = 10;
+    )
 );
 
 //could do variadic templates:

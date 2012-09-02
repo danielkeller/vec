@@ -33,7 +33,6 @@ namespace ast
             : Node0(l), var(v), ename(Global().reserved.null) {}
         VarExpr(Ident n, tok::Location const &l)
             : Node0(l), var(Global().reserved.undeclared_v), ename(n) {}
-        bool isLval() {return true;};
         inline std::string myLbl();
         const char *myColor() {return "5";};
         inline annot_t& Annot();
@@ -194,7 +193,6 @@ namespace ast
             loc = o.loc + getChildA()->loc;
         };
 
-        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "`";}
     };
 
@@ -251,7 +249,6 @@ namespace ast
             : BinExpr(move(lhs), move(rhs), 0, o)
         {}
 
-        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "a{b}";}
     };
 
@@ -261,7 +258,6 @@ namespace ast
             : BinExpr(move(lhs), move(rhs), sc, o)
         {}
 
-        bool isLval() {return getChildA()->isLval();}
         std::string myLbl() {return "a[b]";}
     };
 }
