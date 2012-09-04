@@ -154,11 +154,7 @@ namespace ast
             return nullptr;
         }
 
-        virtual void emitDot(std::ostream &os)
-        {
-            os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl()
-                << "\",style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
-        }
+        virtual void emitDot(std::ostream &os);
 
         //replace child of unknown position
         virtual Ptr replaceChild(Node0*, Ptr)

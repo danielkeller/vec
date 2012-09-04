@@ -3,6 +3,7 @@
 #include "Error.h"
 #include "Global.h"
 #include "Value.h"
+#include "LLVM.h"
 
 #include <cassert>
 #include <queue>
@@ -11,6 +12,8 @@ using namespace ast;
 using namespace sa;
 
 //Phase 3 is type inference, overload resolution, and template instantiation
+//Additionally, we do compile time code execution. any constants are calcuated, and
+//any constant, non-side-effecting expressions are removed
 
 //convenience for overload resolution
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
@@ -93,7 +96,7 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 }
 
 //TODO: remove constant code
-void AssignExpr::inferType(Sema&)
+void AssignExpr::inferType(Sema& sema)
 {
     //try to merge types if its a decl
     if (Type().compare(getChildB()->Type()) == typ::TypeCompareResult::invalid)
@@ -101,7 +104,10 @@ void AssignExpr::inferType(Sema&)
         //first check if we can do arith conversion
         //FIXME: this should go in copy constructor code
         if (Type().getPrimitive().isArith() && getChildB()->Type().getPrimitive().isArith())
+        {
             setChildB(Ptr(new ArithCast(Type(), detachChildB())));
+            getChildB()->inferType(sema);
+        }
         else
             err::Error(getChildA()->loc) << "cannot convert from "
                 << getChildB()->Type() << " to "
@@ -175,9 +181,15 @@ void BinExpr::inferType(Sema& sema)
             auto promoteOther = [&](typ::Type target) -> bool
             {
                 if (lhs_t == target)
+                {
                     childB = Ptr(new ArithCast(target, move(childB)));
+                    childB->inferType(sema);
+                }
                 else if (rhs_t == target)
+                {
                     childA = Ptr(new ArithCast(target, move(childA)));
+                    childA->inferType(sema);
+                }
                 else
                     return false;
                 return true; //if it did something
@@ -209,6 +221,13 @@ void BinExpr::inferType(Sema& sema)
 
         sema.resolveOverload(oGroup, this, argType);
     }
+    else
+        assert("operator not yet implemented");
+}
+
+void ArithCast::inferType(Sema&)
+{
+    //TODO
 }
 
 void ListifyExpr::inferType(Sema&)

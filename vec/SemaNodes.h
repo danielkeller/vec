@@ -92,6 +92,7 @@ namespace ast
         ArithCast(typ::Type to, Ptr node)
             : Node1(move(node)) {Annotate(to);}
         std::string myLbl() {return "(" + Type().to_str() + ")";}
+        void inferType(sa::Sema&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 }

@@ -5,7 +5,7 @@ int:[String] main =
     int foo = 7;
     int!64 bar = 8;
 
-    float baz = 5 / foo * bar + 6.1;
+    float baz = 5 / 7 * bar + 6.1;
 
     if ( baz < foo || bar != 7)
         foo = 8;

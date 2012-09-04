@@ -82,9 +82,11 @@ typ::Type Node0::Type()
     return Annot() ? Annot()->type : typ::error;
 }
 
+val::Value nullVal;
+
 val::Value& Node0::Value()
 {
-    return Annot() ? Annot()->value : Value();
+    return Annot() ? Annot()->value : nullVal;
 }
 
 llvm::Value* Node0::Address()
@@ -96,6 +98,13 @@ llvm::Value* Node0::generate(cg::CodeGen&)
 {
     assert(false && "generate not implemented");
     return nullptr;
+}
+
+void Node0::emitDot(std::ostream &os)
+{
+    os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl()
+        << "\",style=filled,fillcolor=\"/pastel19/" << myColor()
+        << "\",penwidth=" << (Value() ? 2 : 1) << "];\n";
 }
 
 void Node0::AnnotDeleter::operator()(Annotation* a)
