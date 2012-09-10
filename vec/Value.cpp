@@ -179,7 +179,7 @@ void Value::appendSeqElem(const Value& v)
     dynamic_cast<SeqNode*>(node.get())->append(v);
 }
 
-char* Value::getBytes()
+char* Value::getBytes() const
 {
     return dynamic_cast<ScalarNode*>(node.get())->Get();
 }

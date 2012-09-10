@@ -225,9 +225,88 @@ void BinExpr::inferType(Sema& sema)
         assert("operator not yet implemented");
 }
 
+#define LL_BITS (sizeof(long long)*8)
+
+namespace
+{
+    val::Value signExt(long long val, size_t fromWidth, size_t toWidth)
+    {
+        //shrinking
+        if (toWidth < fromWidth)
+        {
+            //clear top toWidth bits
+            val = (val << (LL_BITS - toWidth)) >> (LL_BITS - toWidth);
+        }
+        else if (val & (1ll << (fromWidth - 1))) //sign-extending
+        {
+            while (fromWidth < toWidth)
+            {
+                val &= 0xFF << fromWidth;
+                fromWidth += 8;
+            }
+        }
+        //else zero extending
+        return val::Value(val);
+    }
+
+    val::Value fromLD(long double from, typ::Type to)
+    {
+        if (to == typ::float32)
+            return val::Value((float)from);
+        else if (to == typ::float64)
+            return val::Value((double)from);
+        else
+            return val::Value(from);
+    }
+
+    long double toLD(const val::Value& from, typ::Type type)
+    {
+        if (type == typ::float32)
+            return from.getScalarAs<float>();
+        else if (type == typ::float64)
+            return from.getScalarAs<double>();
+        else
+            return from.getScalarAs<long double>();
+    }
+}
+
 void ArithCast::inferType(Sema&)
 {
-    //TODO
+    if (!getChildA()->Value())
+        return;
+
+    auto from = getChildA()->Type().getPrimitive();
+    auto to = Type().getPrimitive();
+
+    if (from.isInt()) 
+    {
+        int fromWidth = from.toLLVM()->getIntegerBitWidth();
+        long long val = getChildA()->Value().getScalarAs<long long>();
+
+        if (to.isInt()) // int -> int
+        {
+            int toWidth = to.toLLVM()->getIntegerBitWidth();
+            Annotate(signExt(val, fromWidth, toWidth));
+        }
+        else //int -> float
+        {
+            long long temp1 = signExt(val, fromWidth, LL_BITS);
+            Annotate(fromLD((long double)temp1, to));
+        }
+    }
+    else
+    {
+        long double temp2 = toLD(getChildA()->Value(), from);
+
+        if (to.isInt()) // float -> int
+        {
+            Annotate(signExt((long long)temp2, LL_BITS, to.toLLVM()->getIntegerBitWidth()));
+        }
+        else //float -> float
+        {
+            Annotate(fromLD(temp2, to));
+        }
+    }
 }
 
 void ListifyExpr::inferType(Sema&)

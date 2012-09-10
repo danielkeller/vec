@@ -31,7 +31,7 @@ namespace val
         std::shared_ptr<ValNode> node; //I guess this is spimpl
 
         //must be char to avoid undefined aliasing behavior
-        char* getBytes();
+        char* getBytes() const;
 
         void makeScalar(); //needed because fromBytesOf is a template
 
@@ -69,7 +69,7 @@ namespace val
         void appendSeqElem(const Value& v);
 
         template<typename T>
-        T& getScalarAs()
+        T& getScalarAs() const
         {
             return *reinterpret_cast<T*>(getBytes());
         }

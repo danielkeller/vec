@@ -3,7 +3,13 @@ int:[String] main = 8;
 int:[String] main =
 (
     int foo = 7;
-    int!64 bar = 8;
+    int!64 bar = foo;
+
+    foo = bar;
+
+    foo = 6.6;
+
+    float!80 asdfasdf = 128;
 
     float baz = 5 / 7 * bar + 6.1;
 
