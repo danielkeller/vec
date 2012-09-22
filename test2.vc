@@ -3,31 +3,18 @@ int:[String] main = 8;
 int:[String] main =
 (
     int foo = 7;
-    int!64 bar = foo;
+    int bar;
+    bool undef;
 
-    foo = bar;
-
-    foo = 6.6;
-
-    float!80 asdfasdf = 128;
-
-    float baz = 5 / 7 * bar + 6.1;
-
-    if ( baz < foo || bar != 7)
+    if (undef)
+    (
         foo = 8;
-
-    foo + (
-    if (1 < foo)
-        foo = 9;
-    else
-        foo = 10;
+        int a = foo + 1;
     )
+    else
+    (
+        foo = 9;
+        int b = foo + 1;
+    )
+    bar;
 );
-
-//could do variadic templates:
-//ie type foo?[A, B, ...] = [A first, B second, {[...]}];
-//or whatever
-//or have something that expands tuples into others like [a,b,?...]
-
-//add storage duration specifier agg
-//acts like static except initializer is run on first call to agg function

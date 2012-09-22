@@ -75,6 +75,9 @@
     <ClInclude Include="Intrinsic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Exec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Token.cpp">
@@ -134,13 +137,13 @@
     <ClCompile Include="Intrinsic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include=".\SemaTypes.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AstNode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CodeGen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include=".\Exec.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

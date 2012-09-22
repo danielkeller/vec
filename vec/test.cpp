@@ -23,8 +23,10 @@ void __cdecl pause()
 #endif
 #endif
 
-int main ()
+int main (int argc, char* argv[])
 {
+    std::vector<std::string> params(argv, argv + argc);
+
     //pause in windoze for debuggin'
 #ifdef _WIN32
 #ifdef _DEBUG
@@ -33,13 +35,16 @@ int main ()
 #endif
 
     GlobalData::create();
-
-    char fileName[MAX_PATH] = "";
-    openDlg(fileName);
-
+    
     try
     {
+#ifdef _WIN32
+        char fileName[MAX_PATH] = "";
+        openDlg(fileName);
         Global().ParseMainFile(fileName);
+#else
+        Global().ParseMainFile(params[1].c_str());
+#endif
     }
     catch (err::FatalError)
     {

@@ -6,25 +6,6 @@
 namespace ast
 {
     //This file is for AST nodes that are added during semantic analysis, rather than parsing
-    struct TmpExpr : public Node0
-    {
-        const char *myColor() {return "8";};
-        std::string myLbl () {return "tmp";};
-        Node0* setBy;
-
-        TmpExpr(Node0* sb) : Node0(sb->loc), setBy(sb){};
-
-        void emitDot(std::ostream& os)
-        {
-            Node0::emitDot(os);
-            //shows a "sets" relationship
-            os << 'n' << static_cast<Node0*>(setBy) << " -> n" << static_cast<Node0*>(this)
-                << " [style=dotted];\n";
-        };
-
-        annot_t& Annot() {return setBy->Annot();}
-    };
-
     struct ImpliedLoopStmt : public Node1
     {
         std::vector<IterExpr*> targets;
@@ -74,7 +55,7 @@ namespace ast
 
         std::string myLbl() {return utl::to_str(intrin_id) + ":";}
         const char *myColor() {return "5";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 
@@ -92,7 +73,7 @@ namespace ast
         ArithCast(typ::Type to, Ptr node)
             : Node1(move(node)) {Annotate(to);}
         std::string myLbl() {return "(" + Type().to_str() + ")";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 }

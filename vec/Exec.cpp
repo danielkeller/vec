@@ -1,9 +1,9 @@
-#include "Sema.h"
-#include "SemaNodes.h"
+#include "Exec.h"
 #include "Error.h"
 #include "Global.h"
 #include "Value.h"
 #include "LLVM.h"
+#include "AstWalker.h"
 
 #include <cassert>
 #include <queue>
@@ -11,9 +11,12 @@
 using namespace ast;
 using namespace sa;
 
-//Phase 3 is type inference, overload resolution, and template instantiation
-//Additionally, we do compile time code execution. any constants are calcuated, and
-//any constant, non-side-effecting expressions are removed
+//Compile-time code execution:
+
+//This is type inference, overload resolution, and template instantiation
+//any constants are calcuated, and any constant, non-side-effecting
+//expressions are removed. Any remaining code marked "static" is JITted
+//and executed
 
 //convenience for overload resolution
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
@@ -24,7 +27,7 @@ struct pairComp
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
 template<class T>
-void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType)
+void Exec::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType)
 {
     ovr_queue result;
 
@@ -85,19 +88,19 @@ void Sema::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 
             auto iCall = call->makeICall();
 
-            for (auto tmp : intrins[call])
-                tmp->setBy = iCall;
-
             parent->replaceDetachedChild(Ptr(iCall));
 
-            iCall->inferType(*this);
+            iCall->preExec(*this);
         }
+
+        //TODO: process the function
     }
 }
 
-//TODO: remove constant code
-void AssignExpr::inferType(Sema& sema)
+void AssignExpr::preExec(Exec& ex)
 {
+    getChildA()->preExec(ex);
+    getChildB()->preExec(ex);
     //try to merge types if its a decl
     if (Type().compare(getChildB()->Type()) == typ::TypeCompareResult::invalid)
     {
@@ -106,23 +109,30 @@ void AssignExpr::inferType(Sema& sema)
         if (Type().getPrimitive().isArith() && getChildB()->Type().getPrimitive().isArith())
         {
             setChildB(Ptr(new ArithCast(Type(), detachChildB())));
-            getChildB()->inferType(sema);
+            getChildB()->preExec(ex);
         }
         else
+        {
             err::Error(getChildA()->loc) << "cannot convert from "
                 << getChildB()->Type() << " to "
                 << getChildA()->Type() << " in assignment"
                 << err::underline << opLoc << err::caret
                 << getChildB()->loc << err::underline;
+            return;
+        }
     }
-    //FIXME: this will miss some opportunities for assignment, but will prevent initializers from
-    //being overwitten
-    else if (getChildB()->Value() && dynamic_cast<DeclExpr*>(getChildA()))
+
+    if (getChildB()->Value())
+    {
         Annotate(getChildB()->Value());
+        //delete the value if it becomes indeterminate
+        ex.trackVal(getChildA());
+    }
 }
 
-void OverloadCallExpr::inferType(Sema& sema)
+void OverloadCallExpr::preExec(Exec& ex)
 {
+    func->preExec(ex);
     OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(func->var);
     if (oGroup == 0)
     {
@@ -134,15 +144,24 @@ void OverloadCallExpr::inferType(Sema& sema)
 
     typ::TupleBuilder builder;
     for (auto& arg : Children())
+    {
+        arg->preExec(ex);
         builder.push_back(arg->Type(), Global().reserved.null);
+    }
     typ::Type argType = typ::mgr.makeTuple(builder);
 
-    sema.resolveOverload(oGroup, this, argType);
+    ex.resolveOverload(oGroup, this, argType);
 }
 
-void BinExpr::inferType(Sema& sema)
+void BinExpr::preExec(Exec& ex)
 {
-    if (op == tok::colon) //"normal" function call
+    //FIXME: this breaks short-circuiting
+    //super-FIXME: especially with val-scopes
+    getChildA()->preExec(ex);
+    getChildB()->preExec(ex);
+
+    //TODO: should this be an intrinsic?
+    if (op == tok::colon) //function pointer call
     {
         Node0* lhs = getChildA();
         typ::FuncType ft = lhs->Type().getFunc();
@@ -183,12 +202,12 @@ void BinExpr::inferType(Sema& sema)
                 if (lhs_t == target)
                 {
                     childB = Ptr(new ArithCast(target, move(childB)));
-                    childB->inferType(sema);
+                    childB->preExec(ex);
                 }
                 else if (rhs_t == target)
                 {
                     childA = Ptr(new ArithCast(target, move(childA)));
-                    childA->inferType(sema);
+                    childA->preExec(ex);
                 }
                 else
                     return false;
@@ -219,7 +238,7 @@ void BinExpr::inferType(Sema& sema)
         DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[op]);
         OverloadGroupDeclExpr* oGroup = assert_cast<OverloadGroupDeclExpr*>(def, "operator not overloaded properly");
 
-        sema.resolveOverload(oGroup, this, argType);
+        ex.resolveOverload(oGroup, this, argType);
     }
     else
         assert("operator not yet implemented");
@@ -241,7 +260,7 @@ namespace
         {
             while (fromWidth < toWidth)
             {
-                val &= 0xFF << fromWidth;
+                val |= 0xFF << fromWidth;
                 fromWidth += 8;
             }
         }
@@ -270,8 +289,9 @@ namespace
     }
 }
 
-void ArithCast::inferType(Sema&)
+void ArithCast::preExec(Exec&)
 {
+    //Assume child has already been executed
     if (!getChildA()->Value())
         return;
 
@@ -309,25 +329,37 @@ void ArithCast::inferType(Sema&)
     }
 }
 
-void ListifyExpr::inferType(Sema&)
+void ListifyExpr::preExec(Exec& ex)
 {
     typ::Type conts_t = getChild(0)->Type();
     Annotate(typ::mgr.makeList(conts_t, Children().size()));
     for (auto& c : Children())
+    {
+        c->preExec(ex);
         if (conts_t.compare(c->Type()) == typ::TypeCompareResult::invalid)
             err::Error(getChild(0)->loc) << "list contents must be all the same type, " << conts_t
                 << " != " << c->Type() << err::underline << c->loc << err::underline;
+    }
 }
 
-void TuplifyExpr::inferType(Sema&)
+void TuplifyExpr::preExec(Exec& ex)
 {
     typ::TupleBuilder builder;
     for (auto& c : Children())
+    {
+        c->preExec(ex);
         builder.push_back(c->Type(), Global().reserved.null);
+    }
     Annotate(typ::mgr.makeTuple(builder));
 }
 
-void ReturnStmt::inferType(Sema&)
+void StmtPair::preExec(Exec& ex)
+{
+    getChildA()->preExec(ex);
+    getChildB()->preExec(ex);
+}
+
+void ReturnStmt::preExec(Exec&)
 {
     //first check if we can do arith conversion
     //FIXME: this should go in copy constructor code
@@ -345,43 +377,79 @@ void ReturnStmt::inferType(Sema&)
     Annotate(getChildA()->Type());
 }
 
-void IfStmt::inferType(sa::Sema&)
+//TODO: value scopes
+
+void IfStmt::preExec(Exec& ex)
 {
+    getChildA()->preExec(ex);
+
+    if (getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
+        err::Error(getChildA()->loc) << "expected boolean type, got " << getChildA()->Type()
+            << err::underline;
+
     //constant...
     if (getChildA()->Value())
     {
         if (getChildA()->Value().getScalarAs<bool>()) //...and true
+        {
+            getChildB()->preExec(ex);
             parent->replaceChild(this, detachChildB());
+        }
         else //...and false
             parent->replaceChild(this, Ptr(new NullExpr(loc)));
     }
     else
-        Annotate(typ::error);
+    {
+        ex.pushValScope();
+        getChildB()->preExec(ex);
+        ex.popValScope();
+        Annotate(typ::null);
+    }
 }
 
-void IfElseStmt::inferType(sa::Sema&)
+void IfElseStmt::preExec(Exec& ex)
 {
+    getChildA()->preExec(ex);
+
+    if (getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
+        err::Error(getChildA()->loc) << "expected boolean type, got " << getChildA()->Type()
+            << err::underline;
+
     //constant...
     if (getChildA()->Value())
     {
         if (getChildA()->Value().getScalarAs<bool>()) //...and true
+        {
+            getChildB()->preExec(ex);
             parent->replaceChild(this, detachChildB());
+        }
         else //...and false
+        {
+            getChildC()->preExec(ex);
             parent->replaceChild(this, detachChildC());
+        }
     }
     else
     {
+        ex.pushValScope();
+        getChildB()->preExec(ex);
+        ex.popValScope();
+        
+        ex.pushValScope();
+        getChildC()->preExec(ex);
+        ex.popValScope();
+
         //can't do it at runtime. unfortunately we can't tell if the value is ignored and if
         //we should emit an error
         if (getChildB()->Type().compare(getChildC()->Type()) == typ::TypeCompareResult::invalid)
-            Annotate(typ::error);
+            Annotate(typ::null);
         else
             Annotate(getChildB()->Type());
     }
-        
 }
 
-void Sema::processFunc (ast::FuncDeclExpr* n)
+//TOOD: return type and value/call?
+void Exec::processFunc (ast::FuncDeclExpr* n)
 {
     if (!n->Value())
         err::Error(n->loc) << "function '" << n->name << "' is never defined";
@@ -389,15 +457,21 @@ void Sema::processFunc (ast::FuncDeclExpr* n)
     {
         FunctionDef* def = n->Value().getFunc().get();
 
-        processSubtree(def);
+        FuncDeclExpr* oldFunc = curFunc;
+        curFunc = n;
+
+        def->getChildA()->preExec(*this);
+
         for (auto ret : Subtree<ReturnStmt>(def))
             if (n->Type().getFunc().ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
                 err::Error(ret->getChildA()->loc) << "cannot convert from "
                     << ret->getChildA()->Type() << " to " << n->Type().getFunc().ret()
                     << " in function return" << err::underline;
+
+        curFunc = oldFunc;
     }
 }
-
+/*
 void Sema::processSubtree (ast::Node0* n)
 {
     //set the module to temporarily publicly import its own private scope.
@@ -417,14 +491,20 @@ void Sema::processSubtree (ast::Node0* n)
     }
 
     for (auto n : Subtree<>(n).cached())
-         n->inferType(*this);
+         n->preExec(*this);
 
     //remove the temporary import
     mod->pub_import.UnImport(&mod->priv);
 }
-
-void Sema::processMod()
+*/
+void Exec::processMod(ast::Module* mod)
 {
+    //TODO: warn about cyclic imports
+    mod->execStarted = true;
+    for (auto import : mod->imports)
+        if (!import->execStarted)
+            processMod(import);
+
     //change functions into values so we don't enter them early
     for (auto func : Subtree<FunctionDef>(mod).cached())
     {
@@ -436,21 +516,23 @@ void Sema::processMod()
         parent->replaceDetachedChild(Ptr(funcVal));
     }
 
-    processSubtree(mod);
+    mod->getChildA()->preExec(*this);
 }
 
-void Sema::Types()
+Exec::Exec(ast::Module* mainMod)
 {
     typ::mgr.makeLLVMTypes();
 
-    processMod();
+    pushValScope();
+
+    processMod(mainMod);
 
     //now find the entry point and go!!
 
-    DeclExpr* mainVar = mod->priv.getVarDef(Global().reserved.main);
+    DeclExpr* mainVar = mainMod->priv.getVarDef(Global().reserved.main);
     if (!mainVar)
     {
-        err::Error(err::fatal, mod->loc) << "variable 'main' undefined";
+        err::Error(err::fatal, mainMod->loc) << "variable 'main' undefined";
         throw err::FatalError();
     }
     OverloadGroupDeclExpr* mainFunc = exact_cast<OverloadGroupDeclExpr*>(mainVar);
@@ -463,7 +545,7 @@ void Sema::Types()
     args->Annotate(typ::mgr.makeList(Global().reserved.string_t));
 
     OverloadCallExpr entryPt(
-        MkNPtr(new VarExpr(mainFunc, mainFunc->loc)), move(args), &mod->priv, mainFunc->loc);
+        MkNPtr(new VarExpr(mainFunc, mainFunc->loc)), move(args), &mainMod->priv, mainFunc->loc);
 
     resolveOverload(mainFunc, &entryPt, typ::mgr.makeList(Global().reserved.string_t));
 
@@ -475,6 +557,23 @@ void Sema::Types()
 
     Global().entryPt = entryPt.ovrResult;
     processFunc(entryPt.ovrResult);
+}
+
+void Exec::pushValScope()
+{
+    valScopes.emplace();
+}
+
+void Exec::popValScope()
+{
+    for (auto var : valScopes.top())
+        var->Annotate(val::Value());
+    valScopes.pop();
+}
+
+void Exec::trackVal(ast::Node0* n)
+{
+    valScopes.top().push_back(n);
 }
 
 IntrinCallExpr* OverloadCallExpr::makeICall()

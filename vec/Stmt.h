@@ -37,6 +37,7 @@ namespace ast
             os << 'n' << static_cast<Node0*>(this)
                << " [label=\";|<p0>|<p1>\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
         }
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
         annot_t& Annot() {return getChildB()->Annot();}
     };
@@ -61,7 +62,7 @@ namespace ast
             loc = o.loc + getChildB()->loc;
         }
         std::string myLbl() {return "if";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 
@@ -73,7 +74,7 @@ namespace ast
             loc = o.loc + getChildC()->loc;
         }
         std::string myLbl() {return "if-else";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 
@@ -109,7 +110,7 @@ namespace ast
         {}
         std::string myLbl() {return "return";}
         annot_t& Annot() {return getChildA()->Annot();}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 }

@@ -9,7 +9,8 @@ using namespace ast;
 
 Module::Module(std::string fname)
     : Node1(nullptr, tok::Location()),
-    
+    execStarted(false),
+
     //set scope parents (private -> private import -> public -> public import -> universal)
     pub_import(&Global().universal),
     pub(&pub_import),
@@ -40,15 +41,18 @@ Module::Module(std::string fname)
 
 void Module::PublicImport(Module* other)
 {
+    imports.insert(other);
     pub_import.Import(&other->pub);
 }
 
 void Module::PublicUnImport(Module* other)
 {
+    imports.erase(other);
     pub_import.UnImport(&other->pub);
 }
 
 void Module::PrivateImport(Module* other)
 {
+    imports.insert(other);
     priv_import.Import(&other->pub);
 }

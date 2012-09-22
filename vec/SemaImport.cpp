@@ -15,7 +15,7 @@ void Sema::Import()
     Module* intrinsic = Global().findModule("intrinsic");
 
     if (mod != intrinsic)
-        mod->PrivateImport(intrinsic);
+        mod->PublicImport(intrinsic);
 
     //things to be fixed up are var exprs that are undeclared, and decl exprs that point 
     //to external types. we look in private because that's the highest global scope, and

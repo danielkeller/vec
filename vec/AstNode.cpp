@@ -94,6 +94,12 @@ llvm::Value* Node0::Address()
     return Annot() ? Annot()->address : nullptr;
 }
 
+void Node0::preExec(sa::Exec&)
+{
+    //no, it might not need to do anything
+    //assert(false && "preExec not implemented");
+}
+
 llvm::Value* Node0::generate(cg::CodeGen&)
 {
     assert(false && "generate not implemented");

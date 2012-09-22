@@ -20,6 +20,7 @@ namespace ast
             : Node0(tok::Location()) {}
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
+        llvm::Value* generate(cg::CodeGen&) {return nullptr;};
     };
 
     struct DeclExpr;
@@ -131,7 +132,7 @@ namespace ast
         std::string myLbl() {return tok::Name(op);}
 
         IntrinCallExpr* makeICall();
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
     };
 
     struct AssignExpr : public BinExpr
@@ -140,7 +141,7 @@ namespace ast
             : BinExpr(move(lhs), move(rhs), sc, o) {};
         std::string myLbl() {return "'='";}
         annot_t& Annot() {return getChildA()->Annot();}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
     };
 
@@ -160,7 +161,7 @@ namespace ast
         std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
 
         IntrinCallExpr* makeICall();
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
     };
 
     inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &op)
@@ -216,7 +217,7 @@ namespace ast
             loc = getChild(0)->loc;
         };
         std::string myLbl() {return "[...]";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
     };
 
     struct TuplifyExpr : public NodeN
@@ -227,7 +228,7 @@ namespace ast
             loc = getChild(0)->loc;
         };
         std::string myLbl() {return "\\{...\\}";}
-        void inferType(sa::Sema&);
+        void preExec(sa::Exec&);
     };
 
     //postfix expressions

@@ -7,6 +7,7 @@
 #include <map>
 #include <list>
 #include <string>
+#include <unordered_set>
 
 namespace lex
 {
@@ -25,6 +26,10 @@ namespace ast
         void PrivateImport(Module* other);
 
         std::string name;
+
+        std::unordered_set<Module*> imports;
+
+        bool execStarted;
 
         ImportScope pub_import;
         NormalScope pub;

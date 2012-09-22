@@ -77,6 +77,7 @@
     <ClInclude Include="AstWalker.h" />
     <ClInclude Include="CodeGen.h" />
     <ClInclude Include="Error.h" />
+    <ClInclude Include="Exec.h" />
     <ClInclude Include="Expr.h" />
     <ClInclude Include="Intrinsic.h" />
     <ClInclude Include="Lexer.h" />
@@ -107,7 +108,7 @@
     <ClCompile Include="Scope.cpp" />
     <ClCompile Include="Sema.cpp" />
     <ClCompile Include="Sema1.cpp" />
-    <ClCompile Include=".\SemaTypes.cpp" />
+    <ClCompile Include=".\Exec.cpp" />
     <ClCompile Include="SemaImport.cpp" />
     <ClCompile Include="StmtParser.cpp" />
     <ClCompile Include="test.cpp" />

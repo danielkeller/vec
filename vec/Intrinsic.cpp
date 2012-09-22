@@ -45,7 +45,7 @@ using namespace intr;
     ARITH(op, double,      opid, TYPES::DOUBLE); \
     ARITH(op, long double, opid, TYPES::LONG_DOUBLE)
 
-void IntrinCallExpr::inferType(Sema&)
+void IntrinCallExpr::preExec(Exec&)
 {
     //may need to change this if we do other things here
     for (auto& n : Children())

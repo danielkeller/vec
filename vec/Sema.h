@@ -13,13 +13,7 @@ namespace sa
     {
         ast::Module* mod;
 
-        std::map<ast::OverloadableExpr*, std::list<ast::TmpExpr*>> intrins;
-
         void validateTree();
-
-        void processFunc (ast::FuncDeclExpr* n);
-        void processSubtree (ast::Node0* n);
-        void processMod();
         
     public:
         Sema(ast::Module* c) : mod(c) {};
@@ -28,11 +22,6 @@ namespace sa
         void Phase1();
 
         void Import();
-
-        //infer types. only called on main module
-        void Types();
-        template<class T>
-        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
     };
 }
 

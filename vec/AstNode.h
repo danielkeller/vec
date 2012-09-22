@@ -19,6 +19,7 @@
 namespace sa
 {
     class Sema;
+    class Exec;
 }
 
 namespace val
@@ -139,7 +140,7 @@ namespace ast
         val::Value& Value();
         llvm::Value* Address();
 
-        virtual void inferType(sa::Sema&) {}
+        virtual void preExec(sa::Exec&);
         virtual llvm::Value* generate(cg::CodeGen&);
 
         tok::Location loc; //might not be set

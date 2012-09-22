@@ -3,6 +3,7 @@
 #include "Lexer.h"
 #include "Parser.h"
 #include "Sema.h"
+#include "Exec.h"
 #include "CodeGen.h"
 
 #include "LLVM.h"
@@ -84,7 +85,8 @@ void GlobalData::ParseMainFile(const char* path)
 
     sa::Sema s(mainMod);
     s.Import();
-    s.Types();
+    
+    sa::Exec ex(mainMod);
 
     std::ofstream dot(mainMod->fileName + std::string(".3.dot"));
     dot << "digraph G {\n";
@@ -134,7 +136,7 @@ void GlobalData::Initialize()
     reserved.main = addIdent("main");
     reserved.init = addIdent("__init");
     reserved.string = addIdent("String");
-    reserved.undeclared = addIdent("undeclared");
+    reserved.undeclared = addIdent("__undeclared");
     reserved.intrin = addIdent("__intrin");
 
     //add pre defined stuff
@@ -157,7 +159,7 @@ void GlobalData::Initialize()
         if (tok::CanBeOverloaded(tt))
         {
             if (tt == tok::lbrace) //special case
-                reserved.opIdents[tt] = addIdent("operator{}");
+                reserved.opIdents[tt] = addIdent("operator[]");
             else
                 reserved.opIdents[tt] = addIdent(std::string("operator") + tok::Name(tt));
         }
@@ -166,6 +168,7 @@ void GlobalData::Initialize()
 
 GlobalData::~GlobalData()
 {
+    //TODO: allow things to register code to be called at exit?
     //universal declarations are not part of anyone's AST
     for (auto decl : universal.varDefs)
         delete decl.second;
