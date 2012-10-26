@@ -85,14 +85,6 @@ void GlobalData::ParseMainFile(const char* path)
 
     sa::Sema s(mainMod);
     s.Import();
-    
-    sa::Exec ex(mainMod);
-
-    std::ofstream dot(mainMod->fileName + std::string(".3.dot"));
-    dot << "digraph G {\n";
-    mainMod->emitDot(dot);
-    dot << '}';
-    dot.close();
 
     std::string outfile = mainMod->name + ".ll";
 

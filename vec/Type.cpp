@@ -250,7 +250,8 @@ void FuncNode::createLLVMType()
     else
         llvm_args.push_back(arg->llvm_t);
 
-    llvm_t = llvm::FunctionType::get(ret->llvm_t, llvm_args, false);
+    llvm_t = llvm::PointerType::getUnqual(
+        llvm::FunctionType::get(ret->llvm_t, llvm_args, false));
 }
 
 void FuncNode::print(std::ostream &out)
@@ -463,7 +464,6 @@ TypeNodeB* ParamNode::clone(TypeManager*)
 
 void ParamNode::createLLVMType()
 {
-    //this should probably not be used for anything
     llvm_t = llvm::StructType::create(llvm::getGlobalContext(), "_P_" + Global().getIdent(name));
 }
 

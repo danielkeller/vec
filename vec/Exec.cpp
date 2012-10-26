@@ -521,8 +521,6 @@ void Exec::processMod(ast::Module* mod)
 
 Exec::Exec(ast::Module* mainMod)
 {
-    typ::mgr.makeLLVMTypes();
-
     pushValScope();
 
     processMod(mainMod);

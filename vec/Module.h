@@ -50,6 +50,8 @@ namespace ast
 
         std::string myLbl() {return "Comp Unit";}
 
+        llvm::Value* generate(cg::CodeGen& gen);
+
         char * buffer;
         std::string fileName;
     };

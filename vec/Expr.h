@@ -77,7 +77,6 @@ namespace ast
 
         //allows all declarations of functions to share the value
         annot_t& Annot() {return realDecl ? realDecl->Annot() : Node0::Annot();}
-        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     //declaration of an entire function overload group

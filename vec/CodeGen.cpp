@@ -17,7 +17,7 @@ using namespace llvm;
 //DO NOT CALL GENERATE IN AN ARGUMENT LIST. BAD THINGS WILL HAPPEN.
 
 CodeGen::CodeGen(std::string& outfile)
-    : curBB(nullptr), curFunc(nullptr)
+    : curBB(nullptr), curFunc(nullptr), lambda_num(0)
 {
     if (Global().numErrors != 0) //cannot generate code if there are errors
     {
@@ -25,20 +25,16 @@ CodeGen::CodeGen(std::string& outfile)
         throw err::FatalError();
     }
 
+    typ::mgr.makeLLVMTypes();
+
     curMod = new Module(outfile + ".bc", getGlobalContext());
 
-    //gather up all functions
-    /*
-    std::set<ast::FunctionDef*> funcs;
+    //make module init function
+    curFunc = initFunc = curMod->getFunction("__init");
+    curBB = BasicBlock::Create(getGlobalContext(), "FuncEntry", curFunc);
+    
     for (auto m : Global().allModules)
-        for (auto fd : sa::Subtree<ast::FuncDeclExpr>(m))
-            if (fd->Value())
-                funcs.insert(fd->Value().getFunc().get());
-
-        */
-    for (auto m : Global().allModules)
-        for (auto fd : sa::Subtree<ast::FuncDeclExpr>(m))
-            fd->generate(*this);
+        m->generate(*this);
 
     std::string errors;
     llvm::raw_fd_ostream fout(outfile.c_str(), errors);
@@ -53,40 +49,36 @@ CodeGen::CodeGen(std::string& outfile)
 //---------------------------------------------------
 //control flow nodes
 
-Value* ast::FuncDeclExpr::generate(CodeGen& gen)
+Value* ast::Module::generate(CodeGen& gen)
 {
-    //TODO: name mangling?
-
-    //get or create function
-    gen.curFunc = gen.curMod->getFunction(Global().getIdent(name));
-
-    if (!gen.curFunc)
-    {
-        gen.curFunc = Function::Create(
-            dyn_cast<llvm::FunctionType>(Type().toLLVM()),
-            llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), gen.curMod);
-    }
-
-    ast::FunctionDef* def = Value().getFunc().get();
-    if (!def || gen.curFunc->size())
-        return gen.curFunc; //external or already defined
-
-    gen.curBB = BasicBlock::Create(getGlobalContext(), "FuncEntry", gen.curFunc);
-
-    def->generate(gen);
-
-    return gen.curFunc;
+    getChildA()->generate(gen);
+    return IGNORED;
 }
 
 Value* ast::FunctionDef::generate(CodeGen& gen)
 {
+    std::string fName = std::string("lambda") + utl::to_str(gen.lambda_num++);
+
+    //get or create function
+    gen.curFunc = gen.curMod->getFunction(fName);
+
+    if (!gen.curFunc)
+    {
+        PointerType* funPtrType = cast<PointerType>(Type().toLLVM());
+        gen.curFunc = Function::Create(
+            cast<FunctionType>(funPtrType->getElementType()),
+            llvm::GlobalValue::ExternalLinkage, fName, gen.curMod);
+    }
+
+    gen.curBB = BasicBlock::Create(getGlobalContext(), "FuncEntry", gen.curFunc);
+
     llvm::Value* body = getChildA()->generate(gen);
 
     //don't make two returns
     if (!gen.curBB->getTerminator())
         ReturnInst::Create(getGlobalContext(), body, gen.curBB);
 
-    return IGNORED;
+    return gen.curFunc;
 }
 
 Value* ast::StmtPair::generate(CodeGen& gen)

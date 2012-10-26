@@ -13,6 +13,10 @@ namespace cg
         llvm::BasicBlock* curBB;
         llvm::Function* curFunc;
         llvm::Module* curMod;
+
+        llvm::Function* initFunc; //module body level function
+
+        int lambda_num;
     };
 }
 
