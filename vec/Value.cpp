@@ -40,8 +40,8 @@ struct ScalarNode : public ValNode
 
 struct NormalScalarNode : public ScalarNode
 {
-    std::array<char, 10> val;
-    char* Get() {return val.data();}
+    std::aligned_storage<sizeof(long double), std::alignment_of<long double>::value>::type val;
+    char* Get() {return reinterpret_cast<char*>(&val);}
     ValNode* clone() {return new NormalScalarNode(*this);}
 };
 
