@@ -71,8 +71,6 @@ Value* ast::FuncDeclExpr::generate(CodeGen& gen)
     if (!def || gen.curFunc->size())
         return gen.curFunc; //external or already defined
 
-    gen.curBB = BasicBlock::Create(getGlobalContext(), "FuncEntry", gen.curFunc);
-
     def->generate(gen);
 
     return gen.curFunc;
@@ -80,12 +78,7 @@ Value* ast::FuncDeclExpr::generate(CodeGen& gen)
 
 Value* ast::FunctionDef::generate(CodeGen& gen)
 {
-    llvm::Value* body = getChildA()->generate(gen);
-
-    //don't make two returns
-    if (!gen.curBB->getTerminator())
-        ReturnInst::Create(getGlobalContext(), body, gen.curBB);
-
+    getChildA()->generate(gen);
     return IGNORED;
 }
 
@@ -103,54 +96,49 @@ Value* ast::ReturnStmt::generate(CodeGen& gen)
     return retVal;
 }
 
-Value* ast::IfStmt::generate(CodeGen& gen)
+Value* ast::RhoStmt::generate(CodeGen& gen)
 {
-    llvm::Value* test = getChildA()->generate(gen);
-
-    BasicBlock* iftrue = BasicBlock::Create(getGlobalContext(), "if-true", gen.curFunc);
-    BasicBlock* iffalse = BasicBlock::Create(getGlobalContext(), "if-false", gen.curFunc);
-    BranchInst::Create(iftrue, iffalse, test, gen.curBB);
-
-    gen.curBB = iftrue;
-    getChildB()->generate(gen);
-
-    BranchInst::Create(iffalse, iftrue);
-    gen.curBB = iffalse;
-
-    return IGNORED;
+    return getChild(0)->generate(gen);
 }
 
-Value* ast::IfElseStmt::generate(CodeGen& gen)
+//a side effect of this is leaving out unreachable blocks
+Value* ast::BranchStmt::generate(CodeGen& gen)
 {
-    BasicBlock* iftrue = BasicBlock::Create(getGlobalContext(), "if-true", gen.curFunc);
-    BasicBlock* iffalse = BasicBlock::Create(getGlobalContext(), "if-false", gen.curFunc);
-    BasicBlock* after = BasicBlock::Create(getGlobalContext(), "if-after", gen.curFunc);
+    if (myBB)
+        return myBB;
 
-    llvm::Value* test = getChildA()->generate(gen);
-    BranchInst::Create(iftrue, iffalse, test, gen.curBB);
+    myBB = gen.curBB = BasicBlock::Create(getGlobalContext(), "", gen.curFunc);
+    llvm::Value* result = getChildA()->generate(gen);
 
-    gen.curBB = iftrue;
-    llvm::Value* trueVal = getChildB()->generate(gen);
-    BranchInst::Create(after, iftrue);
+    BasicBlock* ift = nullptr, *iff = nullptr;
+    if (ifTrue)
+    {
+        ift = dyn_cast<BasicBlock>(ifTrue->generate(gen));
+    
+        if (ifFalse != ifTrue) //conditional
+        {
+            iff = dyn_cast<BasicBlock>(ifFalse->generate(gen));
+            BranchInst::Create(ift, iff, result, myBB);
+        }
+        else
+            BranchInst::Create(ift, myBB);
+    }
 
-    gen.curBB = iffalse;
-    llvm::Value* falseVal = getChildC()->generate(gen);
-    BranchInst::Create(after, iffalse);
-
-    gen.curBB = after;
-
-    if (Type() == typ::error) //don't return anything
-        return IGNORED;
-
-    //return appropiate value
-    PHINode* ifelseVal = PHINode::Create(Type().toLLVM(), 2, "if-else-phi", after);
-    ifelseVal->addIncoming(trueVal, iftrue);
-    ifelseVal->addIncoming(falseVal, iffalse);
-    return ifelseVal;
+    return myBB;
 }
 
 //---------------------------------------------------
 //expression nodes
+
+Value* ast::NullExpr::generate(CodeGen&)
+{
+    return IGNORED;
+}
+
+Value* ast::NullStmt::generate(CodeGen&)
+{
+    return IGNORED;
+}
 
 Value* ast::DeclExpr::generate(CodeGen& gen)
 {

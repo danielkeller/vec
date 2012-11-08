@@ -15,8 +15,7 @@ using namespace sa;
 
 //This is type inference, overload resolution, and template instantiation
 //any constants are calcuated, and any constant, non-side-effecting
-//expressions are removed. Any remaining code marked "static" is JITted
-//and executed
+//expressions are removed. Any remaining code marked "static" is executed
 
 //convenience for overload resolution
 typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
@@ -125,8 +124,6 @@ void AssignExpr::preExec(Exec& ex)
     if (getChildB()->Value())
     {
         Annotate(getChildB()->Value());
-        //delete the value if it becomes indeterminate
-        ex.trackVal(getChildA());
     }
 }
 
@@ -155,8 +152,6 @@ void OverloadCallExpr::preExec(Exec& ex)
 
 void BinExpr::preExec(Exec& ex)
 {
-    //FIXME: this breaks short-circuiting
-    //super-FIXME: especially with val-scopes
     getChildA()->preExec(ex);
     getChildB()->preExec(ex);
 
@@ -359,8 +354,9 @@ void StmtPair::preExec(Exec& ex)
     getChildB()->preExec(ex);
 }
 
-void ReturnStmt::preExec(Exec&)
+void ReturnStmt::preExec(Exec& ex)
 {
+    getChildA()->preExec(ex);
     //first check if we can do arith conversion
     //FIXME: this should go in copy constructor code
     //TODO: this
@@ -377,75 +373,20 @@ void ReturnStmt::preExec(Exec&)
     Annotate(getChildA()->Type());
 }
 
-//TODO: value scopes
-
-void IfStmt::preExec(Exec& ex)
+void RhoStmt::preExec(Exec& ex)
 {
-    getChildA()->preExec(ex);
-
-    if (getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
-        err::Error(getChildA()->loc) << "expected boolean type, got " << getChildA()->Type()
-            << err::underline;
-
-    //constant...
-    if (getChildA()->Value())
-    {
-        if (getChildA()->Value().getScalarAs<bool>()) //...and true
-        {
-            getChildB()->preExec(ex);
-            parent->replaceChild(this, detachChildB());
-        }
-        else //...and false
-            parent->replaceChild(this, Ptr(new NullExpr(loc)));
-    }
-    else
-    {
-        ex.pushValScope();
-        getChildB()->preExec(ex);
-        ex.popValScope();
-        Annotate(typ::null);
-    }
+    for (auto& c : Children())
+        c->preExec(ex);
 }
 
-void IfElseStmt::preExec(Exec& ex)
+void BranchStmt::preExec(Exec& ex)
 {
     getChildA()->preExec(ex);
 
-    if (getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
+    if (ifTrue != ifFalse //conditional, so child is condition
+        && getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
         err::Error(getChildA()->loc) << "expected boolean type, got " << getChildA()->Type()
             << err::underline;
-
-    //constant...
-    if (getChildA()->Value())
-    {
-        if (getChildA()->Value().getScalarAs<bool>()) //...and true
-        {
-            getChildB()->preExec(ex);
-            parent->replaceChild(this, detachChildB());
-        }
-        else //...and false
-        {
-            getChildC()->preExec(ex);
-            parent->replaceChild(this, detachChildC());
-        }
-    }
-    else
-    {
-        ex.pushValScope();
-        getChildB()->preExec(ex);
-        ex.popValScope();
-        
-        ex.pushValScope();
-        getChildC()->preExec(ex);
-        ex.popValScope();
-
-        //can't do it at runtime. unfortunately we can't tell if the value is ignored and if
-        //we should emit an error
-        if (getChildB()->Type().compare(getChildC()->Type()) == typ::TypeCompareResult::invalid)
-            Annotate(typ::null);
-        else
-            Annotate(getChildB()->Type());
-    }
 }
 
 //TOOD: return type and value/call?
@@ -464,7 +405,7 @@ void Exec::processFunc (ast::FuncDeclExpr* n)
 
         for (auto ret : Subtree<ReturnStmt>(def))
             if (n->Type().getFunc().ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
-                err::Error(ret->getChildA()->loc) << "cannot convert from "
+                err::Error(ret->loc) << "cannot convert from "
                     << ret->getChildA()->Type() << " to " << n->Type().getFunc().ret()
                     << " in function return" << err::underline;
 
@@ -523,8 +464,6 @@ Exec::Exec(ast::Module* mainMod)
 {
     typ::mgr.makeLLVMTypes();
 
-    pushValScope();
-
     processMod(mainMod);
 
     //now find the entry point and go!!
@@ -557,23 +496,6 @@ Exec::Exec(ast::Module* mainMod)
 
     Global().entryPt = entryPt.ovrResult;
     processFunc(entryPt.ovrResult);
-}
-
-void Exec::pushValScope()
-{
-    valScopes.emplace();
-}
-
-void Exec::popValScope()
-{
-    for (auto var : valScopes.top())
-        var->Annotate(val::Value());
-    valScopes.pop();
-}
-
-void Exec::trackVal(ast::Node0* n)
-{
-    valScopes.top().push_back(n);
 }
 
 IntrinCallExpr* OverloadCallExpr::makeICall()

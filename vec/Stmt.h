@@ -7,11 +7,13 @@
 
 namespace ast
 {
+    //TODO: do I even need this, given that nullExpr exists?
     struct NullStmt : public Node0
     {
         NullStmt(tok::Location const &l) : Node0(l) {};
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";}
+        llvm::Value* generate(cg::CodeGen&);
     };
 
     struct ExprStmt : public Node1
@@ -62,8 +64,6 @@ namespace ast
             loc = o.loc + getChildB()->loc;
         }
         std::string myLbl() {return "if";}
-        void preExec(sa::Exec&);
-        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct IfElseStmt : public Node3
@@ -74,8 +74,6 @@ namespace ast
             loc = o.loc + getChildC()->loc;
         }
         std::string myLbl() {return "if-else";}
-        void preExec(sa::Exec&);
-        llvm::Value* generate(cg::CodeGen& gen);
     };
 
     struct SwitchStmt : public Node2

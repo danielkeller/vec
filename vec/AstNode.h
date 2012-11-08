@@ -30,6 +30,7 @@ namespace val
 namespace llvm
 {
     class Value;
+    class BasicBlock;
 }
 
 namespace cg
@@ -544,6 +545,11 @@ namespace ast
         void popChild()
         {
             chld.pop_back();
+        }
+
+        void clear()
+        {
+            chld.clear();
         }
 
         void emitDot(std::ostream &os)

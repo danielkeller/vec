@@ -109,7 +109,7 @@ namespace sa
         }
 
         //do a cached loop instead of a standard one
-        std::list<filter*> cached();
+        std::vector<filter*> cached();
     };
     
     //casting functions
@@ -167,9 +167,9 @@ namespace sa
     }
 
     template<class filter, class c, class o>
-    inline std::list<filter*> Subtree<filter, c, o>::cached()
+    inline std::vector<filter*> Subtree<filter, c, o>::cached()
     {
-        std::list<filter*> cache;
+        std::vector<filter*> cache;
         for (auto it : *this)
             cache.push_back(it);
         return cache;

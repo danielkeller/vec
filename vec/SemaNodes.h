@@ -3,9 +3,107 @@
 
 #include "Stmt.h"
 
+#include <map>
+
 namespace ast
 {
     //This file is for AST nodes that are added during semantic analysis, rather than parsing
+    struct TmpExpr : public Node0
+    {
+        const char *myColor() {return "8";};
+        std::string myLbl () {return "tmp";};
+        Node0* setBy;
+
+        TmpExpr(Node0* sb) : Node0(sb->loc), setBy(sb){};
+
+        void emitDot(std::ostream& os)
+        {
+            Node0::emitDot(os);
+            //shows a "sets" relationship
+            os << 'n' << static_cast<Node0*>(setBy) << " -> n" << static_cast<Node0*>(this)
+                << " [style=dotted];\n";
+        };
+
+        annot_t& Annot() {return setBy->Annot();}
+    };
+    
+    //TODO: consider holding branchStmts some other way, so we don't have to cast so much
+    //a "routing" node that contains BranchStmts
+    struct RhoStmt : public NodeN
+    {
+        std::string myLbl() {return "rho";}
+        const char *myColor() {return "3";}
+        void preExec(sa::Exec&);
+        llvm::Value* generate(cg::CodeGen&);
+    };
+
+    //a BranchStmt is the terminator of the basic block that is attached below it
+    struct BranchStmt : public Node1
+    {
+        //either of these being null means "leave the current rho block"
+        BranchStmt* ifTrue;
+        BranchStmt* ifFalse;
+
+        annot_t& Annot() {return getChildA()->Annot();}
+
+        //conditional
+        BranchStmt(Ptr basicBlock, BranchStmt* ift, BranchStmt* iff)
+            : Node1(move(basicBlock)), ifTrue(ift), ifFalse(iff),
+            myBB(nullptr)
+        {};
+
+        //unconditional
+        BranchStmt(Ptr basicBlock, BranchStmt* dest)
+            : Node1(move(basicBlock)), ifTrue(dest), ifFalse(dest),
+            myBB(nullptr)
+        {};
+        
+        //null (leaving current rho block)
+        BranchStmt(Ptr basicBlock)
+            : Node1(move(basicBlock)), ifTrue(nullptr), ifFalse(nullptr),
+            myBB(nullptr)
+        {};
+
+        std::string myLbl() {return "branch";}
+
+        void emitDot(std::ostream& os)
+        {
+            Node1::emitDot(os);
+            if (ifTrue)
+                os << 'n' << static_cast<Node0*>(this) << " -> n" << static_cast<Node0*>(ifTrue)
+                    << " [style=dotted];\n";
+            if (ifFalse)
+                os << 'n' << static_cast<Node0*>(this) << " -> n" << static_cast<Node0*>(ifFalse)
+                    << " [style=dotted];\n";
+        };
+
+        void preExec(sa::Exec&);
+        llvm::Value* generate(cg::CodeGen&);
+
+    private:
+        llvm::BasicBlock* myBB; //memoized basic block result so we don't generate multiple times
+    };
+
+    //Generalization of TmpExpr for any number of predecessor blocks
+    struct PhiExpr : public Node0
+    {
+        std::map<BranchStmt*, Node0*> inputs;
+
+        const char *myColor() {return "8";};
+        std::string myLbl () {return "phi";};
+
+        PhiExpr(tok::Location& loc) : Node0(loc){};
+
+        void emitDot(std::ostream& os)
+        {
+            Node0::emitDot(os);
+            //shows a "sets" relationship
+            for (auto p : inputs)
+                os << 'n' << static_cast<Node0*>(p.second) << " -> n" << static_cast<Node0*>(this)
+                    << " [style=dotted];\n";
+        };
+    };
+
     struct ImpliedLoopStmt : public Node1
     {
         std::vector<IterExpr*> targets;

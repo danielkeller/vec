@@ -145,6 +145,8 @@ void Sema::Phase1()
     //must represent, if there is only one such function
     //this makes function pointers & stuff easier
     //TODO: won't this break things?
+    //FIXME: do this after import
+    /*
     for (auto ve : Subtree<VarExpr>(mod))
     {
         OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(ve->var);
@@ -154,13 +156,160 @@ void Sema::Phase1()
         if (oGroup->functions.size() == 1)
             ve->var = oGroup->functions.front();
     }
+    */
+
+    //convert control statements into their branch forms
+
+    for (auto If : Subtree<IfStmt>(mod).cached())
+    {
+        auto rho = MkNPtr(new RhoStmt());
+        
+        auto controlled = MkNPtr(new BranchStmt(If->detachChildB()));
+
+        Ptr condPtr = If->detachChildA();
+        rho->appendChild(Ptr(new BranchStmt(move(condPtr), controlled.get(), nullptr)));
+        rho->appendChild(move(controlled));
+        If->parent->replaceChild(If, move(rho));
+    }
+
+    for (auto IfElse : Subtree<IfElseStmt>(mod).cached())
+    {
+        auto rho = MkNPtr(new RhoStmt());
+        
+        auto controlled1 = MkNPtr(new BranchStmt(IfElse->detachChildB()));
+        auto controlled2 = MkNPtr(new BranchStmt(IfElse->detachChildC()));
+
+        Ptr condPtr = IfElse->detachChildA();
+        rho->appendChild(Ptr(new BranchStmt(move(condPtr), controlled1.get(), controlled2.get())));
+        rho->appendChild(move(controlled1));
+        rho->appendChild(move(controlled2));
+        IfElse->parent->replaceChild(IfElse, move(rho));
+    }
+
+    //TODO: the rest of them
+
+    //merge all rho stmts into one, underneath the function def (or compilation unit)
+    auto globalRho = MkNPtr(new RhoStmt());
+    globalRho->appendChild(Ptr(new BranchStmt(mod->detachChildA())));
+    mod->setChildA(move(globalRho));
+
+    for (auto fd : Subtree<FunctionDef>(mod))
+    {
+        auto funcRho = MkNPtr(new RhoStmt());
+        funcRho->appendChild(Ptr(new BranchStmt(fd->detachChildA())));
+        fd->setChildA(move(funcRho));
+    }
+
+    for (auto rho : Subtree<RhoStmt>(mod).cached())
+    {
+        //exclude the ones we just added
+        if (exact_cast<FunctionDef*>(rho->parent) || exact_cast<Module*>(rho->parent))
+            continue;
+
+        BranchStmt* entry = exact_cast<BranchStmt*>(rho->getChild(0));
+        Ptr before = entry->detachChildA();
+
+        //climb up the tree until we find the basic block we're in
+        std::unordered_set<Node0*> parents; //all nodes directly between us and the terminator
+        Node0* terminator;
+        for (terminator = rho->parent;
+            !exact_cast<BranchStmt*>(terminator);
+            terminator = terminator->parent)
+            parents.insert(terminator);
+
+        BranchStmt* exit = exact_cast<BranchStmt*>(terminator);
+
+        //accumulate all nodes that execute before us into before
+        //this is every node that is a descendent of one of the parents nodes, and
+        //which is seen first in a postorder traversal
+        for (auto node : Subtree<>(exit).cached())
+        {
+            //the last thing that must execute before this control structure
+            if (node == rho->getChild(0))
+                break;
+
+            //if its value is used by something that happens before
+            if (!parents.count(node->parent))
+                continue; //ignore it so we can take its parent
+
+            Ptr tmp;
+            //don't do this for nodes that ignore this child's value
+            BinExpr* be = exact_cast<BinExpr*>(node->parent);
+            if (exact_cast<StmtPair*>(node->parent))
+                tmp = Ptr(new NullExpr());
+            else if (be && be->op == tok::comma)
+                tmp = Ptr(new NullExpr());
+            else
+                tmp = Ptr(new TmpExpr(node));
+
+            //it is neccesary to maintain the same value for the code under the
+            //branch, becuse it is used as the condition
+            before = Ptr(new StmtPair(
+                node->parent->replaceChild(node, move(tmp)), //get node and put temp where it was
+                move(before)));
+        }
+
+        RhoStmt* oldOwner = exact_cast<RhoStmt*>(exit->parent);
+
+        entry->setChildA(move(before));
+
+        //point upper branches to our first branch
+        for (auto& upperBrPtr : oldOwner->Children())
+        {
+            BranchStmt* upperBr = exact_cast<BranchStmt*>(upperBrPtr.get());
+            if (upperBr->ifTrue == exit)
+                upperBr->ifTrue = entry;
+            if (upperBr->ifFalse == exit)
+                upperBr->ifFalse = entry;
+        }
+
+        //point our branches that leave the rhoStmt to the "after" branch
+        for (auto& lowerBrPtr : rho->Children())
+        {
+            BranchStmt* lowerBr = exact_cast<BranchStmt*>(lowerBrPtr.get());
+            if (lowerBr->ifTrue == nullptr)
+                lowerBr->ifTrue = exit;
+            if (lowerBr->ifFalse == nullptr)
+                lowerBr->ifFalse = exit;
+        }
+        
+        auto newOwner = MkNPtr(new RhoStmt());
+        
+        Node0* rhoParent = rho->parent;
+        auto rhoPtr = rho->detachSelfAs<RhoStmt>();
+        //PHIXME: should be phi expr
+        rhoParent->replaceDetachedChild(Ptr(new NullExpr()));
+
+        for (auto& it : oldOwner->Children())
+        {
+            if (it.get() == exit) //push our stuff on first
+                newOwner->consume(move(rhoPtr));
+
+            newOwner->appendChild(it->detachSelf());
+        }
+
+        //this looks stupid, but its actually so we don't delete anything other than rho
+        oldOwner->clear();
+        oldOwner->consume(move(newOwner));
+    }
+
+    //now any Branch stmts that branch to null must leave the function
+    for (auto br : Subtree<BranchStmt>(mod))
+    {
+        if (br->ifTrue)
+            continue;
+
+        br->setChildA(Ptr(new ReturnStmt(br->detachChildA())));
+    }
 
     //remove null stmts under StmtPairs
     for (auto sp : Subtree<StmtPair>(mod).cached())
     {
-        if (exact_cast<NullStmt*>(sp->getChildA()) != 0)
+        if (exact_cast<NullStmt*>(sp->getChildA()) != 0
+         || exact_cast<NullExpr*>(sp->getChildA()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildB());
-        else if (exact_cast<NullStmt*>(sp->getChildB()) != 0)
+        else if (exact_cast<NullStmt*>(sp->getChildB()) != 0
+              || exact_cast<NullExpr*>(sp->getChildB()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildA());
     }
 

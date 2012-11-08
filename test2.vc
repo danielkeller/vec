@@ -8,13 +8,17 @@ int:[String] main =
 
     if (undef)
     (
-        foo = 8;
-        int a = foo + 1;
+        if (foo == 7)
+            foo = 8;
+        else
+            int a = foo + 1;
     )
     else
     (
-        foo = 9;
-        int b = foo + 1;
+        if (bar == 1)
+            foo = 9;
+        else
+            int b = foo + 6;
     )
     bar;
 );

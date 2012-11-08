@@ -20,7 +20,7 @@ namespace ast
             : Node0(tok::Location()) {}
         std::string myLbl() {return "Null";}
         const char *myColor() {return "9";};
-        llvm::Value* generate(cg::CodeGen&) {return nullptr;};
+        llvm::Value* generate(cg::CodeGen&);
     };
 
     struct DeclExpr;
