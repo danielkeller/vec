@@ -96,8 +96,6 @@ int!16:{int!16} operator++ = __intrin;
 int!32:{int!32} operator++ = __intrin;
 int!64:{int!64} operator++ = __intrin;
 
-bool:{bool, bool} operator&& = __intrin;
-bool:{bool, bool} operator|| = __intrin;
 bool:bool operator! = __intrin;
 
 [?T]:{[?T], [?T]} operator$ = __intrin;

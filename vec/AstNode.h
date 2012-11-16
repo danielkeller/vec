@@ -82,7 +82,7 @@ namespace ast
     {
     protected:
         Node0(tok::Location const &l)
-            : loc(l), parent(0) {}
+            : loc(l), parent(nullptr), llvmVal(nullptr) {}
         virtual ~Node0() {};
         friend struct deleter;
 
@@ -122,9 +122,13 @@ namespace ast
 
     protected:
         typedef std::unique_ptr<Annotation, AnnotDeleter> annot_t;
+        llvm::Value* llvmVal; //used in some cases to break recursion cycles
 
     private:
         annot_t annot;
+
+        //this allows memoization of the value so it can be accessed again
+        virtual llvm::Value* generate(cg::CodeGen&);
 
     public:
 
@@ -142,7 +146,7 @@ namespace ast
         llvm::Value* Address();
 
         virtual void preExec(sa::Exec&);
-        virtual llvm::Value* generate(cg::CodeGen&);
+        llvm::Value* gen(cg::CodeGen&);
 
         tok::Location loc; //might not be set
         Node0 *parent;

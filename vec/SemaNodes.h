@@ -25,6 +25,7 @@ namespace ast
         };
 
         annot_t& Annot() {return setBy->Annot();}
+        llvm::Value* generate(cg::CodeGen&);
     };
     
     //TODO: consider holding branchStmts some other way, so we don't have to cast so much
@@ -48,20 +49,17 @@ namespace ast
 
         //conditional
         BranchStmt(Ptr basicBlock, BranchStmt* ift, BranchStmt* iff)
-            : Node1(move(basicBlock)), ifTrue(ift), ifFalse(iff),
-            myBB(nullptr)
+            : Node1(move(basicBlock)), ifTrue(ift), ifFalse(iff)
         {};
 
         //unconditional
         BranchStmt(Ptr basicBlock, BranchStmt* dest)
-            : Node1(move(basicBlock)), ifTrue(dest), ifFalse(dest),
-            myBB(nullptr)
+            : Node1(move(basicBlock)), ifTrue(dest), ifFalse(dest)
         {};
         
         //null (leaving current rho block)
         BranchStmt(Ptr basicBlock)
-            : Node1(move(basicBlock)), ifTrue(nullptr), ifFalse(nullptr),
-            myBB(nullptr)
+            : Node1(move(basicBlock)), ifTrue(nullptr), ifFalse(nullptr)
         {};
 
         std::string myLbl() {return "branch";}
@@ -79,15 +77,12 @@ namespace ast
 
         void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen&);
-
-    private:
-        llvm::BasicBlock* myBB; //memoized basic block result so we don't generate multiple times
     };
 
     //Generalization of TmpExpr for any number of predecessor blocks
     struct PhiExpr : public Node0
     {
-        std::map<BranchStmt*, Node0*> inputs;
+        std::vector<BranchStmt*> inputs;
 
         const char *myColor() {return "8";};
         std::string myLbl () {return "phi";};
@@ -99,9 +94,11 @@ namespace ast
             Node0::emitDot(os);
             //shows a "sets" relationship
             for (auto p : inputs)
-                os << 'n' << static_cast<Node0*>(p.second) << " -> n" << static_cast<Node0*>(this)
+                os << 'n' << static_cast<Node0*>(p) << " -> n" << static_cast<Node0*>(this)
                     << " [style=dotted];\n";
         };
+        void preExec(sa::Exec&);
+        llvm::Value* generate(cg::CodeGen&);
     };
 
     struct ImpliedLoopStmt : public Node1

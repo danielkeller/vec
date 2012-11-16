@@ -186,6 +186,7 @@ void BinExpr::preExec(Exec& ex)
         //these are stated in the c standard §6.3.1.8 (omitting unsigned types)
         //if unsigned types are added, they should conform to the standard
 
+        //FIXME: this doesn't apply to all operators, ie (,)
         //TODO: integer-only cases (==, %, etc)
         if (lhs_t.getPrimitive().isArith() && rhs_t.getPrimitive().isArith() && lhs_t != rhs_t)
         {
@@ -387,6 +388,19 @@ void BranchStmt::preExec(Exec& ex)
         && getChildA()->Type().compare(typ::boolean) == typ::TypeCompareResult::invalid)
         err::Error(getChildA()->loc) << "expected boolean type, got " << getChildA()->Type()
             << err::underline;
+}
+
+void PhiExpr::preExec(Exec&)
+{
+    //TODO: to do this at compile time, Exec will have to track the predecessor block if one
+    //exists
+
+    assert(inputs.size() && "empty phi");
+    Annotate(inputs[0]->Type());
+    for (auto pred : inputs)
+        if (!pred->Type().compare(Type()).isValid())
+            err::Error(loc) << "type mismatch, " << Type() << " vs " << pred->Type()
+                << err::underline;
 }
 
 //TOOD: return type and value/call?

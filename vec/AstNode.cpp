@@ -100,6 +100,13 @@ void Node0::preExec(sa::Exec&)
     //assert(false && "preExec not implemented");
 }
 
+llvm::Value* Node0::gen(cg::CodeGen& cgen)
+{
+    if (!llvmVal)
+        llvmVal = generate(cgen);
+    return llvmVal;
+}
+
 llvm::Value* Node0::generate(cg::CodeGen&)
 {
     assert(false && "generate not implemented");

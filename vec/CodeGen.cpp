@@ -13,7 +13,7 @@ using namespace llvm;
 
 #define IGNORED nullptr //denotes an llvm::Value* that should be ignored
 
-//IMPORTANT: the order of evaluation of function arguments is not defined.
+//IMPORTANT: the order of evaluation of function arguments is not specified.
 //DO NOT CALL GENERATE IN AN ARGUMENT LIST. BAD THINGS WILL HAPPEN.
 
 CodeGen::CodeGen(std::string& outfile)
@@ -38,7 +38,7 @@ CodeGen::CodeGen(std::string& outfile)
         */
     for (auto m : Global().allModules)
         for (auto fd : sa::Subtree<ast::FuncDeclExpr>(m))
-            fd->generate(*this);
+            fd->gen(*this);
 
     std::string errors;
     llvm::raw_fd_ostream fout(outfile.c_str(), errors);
@@ -53,78 +53,100 @@ CodeGen::CodeGen(std::string& outfile)
 //---------------------------------------------------
 //control flow nodes
 
-Value* ast::FuncDeclExpr::generate(CodeGen& gen)
+Value* ast::FuncDeclExpr::generate(CodeGen& cgen)
 {
     //TODO: name mangling?
 
     //get or create function
-    gen.curFunc = gen.curMod->getFunction(Global().getIdent(name));
+    cgen.curFunc = cgen.curMod->getFunction(Global().getIdent(name));
 
-    if (!gen.curFunc)
+    if (!cgen.curFunc)
     {
-        gen.curFunc = Function::Create(
+        cgen.curFunc = Function::Create(
             dyn_cast<llvm::FunctionType>(Type().toLLVM()),
-            llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), gen.curMod);
+            llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), cgen.curMod);
     }
 
     ast::FunctionDef* def = Value().getFunc().get();
-    if (!def || gen.curFunc->size())
-        return gen.curFunc; //external or already defined
+    if (!def || cgen.curFunc->size())
+        return cgen.curFunc; //external or already defined
 
-    def->generate(gen);
+    def->gen(cgen);
 
-    return gen.curFunc;
+    return cgen.curFunc;
 }
 
-Value* ast::FunctionDef::generate(CodeGen& gen)
+Value* ast::FunctionDef::generate(CodeGen& cgen)
 {
-    getChildA()->generate(gen);
+    getChildA()->gen(cgen);
     return IGNORED;
 }
 
-Value* ast::StmtPair::generate(CodeGen& gen)
+Value* ast::StmtPair::generate(CodeGen& cgen)
 {
-    getChildA()->generate(gen);
-    return getChildB()->generate(gen);
+    getChildA()->gen(cgen);
+    return getChildB()->gen(cgen);
 }
 
-Value* ast::ReturnStmt::generate(CodeGen& gen)
+Value* ast::ReturnStmt::generate(CodeGen& cgen)
 {
-    llvm::Value* retVal = getChildA()->generate(gen);
-    ReturnInst::Create(getGlobalContext(), retVal, gen.curBB);
+    llvm::Value* retVal = getChildA()->gen(cgen);
+    ReturnInst::Create(getGlobalContext(), retVal, cgen.curBB);
     //return the value so a function with a return at the end doesn't cause an error
     return retVal;
 }
 
-Value* ast::RhoStmt::generate(CodeGen& gen)
+Value* ast::RhoStmt::generate(CodeGen& cgen)
 {
-    return getChild(0)->generate(gen);
+    return getChild(0)->gen(cgen);
 }
 
 //a side effect of this is leaving out unreachable blocks
-Value* ast::BranchStmt::generate(CodeGen& gen)
+Value* ast::BranchStmt::generate(CodeGen& cgen)
 {
-    if (myBB)
-        return myBB;
+    //save off the current basic block in case we're being called recursively
+    BasicBlock* savedBB = cgen.curBB;
 
-    myBB = gen.curBB = BasicBlock::Create(getGlobalContext(), "", gen.curFunc);
-    llvm::Value* result = getChildA()->generate(gen);
+    llvmVal = cgen.curBB = BasicBlock::Create(getGlobalContext(), "", cgen.curFunc);
+    llvm::Value* result = getChildA()->gen(cgen);
 
     BasicBlock* ift = nullptr, *iff = nullptr;
     if (ifTrue)
     {
-        ift = dyn_cast<BasicBlock>(ifTrue->generate(gen));
+        ift = dyn_cast<BasicBlock>(ifTrue->gen(cgen));
     
         if (ifFalse != ifTrue) //conditional
         {
-            iff = dyn_cast<BasicBlock>(ifFalse->generate(gen));
-            BranchInst::Create(ift, iff, result, myBB);
+            iff = dyn_cast<BasicBlock>(ifFalse->gen(cgen));
+            BranchInst::Create(ift, iff, result, cgen.curBB);
         }
         else
-            BranchInst::Create(ift, myBB);
+            BranchInst::Create(ift, cgen.curBB);
+    }
+    //else we have a return stmt that generates its own terminator
+
+    //restore old BB and return ours
+    cgen.curBB = savedBB;
+    return llvmVal;
+}
+
+Value* ast::PhiExpr::generate(CodeGen& cgen)
+{
+    PHINode* ret = PHINode::Create(Type().toLLVM(), inputs.size(), "", cgen.curBB);
+
+    for (auto pred : inputs)
+    {
+        BasicBlock* block = dyn_cast<BasicBlock>(pred->gen(cgen));
+        //kind of hackish. The value for a branch is the value of its child
+        ret->addIncoming(pred->getChildA()->gen(cgen), block);
     }
 
-    return myBB;
+    return ret;
+}
+
+Value* ast::TmpExpr::generate(CodeGen& cgen)
+{
+    return setBy->gen(cgen);
 }
 
 //---------------------------------------------------
@@ -140,20 +162,20 @@ Value* ast::NullStmt::generate(CodeGen&)
     return IGNORED;
 }
 
-Value* ast::DeclExpr::generate(CodeGen& gen)
+Value* ast::DeclExpr::generate(CodeGen& cgen)
 {
-    llvm::Value* addr = new AllocaInst(Type().toLLVM(), Global().getIdent(name), gen.curBB);
+    llvm::Value* addr = new AllocaInst(Type().toLLVM(), Global().getIdent(name), cgen.curBB);
     Annotate(addr);
     //TODO: call constructor
 
     //FIXME: this probably will make lots of extra loads. separate decl and var exprs in sema
     //is this even useful ever?
-    return new LoadInst(addr, "", gen.curBB);
+    return new LoadInst(addr, "", cgen.curBB);
 }
 
-Value* ast::VarExpr::generate(CodeGen& gen)
+Value* ast::VarExpr::generate(CodeGen& cgen)
 {
-    return new LoadInst(Address(), "", gen.curBB);
+    return new LoadInst(Address(), "", cgen.curBB);
 }
 
 Value* ast::ConstExpr::generate(CodeGen&)
@@ -165,32 +187,38 @@ Value* ast::ConstExpr::generate(CodeGen&)
     else if (Type().getPrimitive().isFloat())
         ret = ConstantFP::get(Type().toLLVM(), (double)Value().getScalarAs<long double>());
 
+    else if (Type() == typ::boolean)
+        ret = ConstantInt::get(Type().toLLVM(), Value().getScalarAs<bool>());
+
     else
+    {
+        assert("this type of constant unimplemented");
         ret = UndefValue::get(Type().toLLVM()); //FIXME!!!
+    }
 
     return ret;
 }
 
-Value* ast::AssignExpr::generate(CodeGen& gen)
+Value* ast::AssignExpr::generate(CodeGen& cgen)
 {
     //TODO: it's stupid I have to prefix Value with llvm in these functions
-    llvm::Value* val = getChildB()->generate(gen);
-    getChildA()->generate(gen);
+    llvm::Value* val = getChildB()->gen(cgen);
+    getChildA()->gen(cgen);
     llvm::Value* addr = getChildA()->Address();
     Annotate(addr); //because assignments are lvalues
 
-    new StoreInst(val, addr, gen.curBB);
+    new StoreInst(val, addr, cgen.curBB);
     //TODO: copy constructor
 
     return val;
 }
 
-Value* ast::ArithCast::generate(CodeGen& gen)
+Value* ast::ArithCast::generate(CodeGen& cgen)
 {
-    llvm::Value* arg = getChildA()->generate(gen);
+    llvm::Value* arg = getChildA()->gen(cgen);
 
     return CastInst::Create(CastInst::getCastOpcode(arg, true, Type().toLLVM(), true),
-        arg, Type().toLLVM(), "", gen.curBB);
+        arg, Type().toLLVM(), "", cgen.curBB);
 }
 
 //---------------------------------------------------
@@ -219,7 +247,7 @@ Value* ast::ArithCast::generate(CodeGen& gen)
 #define SET_BIN_OP(types, op, llvmop)   SET_FOR(binOp, types, op, llvmop)
 #define SET_PRED(types, op, llvmop)     SET_FOR(pred,  types, op, llvmop)
 
-Value* ast::IntrinCallExpr::generate(CodeGen& gen)
+Value* ast::IntrinCallExpr::generate(CodeGen& cgen)
 {
     //first handle the easy cases
     Instruction::BinaryOps otherOp = Instruction::BinaryOps(-1);
@@ -246,9 +274,9 @@ Value* ast::IntrinCallExpr::generate(CodeGen& gen)
 
     if (binOp != otherOp)
     {
-        llvm::Value* lhs = getChild(0)->generate(gen);
-        llvm::Value* rhs = getChild(1)->generate(gen);
-        return BinaryOperator::Create(binOp, lhs, rhs, "", gen.curBB);
+        llvm::Value* lhs = getChild(0)->gen(cgen);
+        llvm::Value* rhs = getChild(1)->gen(cgen);
+        return BinaryOperator::Create(binOp, lhs, rhs, "", cgen.curBB);
     }
 
 
@@ -274,59 +302,14 @@ Value* ast::IntrinCallExpr::generate(CodeGen& gen)
 
     if (pred != otherPr)
     {
-        llvm::Value* lhs = getChild(0)->generate(gen);
-        llvm::Value* rhs = getChild(1)->generate(gen);
+        llvm::Value* lhs = getChild(0)->gen(cgen);
+        llvm::Value* rhs = getChild(1)->gen(cgen);
         return CmpInst::Create(
             getChild(0)->Type().getPrimitive().isInt()
                 ? Instruction::OtherOps::ICmp
                 : Instruction::OtherOps::FCmp,
-            (unsigned short)pred, lhs, rhs, "", gen.curBB);
+            (unsigned short)pred, lhs, rhs, "", cgen.curBB);
     }
-
-    //now the short-circuiting operators
-    if (intrin_id == intr::OPS::AND || intrin_id == intr::OPS::OR)
-    {
-        /*
-        before (a) ---> alt (b)
-                \        \
-                 \------>after (r = phi before:a, after:b)
-
-        r = a && b 
-            if (a)
-                r = b
-            else
-                r = a
-
-        r = a || b
-            if (!a)
-                r = b
-            else
-                r = a
-        */
-        BasicBlock* before = gen.curBB;
-        BasicBlock* alt = BasicBlock::Create(getGlobalContext(), "sc-else", gen.curFunc);
-        BasicBlock* after = BasicBlock::Create(getGlobalContext(), "sc-after", gen.curFunc);
-
-        llvm::Value* lhs = getChild(0)->generate(gen);
-
-        if (intrin_id == intr::OPS::AND)
-            BranchInst::Create(alt, after, lhs, before); //if !a
-        else
-            BranchInst::Create(after, alt, lhs, before);
-
-        gen.curBB = alt; //set the current basic block to alt so the rhs goes there
-        llvm::Value* rhs = getChild(1)->generate(gen);
-
-        BranchInst::Create(after, alt);
-        gen.curBB = after;
-
-        PHINode* phi = PHINode::Create(Type().toLLVM(), 2, "sc-phi", after);
-        phi->addIncoming(lhs, before);
-        phi->addIncoming(rhs, alt);
-
-        return phi;
-    }
-
     assert(false && "not implemented");
     return nullptr;
 }

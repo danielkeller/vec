@@ -220,6 +220,12 @@ Node0* Parser::parsePrimaryExpr()
         ret = new ConstExpr(to.loc);
         ret->Annotate(Global().reserved.string_t, lexer->getCurVal());
         return ret;
+    case tok::k_true:
+    case tok::k_false:
+        lexer->Advance();
+        ret = new ConstExpr(to.loc);
+        ret->Annotate(typ::boolean, val::Value(to == tok::k_true));
+        return ret;
     }
 
     case tok::lparen:
@@ -233,7 +239,7 @@ Node0* Parser::parsePrimaryExpr()
         //without advancing at all. as is, things like (1, ) or 5+; will mess up the parser because
         //it will ignore the ) and get all confused.
     default: //we're SOL
-        err::Error(to.loc) << "unexpected '" << to.Name() << "', expecting expression"  << err::caret;
+        err::Error(to.loc) << "unexpected " << to.Name() << ", expecting expression"  << err::caret;
         lexer->Advance(); //eat it so as not to loop forever
         Node0* ret = new NullExpr(to.loc);
         ret->Annotate(typ::error);

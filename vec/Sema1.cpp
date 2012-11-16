@@ -61,6 +61,8 @@ void Sema::Phase1()
                 for (auto it : fde->funcScope->varDefs)
                     Ptr(it.second); //this is kind of dumb but it doesn't access the d'tor directly
 
+                //defining the same intrinsic twice causes a crash on this line
+                //not a huge deal, but not ideal
                 auto ide = MkNPtr(new IntrinDeclExpr(fde, intrin_num));
                 ++intrin_num;
 
@@ -186,6 +188,29 @@ void Sema::Phase1()
         IfElse->parent->replaceChild(IfElse, move(rho));
     }
 
+    for (auto scOp : Subtree<BinExpr>(mod).cached())
+    {
+        if (scOp->op != tok::barbar && scOp->op != tok::ampamp)
+            continue;
+        
+        auto rho = MkNPtr(new RhoStmt());
+        auto controlled2 = MkNPtr(new BranchStmt(scOp->detachChildB()));
+        auto controlled1 = MkNPtr(new BranchStmt(scOp->detachChildA(),
+            //for and, we eval the rhs if the lhs is true
+        /*ifTrue  = */ scOp->op == tok::ampamp ? controlled2.get() : nullptr,
+            //for or, we eval the rhs if the lhs is false
+        /*ifFalse = */ scOp->op == tok::barbar ? controlled2.get() : nullptr
+            ));
+
+        auto phi = MkNPtr(new PhiExpr(scOp->loc));
+        phi->inputs.push_back(controlled1.get());
+        phi->inputs.push_back(controlled2.get());
+
+        rho->appendChild(move(controlled1));
+        rho->appendChild(move(controlled2));
+
+        scOp->parent->replaceChild(scOp, Ptr(new StmtPair(move(rho), move(phi))));
+    }
     //TODO: the rest of them
 
     //merge all rho stmts into one, underneath the function def (or compilation unit)
@@ -207,7 +232,7 @@ void Sema::Phase1()
             continue;
 
         BranchStmt* entry = exact_cast<BranchStmt*>(rho->getChild(0));
-        Ptr before = entry->detachChildA();
+        Ptr before;
 
         //climb up the tree until we find the basic block we're in
         std::unordered_set<Node0*> parents; //all nodes directly between us and the terminator
@@ -244,14 +269,18 @@ void Sema::Phase1()
 
             //it is neccesary to maintain the same value for the code under the
             //branch, becuse it is used as the condition
-            before = Ptr(new StmtPair(
-                node->parent->replaceChild(node, move(tmp)), //get node and put temp where it was
-                move(before)));
+            if (before)
+                before = Ptr(new StmtPair(
+                    move(before), //get node and put temp where it was
+                    node->parent->replaceChild(node, move(tmp))));
+            else
+                before = node->parent->replaceChild(node, move(tmp));
         }
 
-        RhoStmt* oldOwner = exact_cast<RhoStmt*>(exit->parent);
+        //now put the basic block's original contents at the end
+        entry->setChildA(Ptr(new StmtPair(move(before), entry->detachChildA())));
 
-        entry->setChildA(move(before));
+        RhoStmt* oldOwner = exact_cast<RhoStmt*>(exit->parent);
 
         //point upper branches to our first branch
         for (auto& upperBrPtr : oldOwner->Children())

@@ -27,7 +27,6 @@ bool tok::CanBeOverloaded(TokenType type)
         case percent:
         case caret:
         case amp:
-        case ampamp:
         case star:
         case minus:
         case minusminus:
@@ -39,7 +38,6 @@ bool tok::CanBeOverloaded(TokenType type)
         //case opequals: //overload indirectly?
         case lsquare:
         case bar:
-        case barbar:
         //case colon:
         case less:
         case lshift:

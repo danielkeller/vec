@@ -6,6 +6,9 @@ int:[String] main =
     int bar;
     bool undef;
 
+    undef = foo == bar + 1 || foo < bar;
+
+    /*
     if (undef)
     (
         if (foo == 7)
@@ -19,6 +22,6 @@ int:[String] main =
             foo = 9;
         else
             int b = foo + 6;
-    )
+    )*/
     bar;
 );

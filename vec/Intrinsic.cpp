@@ -76,8 +76,6 @@ void IntrinCallExpr::preExec(Exec&)
         U_INTEGER(++, OPS::INCREMENT);
         U_INTEGER(--, OPS::DECREMENT);
 
-        ARITH(&&, bool, OPS::AND, 0);
-        ARITH(||, bool, OPS::OR, 0);
         U_ARITH(!, bool, OPS::NOT, 0);
     default:
         ;
