@@ -1,18 +1,24 @@
-CXXFLAGS = -g -D _DEBUG -Wall -pedantic -std=c++11
-CXX = clang++
-# REQUIRES clang 3.1 or later to compile
+LLVM_MODULES = core native
+
+CXXFLAGS = -g -D _DEBUG -Wall -pedantic -std=c++0x `llvm-config --cppflags`
+LFLAGS = `llvm-config --ldflags`
+LIBS = `llvm-config --libs $(LLVM_MODULES)`
+CXX = g++ 
 
 SRC = $(wildcard *.cpp)
 OBJECTS	= $(patsubst %.cpp,obj/%.o,$(SRC)) 
 
-vc :	$(OBJECTS)
-	$(CXX) $(LFLAGS) $(OBJECTS) -o vc
+vc: objs
+	$(CXX) $(LFLAGS) $(OBJECTS) $(LIBS) -o vc
 	cp vc ..
 
 $(OBJECTS): | obj
 
 obj:
 	mkdir -p $@
+
+objs:
+	$(MAKE) $(OBJECTS)
 
 obj/%.o : %.cpp *.h
 	$(CXX) $(CXXFLAGS) -c $< -o $@

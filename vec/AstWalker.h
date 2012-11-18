@@ -31,7 +31,7 @@ namespace sa
     {
         class Exact {};
         class Dynamic {};
-    };
+    }
 
     namespace Order
     {

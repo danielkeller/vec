@@ -23,7 +23,7 @@ namespace err
         fatal,
         error,
         warning,
-        nitpick,
+        nitpick
     };
 
     enum Special

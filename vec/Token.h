@@ -53,7 +53,7 @@ namespace tok
             shift,
             concat,
             add,
-            multiply,
+            multiply
         };
     }
 

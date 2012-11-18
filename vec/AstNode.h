@@ -82,7 +82,7 @@ namespace ast
     {
     protected:
         Node0(tok::Location const &l)
-            : loc(l), parent(nullptr), llvmVal(nullptr) {}
+            : llvmVal(nullptr), loc(l), parent(nullptr) {}
         virtual ~Node0() {};
         friend struct deleter;
 

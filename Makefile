@@ -1,8 +1,7 @@
 
 all:
 	ctags -R --sort=yes --c++-kinds=+p --fields=+iaS --extra=+q .
-	cd vec ; make
-
+	cd vec ; make -j `cat /proc/cpuinfo | grep processor | wc -l`
 
 clean:
 	cd vec ; make clean
