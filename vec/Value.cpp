@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstring>
 
+#include "LLVM.h"
+
 namespace val{
 
 struct ValNode
