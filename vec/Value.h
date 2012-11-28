@@ -14,7 +14,7 @@
 
 namespace ast
 {
-    struct FunctionDef;
+    struct Lambda;
 }
 
 namespace val
@@ -49,7 +49,7 @@ namespace val
             getScalarAs<T>() = val;
         }
 
-        Value(ast::NPtr<ast::FunctionDef>::type fd);
+        Value(ast::NPtr<ast::Lambda>::type fd);
 
         static Value seq();
         static Value scalarSeq(size_t width);
@@ -74,7 +74,7 @@ namespace val
             return *reinterpret_cast<T*>(getBytes());
         }
 
-        ast::NPtr<ast::FunctionDef>::type& getFunc();
+        ast::NPtr<ast::Lambda>::type& getFunc();
     };
 }
         

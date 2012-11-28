@@ -45,10 +45,9 @@ void Sema::Phase1()
 
     int intrin_num = 0; //because of the way this works, all intrins need to be in one file
 
-    //FIXME: memory leak when functions are declared & not defined
     for (auto ae : Subtree<AssignExpr>(mod).cached())
     {
-        FuncDeclExpr* fde = exact_cast<FuncDeclExpr*>(ae->getChildA());
+        DeclExpr* fde = exact_cast<DeclExpr*>(ae->getChildA());
         //TODO: or varexpr?
         if (!fde)
             continue;
@@ -56,42 +55,18 @@ void Sema::Phase1()
         //insert intrinsic declaration if that's what this is
         if (VarExpr* ve = exact_cast<VarExpr*>(ae->getChildB()))
         {
-            if (ve->var == Global().reserved.intrin_v)
+            if (ve->name == Global().reserved.intrin)
             {
-                for (auto it : fde->funcScope->varDefs)
-                    Ptr(it.second); //this is kind of dumb but it doesn't access the d'tor directly
-
                 //defining the same intrinsic twice causes a crash on this line
                 //not a huge deal, but not ideal
                 auto ide = MkNPtr(new IntrinDeclExpr(fde, intrin_num));
                 ++intrin_num;
 
-                //now replace the function decl in the overload group
-                OverloadGroupDeclExpr* oGroup = assert_cast<OverloadGroupDeclExpr*>(
-                    Global().universal.getVarDef(fde->name),
-                    "function decl not in group");
-
-                oGroup->functions.remove(fde);
-                oGroup->functions.push_back(ide.get());
-
                 ae->parent->replaceChild(ae, move(ide));
                 continue;
             }
         }
-
-        //exprStmt is needed so ` doesn't escape function decls
-        Ptr conts = Ptr(new ExprStmt(ae->detachChildB()));
-
-        //add decl exprs generated earlier to the AST
-        for (auto it : fde->funcScope->varDefs)
-        {
-            conts = Ptr(new StmtPair(Ptr(it.second), move(conts)));
-        }
-
-        //create and insert function definition
-        auto fd = MkNPtr(new FunctionDef(fde->Type(), move(conts)));
-
-        ae->setChildB(move(fd));
+        //TODO: insert lambda when function is defined "pointfree"
     }
 
     //do this after types in case of ref types
@@ -218,7 +193,7 @@ void Sema::Phase1()
     globalRho->appendChild(Ptr(new BranchStmt(mod->detachChildA())));
     mod->setChildA(move(globalRho));
 
-    for (auto fd : Subtree<FunctionDef>(mod))
+    for (auto fd : Subtree<Lambda>(mod))
     {
         auto funcRho = MkNPtr(new RhoStmt());
         funcRho->appendChild(Ptr(new BranchStmt(fd->detachChildA())));
@@ -228,7 +203,7 @@ void Sema::Phase1()
     for (auto rho : Subtree<RhoStmt>(mod).cached())
     {
         //exclude the ones we just added
-        if (exact_cast<FunctionDef*>(rho->parent) || exact_cast<Module*>(rho->parent))
+        if (exact_cast<Lambda*>(rho->parent) || exact_cast<Module*>(rho->parent))
             continue;
 
         BranchStmt* entry = exact_cast<BranchStmt*>(rho->getChild(0));
@@ -278,7 +253,8 @@ void Sema::Phase1()
         }
 
         //now put the basic block's original contents at the end
-        entry->setChildA(Ptr(new StmtPair(move(before), entry->detachChildA())));
+        if (before)
+            entry->setChildA(Ptr(new StmtPair(move(before), entry->detachChildA())));
 
         RhoStmt* oldOwner = exact_cast<RhoStmt*>(exit->parent);
 

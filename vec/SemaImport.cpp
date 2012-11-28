@@ -17,28 +17,12 @@ void Sema::Import()
     if (mod != intrinsic)
         mod->PublicImport(intrinsic);
 
-    //things to be fixed up are var exprs that are undeclared, and decl exprs that point 
-    //to external types. we look in private because that's the highest global scope, and
-    //the highest one that it's reasonable to go looking for undeclared stuff. this lets us
-    //put things in private or higher scope in any order which is nice.
+    //things to be fixed up are decl exprs that point to external types. we look
+    //in private because that's the highest global scope, and the highest one that
+    //it's reasonable to go looking for undeclared stuff. this lets us put things
+    //in private or higher scope in any order which is nice.
 
-    for (auto evar : Subtree<VarExpr>(mod))
-    {
-        if (evar->ename == 0)
-            continue; //not external
-
-        DeclExpr* realDecl = mod->priv.getVarDef(evar->ename);
-        if (realDecl) //found it!
-            evar->var = realDecl;
-        else //undeclared!
-        {
-            err::Error(evar->loc) << "undeclared variable '" << evar->ename
-                << "'" << err::underline;
-            evar->Annotate(typ::error);
-        }
-        //fortunately we can sort of recover by leaving it the way it is, changing the type
-        //to <error type>
-    }
+    //TODO: eventually this will happen in Exec
 
     //now we have to go in and replace all uses of external types with their actual type
     std::map<typ::Type, typ::Type> typeReplace;

@@ -36,9 +36,7 @@ CodeGen::CodeGen(std::string& outfile)
                 funcs.insert(fd->Value().getFunc().get());
 
         */
-    for (auto m : Global().allModules)
-        for (auto fd : sa::Subtree<ast::FuncDeclExpr>(m))
-            fd->gen(*this);
+    Global().entryPt->Value().getFunc()->gen(*this);
 
     std::string errors;
     llvm::raw_fd_ostream fout(outfile.c_str(), errors);
@@ -53,7 +51,7 @@ CodeGen::CodeGen(std::string& outfile)
 //---------------------------------------------------
 //control flow nodes
 
-Value* ast::FuncDeclExpr::generate(CodeGen& cgen)
+Value* ast::Lambda::generate(CodeGen& cgen)
 {
     //TODO: name mangling?
 
@@ -67,19 +65,9 @@ Value* ast::FuncDeclExpr::generate(CodeGen& cgen)
             llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), cgen.curMod);
     }
 
-    ast::FunctionDef* def = Value().getFunc().get();
-    if (!def || cgen.curFunc->size())
-        return cgen.curFunc; //external or already defined
-
-    def->gen(cgen);
+    getChildA()->gen(cgen);
 
     return cgen.curFunc;
-}
-
-Value* ast::FunctionDef::generate(CodeGen& cgen)
-{
-    getChildA()->gen(cgen);
-    return IGNORED;
 }
 
 Value* ast::StmtPair::generate(CodeGen& cgen)

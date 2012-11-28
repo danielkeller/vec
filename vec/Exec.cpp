@@ -18,24 +18,24 @@ using namespace sa;
 //expressions are removed. Any remaining code marked "static" is executed
 
 //convenience for overload resolution
-typedef std::pair<typ::TypeCompareResult, FuncDeclExpr*> ovr_result;
+typedef std::pair<typ::TypeCompareResult, DeclExpr*> ovr_result;
 struct pairComp
 {
     bool operator()(const ovr_result& lhs, const ovr_result& rhs) {return rhs.first < lhs.first;}
 };
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
-template<class T>
-void Exec::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType)
+void OverloadableExpr::resolveOverload(typ::Type argType, Exec* ex)
 {
     ovr_queue result;
 
-    for (auto func : oGroup->functions)
+    std::vector<DeclExpr*> functions = sco->getVarDefs(name);
+
+    for (auto func : functions)
     {
-        //funcScope is the function's owning scope if its a decl, funcScope->parent is
-        //if its a definition. TODO: this is kind of stupid
-        if (!call->owner->canSee(func->funcScope) && !call->owner->canSee(func->funcScope->getParent()))
-            continue; //not visible in this scope
+        //ignore non-functions
+        if (!func->Type().getFunc().isValid())
+            continue;
 
         result.push(
             std::make_pair(
@@ -44,10 +44,13 @@ void Exec::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             );
     }
 
+    //TODO: find a better way?
+    Node0* call = dynamic_cast<Node0*>(this);
+
     //TODO: now try template functions
     if (result.size() == 0)
     {
-        err::Error(call->loc) << "function '" << oGroup->name << "' is not defined in this scope"
+        err::Error(call->loc) << "function '" << name << "' is not defined in this scope"
             << err::underline << call->loc << err::caret;
         call->Annotate(typ::error);
         return;
@@ -57,14 +60,14 @@ void Exec::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
 
     if (!firstChoice.first.isValid())
     {
-        err::Error(call->loc) << "no accessible instance of overloaded function '" << oGroup->name
+        err::Error(call->loc) << "no accessible instance of overloaded function '" << name
             << "' matches arguments of type " << argType << err::underline << call->loc << err::caret;
         call->Annotate(typ::error);
     }
     else if (result.size() > 1 && (result.pop(), firstChoice.first == result.top().first))
     {
         err::Error ambigErr(call->loc);
-        ambigErr << "overloaded call to '" << oGroup->name << "' is ambiguous" << err::underline
+        ambigErr << "overloaded call to '" << name << "' is ambiguous" << err::underline
             << call->loc << err::caret << firstChoice.second->loc << err::note << "could be" << err::underline;
 
         while (result.size() && firstChoice.first == result.top().first)
@@ -72,24 +75,25 @@ void Exec::resolveOverload(OverloadGroupDeclExpr* oGroup, T* call, typ::Type arg
             ambigErr << result.top().second->loc << err::note << "or" << err::underline;
             result.pop();
         }
-        call->ovrResult = firstChoice.second; //recover
-        call->Annotate(call->ovrResult->Type().getFunc().ret());
+        ovrResult = firstChoice.second; //recover
+        call->Annotate(ovrResult->Type().getFunc().ret());
     }
     else //success
     {
-        call->ovrResult = firstChoice.second;
-        call->Annotate(call->ovrResult->Type().getFunc().ret());
+        ovrResult = firstChoice.second;
+        call->Annotate(ovrResult->Type().getFunc().ret());
 
         //if its an intrinsic, switch it to a special node
-        if (exact_cast<IntrinDeclExpr*>(call->ovrResult))
+        if (exact_cast<IntrinDeclExpr*>(ovrResult))
         {
             Node0* parent = call->parent;
 
-            auto iCall = call->makeICall();
+            auto iCall = makeICall();
 
             parent->replaceDetachedChild(Ptr(iCall));
 
-            iCall->preExec(*this);
+            if (ex)
+                iCall->preExec(*ex);
         }
 
         //TODO: process the function
@@ -129,16 +133,6 @@ void AssignExpr::preExec(Exec& ex)
 
 void OverloadCallExpr::preExec(Exec& ex)
 {
-    func->preExec(ex);
-    OverloadGroupDeclExpr* oGroup = exact_cast<OverloadGroupDeclExpr*>(func->var);
-    if (oGroup == 0)
-    {
-        err::Error(func->loc) << "cannot call object of non-function type "
-            << func->Type() << err::underline;
-        Annotate(func->Type()); //sorta recover
-        return;
-    }
-
     typ::TupleBuilder builder;
     for (auto& arg : Children())
     {
@@ -147,7 +141,7 @@ void OverloadCallExpr::preExec(Exec& ex)
     }
     typ::Type argType = typ::mgr.makeTuple(builder);
 
-    ex.resolveOverload(oGroup, this, argType);
+    resolveOverload(argType, &ex);
 }
 
 void BinExpr::preExec(Exec& ex)
@@ -231,10 +225,8 @@ void BinExpr::preExec(Exec& ex)
         builder.push_back(getChildA()->Type(), Global().reserved.null);
         builder.push_back(getChildB()->Type(), Global().reserved.null);
         typ::Type argType = typ::mgr.makeTuple(builder);
-        DeclExpr* def = Global().universal.getVarDef(Global().reserved.opIdents[op]);
-        OverloadGroupDeclExpr* oGroup = assert_cast<OverloadGroupDeclExpr*>(def, "operator not overloaded properly");
 
-        ex.resolveOverload(oGroup, this, argType);
+        resolveOverload(argType, &ex);
     }
     else
         assert("operator not yet implemented");
@@ -404,54 +396,48 @@ void PhiExpr::preExec(Exec&)
 }
 
 //TOOD: return type and value/call?
-void Exec::processFunc (ast::FuncDeclExpr* n)
+void Exec::processFunc (ast::DeclExpr* n)
 {
+    //TODO: merge and use Lambda's type
+    typ::FuncType ft = n->Type().getFunc();
+    assert(ft.isValid() && "that's not a function!");
+
     if (!n->Value())
         err::Error(n->loc) << "function '" << n->name << "' is never defined";
     else
     {
-        FunctionDef* def = n->Value().getFunc().get();
+        Lambda* def = n->Value().getFunc().get();
 
-        FuncDeclExpr* oldFunc = curFunc;
-        curFunc = n;
+        typ::Type arg = ft.arg();
+        typ::TupleType args = arg.getTuple();
+
+        if (args.isValid())
+        {
+            if (def->params.size() != args.size())
+            {
+                err::Error(n->loc) << "incorrect number of parameters for function, expected "
+                    << utl::to_str(args.size()) << ", got " << def->params.size();
+                return;
+            }
+
+            for (size_t i = 0; i < args.size(); ++i)
+            {
+                def->sco->getVarDef(def->params[i])->Annotate(args.elem(i));
+            }
+        }
+        else
+            def->sco->getVarDef(def->params[0])->Annotate(arg);
 
         def->getChildA()->preExec(*this);
 
         for (auto ret : Subtree<ReturnStmt>(def))
-            if (n->Type().getFunc().ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
+            if (ft.ret().compare(ret->Type()) == typ::TypeCompareResult::invalid)
                 err::Error(ret->loc) << "cannot convert from "
-                    << ret->getChildA()->Type() << " to " << n->Type().getFunc().ret()
+                    << ret->getChildA()->Type() << " to " << ft.ret()
                     << " in function return" << err::underline;
-
-        curFunc = oldFunc;
     }
 }
-/*
-void Sema::processSubtree (ast::Node0* n)
-{
-    //set the module to temporarily publicly import its own private scope.
-    //this lets overloaded calls in scopes inside the public scope see
-    //overloads in private or privately imported scopes
-    //TODO: will this support recursive sema 3? we could track the "current" module.
-    mod->pub_import.Import(&mod->priv);
 
-    intrins.clear();
-    //collect all temps set by overloadable exprs so they can be replaced
-    for (auto tmp : Subtree<TmpExpr>(n))
-    {
-        OverloadableExpr* setBy = dynamic_cast<OverloadableExpr*>(tmp->setBy);
-        if (!setBy)
-            continue;
-        intrins[setBy].push_back(tmp);
-    }
-
-    for (auto n : Subtree<>(n).cached())
-         n->preExec(*this);
-
-    //remove the temporary import
-    mod->pub_import.UnImport(&mod->priv);
-}
-*/
 void Exec::processMod(ast::Module* mod)
 {
     //TODO: warn about cyclic imports
@@ -461,13 +447,13 @@ void Exec::processMod(ast::Module* mod)
             processMod(import);
 
     //change functions into values so we don't enter them early
-    for (auto func : Subtree<FunctionDef>(mod).cached())
+    for (auto func : Subtree<Lambda>(mod).cached())
     {
         Node0* parent = func->parent;
         ConstExpr* funcVal = new ConstExpr(func->loc);
         typ::Type funcType = func->Type();
 
-        funcVal->Annotate(funcType, val::Value(func->detachSelfAs<FunctionDef>()));
+        funcVal->Annotate(funcType, val::Value(func->detachSelfAs<Lambda>()));
         parent->replaceDetachedChild(Ptr(funcVal));
     }
 
@@ -488,19 +474,16 @@ Exec::Exec(ast::Module* mainMod)
         err::Error(err::fatal, mainMod->loc) << "variable 'main' undefined";
         throw err::FatalError();
     }
-    OverloadGroupDeclExpr* mainFunc = exact_cast<OverloadGroupDeclExpr*>(mainVar);
-    if (!mainFunc)
-    {
-        err::Error(err::fatal, mainVar->loc) << "variable 'main' must be a function" << err::underline;
-        throw err::FatalError();
-    }
-    Ptr args = MkNPtr(new ConstExpr(mainFunc->loc));
+
+    Ptr args = MkNPtr(new ConstExpr(mainVar->loc));
     args->Annotate(typ::mgr.makeList(Global().reserved.string_t));
 
     OverloadCallExpr entryPt(
-        MkNPtr(new VarExpr(mainFunc, mainFunc->loc)), move(args), &mainMod->priv, mainFunc->loc);
+        MkNPtr(new VarExpr(mainVar->name, mainVar->sco, mainVar->loc)),
+        move(args), mainVar->loc);
 
-    resolveOverload(mainFunc, &entryPt, typ::mgr.makeList(Global().reserved.string_t));
+    //resolveOverload may be modified at some point to call processFunc
+    entryPt.resolveOverload(typ::mgr.makeList(Global().reserved.string_t), this);
 
     if (!entryPt.ovrResult)
     {

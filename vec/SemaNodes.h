@@ -119,12 +119,12 @@ namespace ast
     };
 
     //TODO: do it this way, or with inline assembly?
-    struct IntrinDeclExpr : public FuncDeclExpr
+    struct IntrinDeclExpr : public DeclExpr
     {
         int intrin_id;
         //it's "based on" func so it's ok not to use Ptr
-        IntrinDeclExpr(FuncDeclExpr* func, int id)
-            : FuncDeclExpr(*func), intrin_id(id) {}
+        IntrinDeclExpr(DeclExpr* func, int id)
+            : DeclExpr(*func), intrin_id(id) {}
         const char *myColor() {return "8";};
     };
 
@@ -152,15 +152,6 @@ namespace ast
         const char *myColor() {return "5";}
         void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
-    };
-
-    struct FunctionDef : public Node1
-    {
-        FunctionDef(typ::Type t, Ptr s)
-            : Node1(move(s))
-        {Annotate(t);}
-        std::string myLbl() {return Type().to_str();}
-        llvm::Value* generate(cg::CodeGen&);
     };
 
     struct ArithCast : public Node1

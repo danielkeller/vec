@@ -27,7 +27,7 @@ struct NullNode : public ValNode
 
 struct FuncNode : public ValNode
 {
-    ast::NPtr<ast::FunctionDef>::type fd;
+    ast::NPtr<ast::Lambda>::type fd;
 
     //FIXME: should be able to clone, for functional stuff
     ValNode* clone() {return this;}
@@ -184,7 +184,7 @@ char* Value::getBytes() const
     return dynamic_cast<ScalarNode*>(node.get())->Get();
 }
 
-ast::NPtr<ast::FunctionDef>::type& Value::getFunc()
+ast::NPtr<ast::Lambda>::type& Value::getFunc()
 {
     return exact_cast<FuncNode*>(node.get())->fd;
 }
@@ -199,7 +199,7 @@ Value::Value(const std::shared_ptr<ValNode>& n)
     node = n;
 }
 
-Value::Value(ast::NPtr<ast::FunctionDef>::type fd)
+Value::Value(ast::NPtr<ast::Lambda>::type fd)
 {
     auto n = std::make_shared<FuncNode>();
     n->fd = move(fd);

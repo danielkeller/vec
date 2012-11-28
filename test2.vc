@@ -1,6 +1,4 @@
-int:[String] main = 8;
-
-int:[String] main =
+int:[String] main {args}
 (
     int foo = 7;
     int bar;
@@ -8,7 +6,6 @@ int:[String] main =
 
     undef = foo == bar + 1 || foo < bar;
 
-    /*
     if (undef)
     (
         if (foo == 7)
@@ -22,6 +19,6 @@ int:[String] main =
             foo = 9;
         else
             int b = foo + 6;
-    )*/
+    )
     bar;
 );

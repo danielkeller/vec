@@ -19,9 +19,10 @@ namespace ast
     {
     public:
         virtual DeclExpr* getVarDef(Ident name) = 0;
+        virtual std::vector<DeclExpr*> getVarDefs(Ident name) = 0;
         virtual TypeDef * getTypeDef(Ident name) = 0;
 
-        virtual bool canSee(Scope* other) = 0;
+        //virtual bool canSee(Scope* other) = 0;
 
         virtual ~Scope() {};
     };
@@ -33,12 +34,13 @@ namespace ast
     public: //maybe find a better way?
 
         std::map<Ident, TypeDef> typeDefs;
-        std::map<Ident, DeclExpr*> varDefs;
+        std::vector<DeclExpr*> varDefs;
 
         //insert var def into current scope
-        void addVarDef(Ident name, DeclExpr* decl);
+        void addVarDef(DeclExpr* decl);
         //recursively find def in all scope parents
         DeclExpr* getVarDef(Ident name);
+        std::vector<DeclExpr*> getVarDefs(Ident name);
 
         NormalScope() : parent(0) {};
         NormalScope(Scope *p) : parent(p) {};
@@ -74,6 +76,7 @@ namespace ast
         }
 
         DeclExpr* getVarDef(Ident name);
+        std::vector<DeclExpr*> getVarDefs(Ident name);
         TypeDef * getTypeDef(Ident name);
 
         bool canSee(Scope* other);

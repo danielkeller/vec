@@ -124,6 +124,7 @@ namespace typ
         TupleNode* und_node;
     public:
         Type elem(size_t pos);
+        size_t size();
         bool isValid() {return und_node != 0;}
         friend class Type;
     };

@@ -27,28 +27,31 @@ namespace ast
 
     struct VarExpr : public Node0
     {
-        DeclExpr* var; //the variable we belong to
-        Ident ename; //name of external variable
+        NormalScope* sco; //the scope we're in
+        Ident name; //name of the variable
 
-        VarExpr(DeclExpr* v, tok::Location const &l)
-            : Node0(l), var(v), ename(Global().reserved.null) {}
-        VarExpr(Ident n, tok::Location const &l)
-            : Node0(l), var(Global().reserved.undeclared_v), ename(n) {}
+        VarExpr(Ident n, NormalScope* s, tok::Location const &l)
+            : Node0(l), sco(s), name(n) {}
         inline std::string myLbl();
         const char *myColor() {return "5";};
         inline annot_t& Annot();
         llvm::Value* generate(cg::CodeGen& gen);
     };
 
-    //could possibly have a weak_string of its name?
     struct DeclExpr : public VarExpr
     {
-        Ident name; //for errors
+        DeclExpr(Ident n, NormalScope* s, typ::Type t, tok::Location const &l)
+            : VarExpr(n, s, l)
+        {
+            s->addVarDef(this);
+            Annotate(t);
+        }
 
-        DeclExpr(Ident n, typ::Type t, tok::Location const &l)
-            : VarExpr(this, l),  name(n) {Annotate(t);}
-        DeclExpr(DeclExpr& old) //this has to be specified because var must point to this
-            : VarExpr(this, old.loc), name(old.name) {Annotate(old.Type());}
+        DeclExpr(DeclExpr& other)
+            : VarExpr(other.name, other.sco, other.loc)
+        {
+            Annotate(other.Type());
+        }
 
         std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
 
@@ -60,37 +63,30 @@ namespace ast
     //put this here so it knows what a DeclExpr is
     std::string VarExpr::myLbl()
     {
-        return var != 0 ? "var " + utl::to_str(var->name) : "undefined var";
+        return sco->getVarDef(name) != 0 ? "var " + utl::to_str(name) : "undefined var";
     }
 
     Node0::annot_t& VarExpr::Annot()
     {
-        return var->Annot();
+        DeclExpr* var = sco->getVarDef(name);
+        if (var)
+            return var->Annot();
+        else //is this right?
+            return Node0::Annot();
     }
 
-    struct FuncDeclExpr : public DeclExpr
+    struct Lambda : public Node1
     {
-        NormalScope* funcScope;
-        FuncDeclExpr* realDecl;
-        FuncDeclExpr(Ident n, typ::Type t, NormalScope* s, tok::Location const &l)
-            : DeclExpr(n, t, l), funcScope(s), realDecl(nullptr) {}
-
-        //allows all declarations of functions to share the value
-        annot_t& Annot() {return realDecl ? realDecl->Annot() : Node0::Annot();}
-        llvm::Value* generate(cg::CodeGen& gen);
+        Ident name;
+        std::vector<Ident> params;
+        NormalScope* sco;
+        Lambda(Ident n, std::vector<Ident> &&p, NormalScope* s, Ptr conts)
+            : Node1(move(conts)), name(n), params(move(p)), sco(s)
+        {}
+        std::string myLbl() {return Type().to_str();}
+        llvm::Value* generate(cg::CodeGen&);
     };
 
-    //declaration of an entire function overload group
-    struct OverloadGroupDeclExpr : public DeclExpr
-    {
-        std::list<FuncDeclExpr*> functions;
-        OverloadGroupDeclExpr(Ident n, tok::Location const &firstLoc)
-            : DeclExpr(n, typ::error, firstLoc)
-        {
-            Annotate(typ::overload);
-        }
-        void Insert(FuncDeclExpr* newDecl);
-    };
 
     struct ConstExpr : public Node0
     {
@@ -109,11 +105,15 @@ namespace ast
 
     struct OverloadableExpr
     {
-        NormalScope* owner;
-        FuncDeclExpr* ovrResult;
+        NormalScope* sco;
+        Ident name;
+        DeclExpr* ovrResult;
         virtual IntrinCallExpr* makeICall() = 0;
-        OverloadableExpr(NormalScope* o)
-            : owner(o), ovrResult(0) {}
+        OverloadableExpr(NormalScope* o, Ident n)
+            : sco(o), name(n), ovrResult(0) {}
+
+        //ex is optional; null if we don't want to exec it now
+        void resolveOverload(typ::Type argType, sa::Exec* ex);
     };
 
     //general binary expressions
@@ -122,11 +122,11 @@ namespace ast
         tok::TokenType op;
         tok::Location opLoc;
         BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
-            : OverloadableExpr(sc),
+            : OverloadableExpr(sc, Global().reserved.opIdents[o.Type()]),
             Node2(move(lhs), move(rhs)), op(o.type), opLoc(o.loc)
         {};
         BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::TokenType o)
-            : OverloadableExpr(sc),
+            : OverloadableExpr(sc, Global().reserved.opIdents[o]),
             Node2(move(lhs), move(rhs)), op(o)
         {};
         std::string myLbl() {return tok::Name(op);}
@@ -155,10 +155,9 @@ namespace ast
 
     struct OverloadCallExpr : public OverloadableExpr, public NodeN
     {
-        NPtr<VarExpr>::type func; //so tree walker won't see it
-        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, NormalScope* owner, const tok::Location & l)
-            : OverloadableExpr(owner), NodeN(move(rhs), l), func(move(lhs)) {}
-        std::string myLbl() {return utl::to_str(func->var->name) + " ?:?";};
+        OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, const tok::Location & l)
+            : OverloadableExpr(lhs->sco, lhs->name), NodeN(move(rhs), l) {}
+        std::string myLbl() {return utl::to_str(name) + " ?:?";};
 
         IntrinCallExpr* makeICall();
         void preExec(sa::Exec&);

@@ -145,12 +145,6 @@ void GlobalData::Initialize()
     universal.addTypeDef(reserved.string, td);
     reserved.string_t = typ::mgr.makeNamed(td.mapped, reserved.string);
 
-    reserved.undeclared_v = new ast::DeclExpr(reserved.undeclared, typ::error, tok::Location());
-    universal.addVarDef(reserved.undeclared, reserved.undeclared_v);
-
-    reserved.intrin_v = new ast::DeclExpr(reserved.intrin, typ::error, tok::Location());
-    universal.addVarDef(reserved.intrin, reserved.intrin_v);
-
     numErrors = 0;
 
     //HACK HACK
@@ -170,6 +164,7 @@ GlobalData::~GlobalData()
 {
     //TODO: allow things to register code to be called at exit?
     //universal declarations are not part of anyone's AST
+    //TODO: currently there are none. Do we need universal?
     for (auto decl : universal.varDefs)
-        delete decl.second;
+        delete decl;
 }

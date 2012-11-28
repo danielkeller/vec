@@ -587,6 +587,7 @@ Type FuncType::ret() {return und_node->ret;}
 Type ListType::conts() {return und_node->contents;}
 
 Type TupleType::elem(size_t pos) {return und_node->conts[pos].first;}
+size_t TupleType::size() {return und_node->conts.size();}
 
 Ident NamedType::name() {return und_node->name;}
 Type NamedType::realType() {return und_node->type;}
@@ -755,7 +756,7 @@ void TypeManager::printAll(std::ostream& os)
 {
     for (auto node : nodes)
     {
-        os << Type(node).to_str() << std::endl;
+        os << Type(node).to_str() << '\n';
     }
 }
 

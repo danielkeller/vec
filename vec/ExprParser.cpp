@@ -45,18 +45,12 @@ Node0* Parser::parseBinaryExprRHS(Node0* lhs, tok::prec::precidence minPrec)
             + (op.Asso_ty() == tok::LeftAssoc ? 1 : 0)));
         //precidence can be the same if it is right associative
 
-        //special case for functions
-        FuncDeclExpr* de = dynamic_cast<FuncDeclExpr*>(lhs);
-        if (op == tok::equals && de)
-            curScope = static_cast<NormalScope*>(curScope->getParent()); //pop scope stack
-        //static_cast is non-ideal but should be safe
-
         //reduce
 
         //special case for function calls with a VarExpr (overloaded calls)
         VarExpr* func = dynamic_cast<VarExpr*>(lhs);
         if (op == tok::colon && func)
-            lhs = new OverloadCallExpr(MkNPtr(func), Ptr(rhs), curScope, op.loc);
+            lhs = new OverloadCallExpr(MkNPtr(func), Ptr(rhs), op.loc);
         else
             lhs = makeBinExpr(Ptr(lhs), Ptr(rhs), curScope, op);
         //fall through and "tail recurse"
@@ -194,12 +188,7 @@ Node0* Parser::parsePrimaryExpr()
     case tok::identifier:
     {
         lexer->Advance();
-        DeclExpr* decl = curScope->getVarDef(to.value.ident_v);
-        if (decl == 0) //didn't find decl
-            return new VarExpr(to.value.ident_v, to.loc);
-        //don't complain, it could be in another package. put in an extern var instead
-
-        return new VarExpr(decl, to.loc);
+        return new VarExpr(to.value.ident_v, curScope, to.loc);
     }
     {
         ConstExpr * ret;

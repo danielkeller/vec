@@ -1,4 +1,5 @@
 #include "Scope.h"
+#include "Expr.h"
 
 using namespace ast;
 
@@ -21,33 +22,34 @@ TypeDef * NormalScope::getTypeDef(Ident name)
         return &it->second;
 }
 
-void NormalScope::addVarDef(Ident name, DeclExpr* decl)
+void NormalScope::addVarDef(DeclExpr* decl)
 {
-    varDefs[name] = decl;
+    varDefs.push_back(decl);
 }
 
 DeclExpr* NormalScope::getVarDef(Ident name)
 {
-    auto it = varDefs.find(name);
-    if (it == varDefs.end())
-    {
-        if (parent)
-            return parent->getVarDef(name);
-        else
-            return nullptr;
-    }
+    for (auto def : varDefs)
+        if (def->name == name)
+            return def;
+
+    if (parent)
+        return parent->getVarDef(name);
     else
-        return it->second;
+        return nullptr;
 }
 
-bool NormalScope::canSee(Scope* other)
+std::vector<DeclExpr*> NormalScope::getVarDefs(Ident name)
 {
-    if (this == other)
-        return true;
-    else if (!parent)
-        return false;
-    else
-        return getParent()->canSee(other);
+    std::vector<DeclExpr*> ret;
+    if (parent)
+        ret = parent->getVarDefs(name);
+
+    for (auto def : varDefs)
+        if (def->name == name)
+            ret.push_back(def);
+
+    return ret;
 }
 
 DeclExpr* ImportScope::getVarDef(Ident name)
@@ -71,6 +73,25 @@ DeclExpr* ImportScope::getVarDef(Ident name)
     return nullptr;
 }
 
+std::vector<DeclExpr*> ImportScope::getVarDefs(Ident name)
+{
+    //don't cycle
+    if (hasVisited)
+        return std::vector<DeclExpr*>();
+    hasVisited = true;
+
+    std::vector<DeclExpr*> ret;
+
+    for (auto scope : imports)
+    {
+        std::vector<DeclExpr*> defs = scope->getVarDefs(name);
+        ret.insert(ret.end(), defs.begin(), defs.end());
+    }
+
+    hasVisited = false;
+    return ret;
+}
+
 TypeDef * ImportScope::getTypeDef(Ident name)
 {
     //don't cycle
@@ -90,29 +111,4 @@ TypeDef * ImportScope::getTypeDef(Ident name)
 
     hasVisited = false;
     return nullptr;
-}
-
-bool ImportScope::canSee(Scope* other)
-{
-    if (this == other)
-        return true;
-    else if (!imports.size())
-        return false;
-
-    //don't cycle
-    if (hasVisited)
-        return false;
-    hasVisited = true;
-    
-    for (auto scope : imports)
-    {
-        if (scope->canSee(other))
-        {
-            hasVisited = false;
-            return true;
-        }
-    }
-
-    hasVisited = false;
-    return false;
 }

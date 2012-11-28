@@ -9,7 +9,7 @@ typedef std::vector<std::string> TblType;
 
 namespace ast
 {
-    struct FuncDeclExpr;
+    struct DeclExpr;
 }
 
 //TODO: make members private and use synchronization to better support threads
@@ -65,7 +65,7 @@ public:
 
     ast::Module* findModule(const std::string& name);
 
-    ast::FuncDeclExpr* entryPt;
+    ast::DeclExpr* entryPt;
 
     int numErrors;
 

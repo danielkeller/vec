@@ -121,36 +121,10 @@ Node0* Parser::parseDecl()
     return parseDeclRHS();
 }
 
-//TODO: should this be here?
-//precondition: newDecl.Type() is actually a function type.
-//this function will segfault otherwise
-void OverloadGroupDeclExpr::Insert(FuncDeclExpr* newDecl)
-{
-    for (auto func : functions)
-    {
-        if (func->Type().getFunc().arg().compare(newDecl->Type().getFunc().arg())
-            == typ::TypeCompareResult::valid)
-        {
-            if (func->Type().getFunc().ret().compare(newDecl->Type().getFunc().ret())
-                == typ::TypeCompareResult::invalid)
-            {
-                err::Error(newDecl->loc) << "overloaded function differs only in return type"
-                    << err::underline << func->loc << err::note << "see previous declaration"
-                    << err::underline;
-            }
-            //let it know about the 'actual' decl
-            newDecl->realDecl = func;
-            return; //already declared
-        }
-    }
-
-    //new!
-    functions.push_back(newDecl);
-}
-
 /*
 primary-expr
     : type IDENT
+    | type IDENT ('{' (IDENT ',')* IDENT '}') | '{' '}' expr
     ;
 */
 Node0* Parser::parseDeclRHS()
@@ -170,81 +144,54 @@ Node0* Parser::parseDeclRHS()
     }
 
     Ident id = to.value.ident_v;
-    DeclExpr* ret;
+    Node0* ret = new DeclExpr(id, curScope, type, to.loc);
 
+    //There are no redefinitions, because there are no definitions, only assignment.
+    //Redeclarations are fine. In case of values declared with multiple types, Exec
+    //can issue an error/warning
 
-    if (type.getFunc().isValid())
+    if (lexer->Expect(tupleBegin))
     {
-        //TODO: insert type params into this scope
-        if (lexer->Peek() == tok::equals)
+        backtrackStatus = CantBacktrack; //there's nothing else it could be
+        std::vector<Ident> params;
+        while (true)
         {
-            mod->scopes.emplace_back(curScope);
-            curScope = &mod->scopes.back(); //create scope for function args
-        }
-
-        OverloadGroupDeclExpr* oGroup;
-        if (DeclExpr* previousDecl = curScope->getVarDef(id))
-        {
-            oGroup = dynamic_cast<OverloadGroupDeclExpr*>(previousDecl);
-            if (!oGroup)
+            tok::Token pTo;
+            if (!lexer->Expect(tok::identifier, pTo))
             {
-                err::Error(to.loc) << "redefinition of non-function as function" << err::underline
-                    << previousDecl->loc << err::note << "see previous declaration" << err::underline;
-                return new VarExpr(previousDecl, to.loc); //recover gracefully
+                err::Error(lexer->Last().loc) << "expected identifier" << err::postcaret;
+                break;
+            }
+            params.push_back(pTo.value.ident_v);
+
+            if (!lexer->Expect(tok::comma))
+            {
+                if (!lexer->Expect(tupleEnd))
+                    err::ExpectedAfter(lexer, "'}'", "parameter list");
+                break;
             }
         }
-        else //we have to create the overload group
+
+        NormalScope* oldScope = curScope;
+        mod->scopes.emplace_back(curScope);
+        curScope = &mod->scopes.back();
+
+        Ptr conts = Ptr(parseExpression());
+
+        for (auto p : params)
         {
-            oGroup = new OverloadGroupDeclExpr(id, to.loc);
-            //overload groups are in the universal scope; the visibility of individual functions
-            //is sorted out in sema 3. global also cleans them up this way!
-            Global().universal.addVarDef(id, oGroup);
+            DeclExpr* pdecl = new DeclExpr(p, curScope, typ::error, ret->loc);
+            curScope->addVarDef(pdecl);
+            conts = Ptr(new StmtPair(Ptr(pdecl), move(conts)));
         }
 
-        FuncDeclExpr* fde = new FuncDeclExpr(id, type, curScope, to.loc);
+        Lambda* body = new Lambda(id, move(params), curScope, move(conts));
+        //FIXME: this is a hack until type merging works
+        body->Annotate(ret->Type());
 
-        oGroup->Insert(fde);
-
-        //leave the decl expr hanging, it will get attached later
-        //add argument definition to function's scope
-        if (lexer->Peek() == tok::equals)
-            curScope->addVarDef(Global().reserved.arg,
-                new DeclExpr(Global().reserved.arg, type.getFunc().arg(), to.loc));
-
-        return fde;
+        ret = new AssignExpr(Ptr(ret), Ptr(body), oldScope, to);
+        curScope = oldScope;
     }
-    else //variable
-    {
-        if (DeclExpr* previousDecl = curScope->getVarDef(id))
-        {
-            //variables cannot be defined twice
-            if (dynamic_cast<OverloadGroupDeclExpr*>(previousDecl))
-            {
-                err::Error(to.loc) << "redefinition of function as non-function" << err::underline
-                    << previousDecl->loc << err::note << "see previous definition" << err::underline;
-            }
-            else
-            {
-                err::Error(to.loc) << "redefinition of variable '" << id
-                    << '\'' << err::underline;
-            }
-
-            return new VarExpr(curScope->getVarDef(id), to.loc); //recover gracefully
-        }
-
-        //this works because idents are given out sequentially
-        if (id >= Global().reserved.opIdents.begin()->second && id <= Global().reserved.opIdents.rbegin()->second)
-        {
-            err::Error(to.loc) << "'operator' may only be used for functions" << err::underline;
-            return new NullExpr(to.loc);
-        }
-
-        ret = new DeclExpr(id, type, to.loc);
-        curScope->addVarDef(id, ret);
-    }
-
-    //this is an inconsistency in location tracking, we should have it start at
-    //the beginning of the type, but we don't know where that is in this scope
 
     return ret;
 }

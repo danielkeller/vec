@@ -10,16 +10,12 @@ namespace sa
     //compile-time execution engine
     class Exec
     {
-        ast::FuncDeclExpr* curFunc;
-
-        void processFunc(ast::FuncDeclExpr* n);
         void processMod(ast::Module* mod);
 
     public:
         Exec(ast::Module* mainMod);
 
-        template<class T>
-        void resolveOverload(ast::OverloadGroupDeclExpr* oGroup, T* call, typ::Type argType);
+        void processFunc(ast::DeclExpr* n);
     };
 }
 

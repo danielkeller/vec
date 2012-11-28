@@ -33,8 +33,6 @@ void err::ExpectedAfter(lex::Lexer *l, const char *expected, const char *after)
 
 void Error::init(Level lvl)
 {
-    ++Global().numErrors;
-
     posn = 0;
 
     std::cerr << loc << ": ";
@@ -46,6 +44,7 @@ void Error::init(Level lvl)
         break;
 
     case error:
+        ++Global().numErrors;
         std::cerr << RED "error: " COLOFF BOLD;
         break;
 
@@ -58,7 +57,7 @@ void Error::init(Level lvl)
 
 Error::~Error()
 {
-    std::cerr << std::endl << std::endl;
+    std::cerr << COLOFF "\n\n";
 }
 
 Error & Error::operator<< (const tok::Location &l)
@@ -77,14 +76,14 @@ Error & Error::operator<< (Special toPrint)
 
     if (toPrint == note)
     {
-        std::cerr << std::endl << loc << ": note: ";
+        std::cerr << '\n' << loc << ": note: ";
         posn = 0;
         return *this;
     }
 
     if (posn == 0) //if we're just starting, print the line
     {
-        std::cerr << std::endl << loc.lineStr << std::endl;
+        std::cerr << '\n' << loc.lineStr << '\n';
     }
 
     std::cerr << GRN;
