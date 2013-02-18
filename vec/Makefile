@@ -9,7 +9,7 @@ SRC = $(wildcard *.cpp)
 OBJECTS	= $(patsubst %.cpp,obj/%.o,$(SRC)) 
 
 vc: objs
-	$(CXX) $(LFLAGS) $(OBJECTS) $(LIBS) -o vc
+	$(CXX) $(OBJECTS) $(LIBS) $(LFLAGS) -o vc
 	cp vc ..
 
 $(OBJECTS): | obj
