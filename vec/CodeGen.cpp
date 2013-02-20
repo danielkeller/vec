@@ -25,17 +25,8 @@ CodeGen::CodeGen(std::string& outfile)
         throw err::FatalError();
     }
 
-    curMod = new Module(outfile + ".bc", getGlobalContext());
+    curMod.reset(new Module(outfile + ".bc", getGlobalContext()));
 
-    //gather up all functions
-    /*
-    std::set<ast::FunctionDef*> funcs;
-    for (auto m : Global().allModules)
-        for (auto fd : sa::Subtree<ast::FuncDeclExpr>(m))
-            if (fd->Value())
-                funcs.insert(fd->Value().getFunc().get());
-
-        */
     Global().entryPt->Value().getFunc()->gen(*this);
 
     std::string errors;
@@ -46,6 +37,7 @@ CodeGen::CodeGen(std::string& outfile)
 	pm.add(createPrintModulePass(&fout));
     pm.add(createVerifierPass(llvm::VerifierFailureAction::PrintMessageAction));
 	pm.run(*curMod);
+    llvm_shutdown();
 }
 
 //---------------------------------------------------
@@ -62,7 +54,7 @@ Value* ast::Lambda::generate(CodeGen& cgen)
     {
         cgen.curFunc = Function::Create(
             dyn_cast<llvm::FunctionType>(Type().toLLVM()),
-            llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), cgen.curMod);
+            llvm::GlobalValue::ExternalLinkage, Global().getIdent(name), cgen.curMod.get());
     }
 
     getChildA()->gen(cgen);

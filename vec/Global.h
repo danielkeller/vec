@@ -61,7 +61,7 @@ public:
         //use some sort of hungarian notation here for clarity
     } reserved;
 
-    std::list<ast::Module*> allModules;
+    std::list<ast::Module> allModules;
 
     ast::Module* findModule(const std::string& name);
 

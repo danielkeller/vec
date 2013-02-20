@@ -19,7 +19,7 @@ namespace ast
     struct Module : public Node1
     {
         Module(std::string fname);
-        ~Module() {delete[] buffer;}
+        ~Module();
 
         void PublicImport(Module* other);
         void PublicUnImport(Module* other);

@@ -27,6 +27,12 @@ void NormalScope::addVarDef(DeclExpr* decl)
     varDefs.push_back(decl);
 }
 
+void NormalScope::removeVarDef(DeclExpr* decl)
+{
+    //erase remove the element that is now one past the end
+    varDefs.erase(std::remove(varDefs.begin(), varDefs.end(), decl));
+}
+
 DeclExpr* NormalScope::getVarDef(Ident name)
 {
     for (auto def : varDefs)

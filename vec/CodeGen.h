@@ -12,7 +12,7 @@ namespace cg
 
         llvm::BasicBlock* curBB;
         llvm::Function* curFunc;
-        llvm::Module* curMod;
+        std::unique_ptr<llvm::Module> curMod;
     };
 }
 

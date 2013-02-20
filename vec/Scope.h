@@ -38,6 +38,7 @@ namespace ast
 
         //insert var def into current scope
         void addVarDef(DeclExpr* decl);
+        void removeVarDef(DeclExpr* decl);
         //recursively find def in all scope parents
         DeclExpr* getVarDef(Ident name);
         std::vector<DeclExpr*> getVarDefs(Ident name);

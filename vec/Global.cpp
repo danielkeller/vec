@@ -32,9 +32,8 @@ GlobalData& Global()
 
 ast::Module* GlobalData::ParseFile(const char* path)
 {
-    ast::Module* mod = new ast::Module(path);
-
-    allModules.push_back(mod);
+    allModules.emplace_back(path);
+    ast::Module* mod = &allModules.back();
 
     mod->name = path;
     auto ext = mod->name.find_first_of(".vc");
@@ -67,8 +66,8 @@ ast::Module* GlobalData::ParseFile(const char* path)
 //may add code later to suppress warnings
 void GlobalData::ParseBuiltin(const char* path)
 {
-    ast::Module* mod = new ast::Module(path);
-    Global().allModules.push_back(mod);
+    allModules.emplace_back(path);
+    ast::Module* mod = &allModules.back();
     mod->name = path;
 
     lex::Lexer l(mod);
@@ -80,8 +79,8 @@ void GlobalData::ParseBuiltin(const char* path)
 
 void GlobalData::ParseMainFile(const char* path)
 {
-    Global().ParseBuiltin("intrinsic");
-    ast::Module* mainMod = Global().ParseFile(path);
+    ParseBuiltin("intrinsic");
+    ast::Module* mainMod = ParseFile(path);
 
     sa::Sema s(mainMod);
     s.Import();
@@ -97,10 +96,6 @@ void GlobalData::ParseMainFile(const char* path)
     std::string outfile = mainMod->name + ".ll";
 
     cg::CodeGen gen(outfile);
-
-    //FIXME: use RAII instead
-    for (auto mod : Global().allModules)
-        delete mod;
 }
 
 Ident GlobalData::addIdent(const std::string &str)
@@ -119,9 +114,9 @@ std::ostream& operator<<(std::ostream& lhs, Ident& rhs)
 
 ast::Module* GlobalData::findModule(const std::string& name)
 {
-    for (auto mod : allModules)
-        if (mod->name == name)
-            return mod;
+    for (auto& mod : allModules)
+        if (mod.name == name)
+            return &mod;
     return nullptr;
 }
 

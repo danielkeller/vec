@@ -6,6 +6,8 @@
 #include "Scope.h"
 #include "Location.h"
 
+#include <iostream>
+
 namespace ast
 {
     //leaf expression type
@@ -47,9 +49,15 @@ namespace ast
             Annotate(t);
         }
 
+        ~DeclExpr()
+        {
+            sco->removeVarDef(this);
+        }
+
         DeclExpr(DeclExpr& other)
             : VarExpr(other.name, other.sco, other.loc)
         {
+            other.sco->addVarDef(this);
             Annotate(other.Type());
         }
 

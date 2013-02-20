@@ -39,6 +39,12 @@ Module::Module(std::string fname)
     fileName = fileName.substr(fileName.find_last_of('/') + 1); //portability!
 }
 
+Module::~Module()
+{
+    delete[] buffer;
+    detachChildA(); //delete the nodes manually before the scopes get deleted
+}
+
 void Module::PublicImport(Module* other)
 {
     imports.insert(other);
