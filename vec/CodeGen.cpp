@@ -37,7 +37,6 @@ CodeGen::CodeGen(std::string& outfile)
 	pm.add(createPrintModulePass(&fout));
     pm.add(createVerifierPass(llvm::VerifierFailureAction::PrintMessageAction));
 	pm.run(*curMod);
-    llvm_shutdown();
 }
 
 //---------------------------------------------------
