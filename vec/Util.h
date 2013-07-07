@@ -31,12 +31,15 @@ To exact_cast(From from)
 
 #ifdef _DEBUG
 
-//FIXME: user won't see the message w/o a debugger
 template<class To, class From>
-To assert_cast(From from, const char *)
+To assert_cast(From from, const char * message)
 {
     To ret = exact_cast<To>(from);
-    assert(ret);
+    if (!ret)
+    {
+        err::Error(err::fatal, tok::Location()) << "Internal error: " << message;
+        throw new err::FatalError();
+    }
     return ret;
 }
 

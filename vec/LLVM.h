@@ -20,6 +20,7 @@
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Transforms/Scalar.h>
+#include <llvm/Support/ManagedStatic.h>
 
 #ifdef _WIN32
 #pragma warning( pop )

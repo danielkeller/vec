@@ -34,6 +34,9 @@ CodeGen::CodeGen(std::string& outfile)
 
 	PassManager pm;
     //pm.add(createDeadCodeEliminationPass());
+    //add a few passes to make the IR easier to read
+    pm.add(createCFGSimplificationPass());
+    //pm.add(createGVNPass());
 	pm.add(createPrintModulePass(&fout));
     pm.add(createVerifierPass(llvm::VerifierFailureAction::PrintMessageAction));
 	pm.run(*curMod);

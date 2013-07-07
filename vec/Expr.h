@@ -13,14 +13,20 @@ namespace ast
     //leaf expression type
     struct NullExpr : public Node0
     {
+        //some explanation of what this is doing here
+        const char * const detail;
+
         NullExpr(tok::Location const &l)
-            : Node0(l)
+            : Node0(l), detail(nullptr)
         {
             Annotate(typ::null); //could be void or <error type> or something
         };
         NullExpr()
-            : Node0(tok::Location()) {}
-        std::string myLbl() {return "Null";}
+            : Node0(tok::Location()), detail(nullptr) {}
+        NullExpr(const char * const detail)
+            : Node0(tok::Location()), detail(detail) {}
+
+        std::string myLbl() {return detail ? detail : "Null";}
         const char *myColor() {return "9";};
         llvm::Value* generate(cg::CodeGen&);
     };
@@ -61,7 +67,7 @@ namespace ast
             Annotate(other.Type());
         }
 
-        std::string myLbl() {return Type().to_str() + " " + utl::to_str(name);}
+        std::string myLbl() {return Type().to_str() + " " + Global().getIdent(name);}
 
         //have to re-override it back to the original
         annot_t& Annot() {return Node0::Annot();}
@@ -71,7 +77,7 @@ namespace ast
     //put this here so it knows what a DeclExpr is
     std::string VarExpr::myLbl()
     {
-        return sco->getVarDef(name) != 0 ? "var " + utl::to_str(name) : "undefined var";
+        return sco->getVarDef(name) != 0 ? Global().getIdent(name) : "undefined var";
     }
 
     Node0::annot_t& VarExpr::Annot()

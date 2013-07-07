@@ -1,6 +1,7 @@
 #include "Module.h"
 #include "Global.h"
 #include "Error.h"
+#include "LLVM.h"
 
 #include <cstdio>
 #include <iostream>
@@ -35,6 +36,7 @@ int main (int argc, char* argv[])
 #endif
 
     GlobalData::create();
+    llvm::llvm_shutdown_obj shutdown/*(multithreaded = false)*/; //clean up llvm upon exit
     
     try
     {

@@ -4,6 +4,7 @@
 #include "Global.h"
 
 #include <cassert>
+#include <set>
 
 using namespace ast;
 using namespace sa;
@@ -236,9 +237,9 @@ void Sema::Phase1()
             //don't do this for nodes that ignore this child's value
             BinExpr* be = exact_cast<BinExpr*>(node->parent);
             if (exact_cast<StmtPair*>(node->parent))
-                tmp = Ptr(new NullExpr());
+                tmp = Ptr(new NullExpr("Temp Ignored"));
             else if (be && be->op == tok::comma)
-                tmp = Ptr(new NullExpr());
+                tmp = Ptr(new NullExpr("Temp Ignored"));
             else
                 tmp = Ptr(new TmpExpr(node));
 
@@ -268,10 +269,17 @@ void Sema::Phase1()
                 upperBr->ifFalse = entry;
         }
 
-        //point our branches that leave the rhoStmt to the "after" branch
+        //point our branches that leave the rhoStmt to the "after" branch.
+        //also, collect these branches, as they define rho's value
+        std::set<BranchStmt*> ends;
         for (auto& lowerBrPtr : rho->Children())
         {
             BranchStmt* lowerBr = exact_cast<BranchStmt*>(lowerBrPtr.get());
+
+            if (lowerBr->ifTrue == nullptr
+                || lowerBr->ifFalse == nullptr)
+                ends.insert(lowerBr);
+
             if (lowerBr->ifTrue == nullptr)
                 lowerBr->ifTrue = exit;
             if (lowerBr->ifFalse == nullptr)
@@ -282,8 +290,11 @@ void Sema::Phase1()
         
         Node0* rhoParent = rho->parent;
         auto rhoPtr = rho->detachSelfAs<RhoStmt>();
-        //PHIXME: should be phi expr
-        rhoParent->replaceDetachedChild(Ptr(new NullExpr()));
+        //now take care of rho's value
+        auto phi = MkNPtr(new PhiExpr(rho->loc));
+        for (auto br : ends)
+            phi->inputs.push_back(br);
+        rhoParent->replaceDetachedChild(move(phi));
 
         for (auto& it : oldOwner->Children())
         {
