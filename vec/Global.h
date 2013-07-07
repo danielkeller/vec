@@ -36,6 +36,8 @@ public:
 
     Ident addIdent(const std::string &str);
 
+    Ident findIdent(tok::TokenType to) {return reserved.opIdents[to];}
+
     std::string & getIdent(Ident idx) {return identTbl[idx];}
 
     ast::NormalScope universal;

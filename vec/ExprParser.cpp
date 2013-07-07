@@ -47,12 +47,16 @@ Node0* Parser::parseBinaryExprRHS(Node0* lhs, tok::prec::precidence minPrec)
 
         //reduce
 
-        //special case for function calls with a VarExpr (overloaded calls)
         VarExpr* func = dynamic_cast<VarExpr*>(lhs);
         if (op == tok::colon && func)
             lhs = new OverloadCallExpr(MkNPtr(func), Ptr(rhs), op.loc);
+        else if (op == tok::equals)
+            lhs = new AssignExpr(Ptr(lhs), Ptr(rhs), op.loc);
+        else if (op == tok::opequals)
+            lhs = new OpAssignExpr(Ptr(lhs), Ptr(rhs), op, curScope);
         else
-            lhs = makeBinExpr(Ptr(lhs), Ptr(rhs), curScope, op);
+            lhs = new OverloadCallExpr(op, curScope, Ptr(lhs), Ptr(rhs));
+
         //fall through and "tail recurse"
     }
     return lhs; //cave johnson, we're done here
@@ -80,8 +84,11 @@ Node0* Parser::parseUnaryExpr()
     case tok::plus:
     case tok::plusplus:
     case tok::minusminus:
-        lexer->Advance();
-        return new UnExpr(Ptr(parsePostfixExpr()), op);
+        {
+            lexer->Advance();
+            Node0* arg = parsePostfixExpr();
+            return new OverloadCallExpr(MkNPtr(new VarExpr(op, curScope)), Ptr(arg), arg->loc);
+        }
     case tok::tick:
         lexer->Advance();
         return new IterExpr(Ptr(parsePostfixExpr()), op);
@@ -122,7 +129,7 @@ Node0* Parser::parsePostfixExpr()
                 err::ExpectedAfter(lexer, tok::Name(listEnd), "expression");
             else
                 rhs->loc += lexer->Last().loc; //lump } in with length of arg. not great but good enough
-            arg = new ListAccExpr(Ptr(arg), Ptr(rhs), curScope, op);
+            arg = new ListAccExpr(Ptr(arg), Ptr(rhs), op, curScope);
             break;
 
         case tupleBegin:
@@ -132,7 +139,7 @@ Node0* Parser::parsePostfixExpr()
                 err::ExpectedAfter(lexer, tok::Name(tupleEnd), "expression");
             else
                 rhs->loc += lexer->Last().loc;
-            arg = new TupAccExpr(Ptr(arg), Ptr(rhs), op);
+            arg = new TupAccExpr(Ptr(arg), Ptr(rhs), op, curScope);
             break;
 
         default: //Toto, I've a feeling we're not in postfix anymore.

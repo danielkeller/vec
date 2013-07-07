@@ -11,28 +11,53 @@ using namespace sa;
 
 //Phase one is for insertion / modification of nodes in a way which
 //generally preserves the structure of the AST
+
+//flatten out listify and tuplify expressions
+void ifyFlatten (NodeN* ify)
+{
+    auto comma = ify->detachChildAs<OverloadCallExpr>(ify->Children().size() - 1);
+
+    while (comma && comma->fun->Op() == tok::comma)
+    {
+        ify->popChild();
+        ify->appendChild(comma->detachChild(0)); //add the left child
+        ify->appendChild(comma->detachChild(1)); //add the (potetially comma) right child
+
+        comma = ify->detachChildAs<OverloadCallExpr>(ify->Children().size() - 1);
+    }
+
+    //replace the non-comma
+    ify->setChild(ify->Children().size() - 1, move(comma));
+}
+
 void Sema::Phase1()
 {
     //TODO: insert ScopeEntryExpr and ScopeExitExpr or somesuch
 
-    //flatten out listify and tuplify expressions
-    auto ifyFlatten = [] (NodeN* ify)
+    for (auto opAs : Subtree<OpAssignExpr>(mod).cached())
     {
-        BinExpr* comma = exact_cast<BinExpr*>(ify->getChild(ify->Children().size() - 1));
-        while (comma != nullptr && comma->op == tok::comma)
-        {
-            auto commaSave = comma->detachSelf(); //don't delete the subtree (yet)
-            ify->popChild();
-            ify->appendChild(comma->detachChildA()); //add the left child
-            ify->appendChild(comma->detachChildB()); //add the (potetially comma) right child
-        }
-    };
+        // a += b
+        // becomes
+        // tmp = leval(a)
+        // *tmp = *tmp + eval(b)
+
+        tok::Token op;
+        op.type = opAs->assignOp;
+        op.loc = opAs->opLoc;
+
+        Ptr tmp = Ptr(new TmpExpr(opAs->getChildA())); //first temp
+        Ptr call = Ptr(new OverloadCallExpr(op, opAs->sco, move(tmp), opAs->detachChildB()));
+
+        tmp = Ptr(new TmpExpr(opAs->getChildA())); //second temp
+        Ptr asgn = Ptr(new AssignExpr(move(tmp), move(call), op.loc));
+        Ptr seq = Ptr(new StmtPair(opAs->detachChildA(), move(asgn)));
+        opAs->parent->replaceChild(opAs, move(seq));
+    }
 
     for (auto ify : Subtree<ListifyExpr>(mod))
         ifyFlatten(ify);
     for (auto ify : Subtree<TuplifyExpr>(mod))
         ifyFlatten(ify);
-
 
     //push flattened tuplify exprs into func calls
     for (auto call : Subtree<OverloadCallExpr>(mod))
@@ -56,7 +81,7 @@ void Sema::Phase1()
         //insert intrinsic declaration if that's what this is
         if (VarExpr* ve = exact_cast<VarExpr*>(ae->getChildB()))
         {
-            if (ve->name == Global().reserved.intrin)
+            if (ve->Name() == Global().reserved.intrin)
             {
                 //defining the same intrinsic twice causes a crash on this line
                 //not a huge deal, but not ideal
@@ -164,18 +189,18 @@ void Sema::Phase1()
         IfElse->parent->replaceChild(IfElse, move(rho));
     }
 
-    for (auto scOp : Subtree<BinExpr>(mod).cached())
+    for (auto scOp : Subtree<OverloadCallExpr>(mod).cached())
     {
-        if (scOp->op != tok::barbar && scOp->op != tok::ampamp)
+        if (scOp->fun->Op() != tok::barbar && scOp->fun->Op() != tok::ampamp)
             continue;
         
         auto rho = MkNPtr(new RhoStmt());
-        auto controlled2 = MkNPtr(new BranchStmt(scOp->detachChildB()));
-        auto controlled1 = MkNPtr(new BranchStmt(scOp->detachChildA(),
+        auto controlled2 = MkNPtr(new BranchStmt(scOp->detachChild(1)));
+        auto controlled1 = MkNPtr(new BranchStmt(scOp->detachChild(0),
             //for and, we eval the rhs if the lhs is true
-        /*ifTrue  = */ scOp->op == tok::ampamp ? controlled2.get() : nullptr,
+        /*ifTrue  = */ scOp->fun->Op() == tok::ampamp ? controlled2.get() : nullptr,
             //for or, we eval the rhs if the lhs is false
-        /*ifFalse = */ scOp->op == tok::barbar ? controlled2.get() : nullptr
+        /*ifFalse = */ scOp->fun->Op() == tok::barbar ? controlled2.get() : nullptr
             ));
 
         auto phi = MkNPtr(new PhiExpr(scOp->loc));
@@ -235,10 +260,11 @@ void Sema::Phase1()
 
             Ptr tmp;
             //don't do this for nodes that ignore this child's value
-            BinExpr* be = exact_cast<BinExpr*>(node->parent);
+            //TODO: do this more flexibly
+            OverloadCallExpr* be = exact_cast<OverloadCallExpr*>(node->parent);
             if (exact_cast<StmtPair*>(node->parent))
                 tmp = Ptr(new NullExpr("Temp Ignored"));
-            else if (be && be->op == tok::comma)
+            else if (be && be->fun->Op() == tok::comma)
                 tmp = Ptr(new NullExpr("Temp Ignored"));
             else
                 tmp = Ptr(new TmpExpr(node));

@@ -189,7 +189,7 @@ Node0* Parser::parseDeclRHS()
         //FIXME: this is a hack until type merging works
         body->Annotate(ret->Type());
 
-        ret = new AssignExpr(Ptr(ret), Ptr(body), oldScope, to);
+        ret = new AssignExpr(Ptr(ret), Ptr(body), to.loc);
         curScope = oldScope;
     }
 

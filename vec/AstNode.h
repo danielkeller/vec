@@ -453,6 +453,12 @@ namespace ast
         {
             appendChild(move(first));
         }
+        NodeN(Ptr first, Ptr second, tok::Location const &l)
+            : Node0(l)
+        {
+            appendChild(move(first));
+            appendChild(move(second));
+        }
 
         ~NodeN()
         {
@@ -460,36 +466,8 @@ namespace ast
 
     public:
 
-        Node0* childAfter(Node0* n)
-        {
-            if (chld.size() == 0)
-                return nullptr;
-            if (n == nullptr)
-                return getChild(0);
-
-            auto loc = std::find_if(chld.begin(), chld.end(),
-                [n](const Ptr& cur) {return cur.get() == n;});
-
-            assert(loc != chld.end() && "child not found!");
-            ++loc;
-            if (loc == chld.end())
-                return nullptr;
-            else
-                return loc->get();
-        }
-
-        Ptr replaceChild(Node0* old, Ptr n)
-        {
-            for (Ptr& c : chld)
-                if (c.get() == old)
-                {
-                    std::swap(c, n);
-                    setParent(c);
-                    return move(n);
-                }
-            assert(false && "didn't find child");
-            return nullptr;
-        }
+        Node0* childAfter(Node0* n);
+        Ptr replaceChild(Node0* old, Ptr n);
 
         Node0* getChild(int n) const
         {
@@ -546,9 +524,11 @@ namespace ast
             chld.push_back(move(c));
         }
 
-        void popChild()
+        Ptr popChild()
         {
+            Ptr ch = move(chld.back());
             chld.pop_back();
+            return ch;
         }
 
         void clear()
@@ -556,20 +536,7 @@ namespace ast
             chld.clear();
         }
 
-        void emitDot(std::ostream &os)
-        {
-            int p = 0;
-            for (Ptr& n : chld)
-            {
-                os << 'n' << static_cast<Node0*>(this) << ":p" << p <<  " -> n" << n.get() << ";\n";
-                ++p;
-                nodeDot(n, os);
-            }
-            os << 'n' << static_cast<Node0*>(this) << " [label=\"" << myLbl();
-            for (unsigned int p = 0; p < chld.size(); ++p)
-                os << "|<p" << p << ">     ";
-            os << "\",shape=record,style=filled,fillcolor=\"/pastel19/" << myColor() << "\"];\n";
-        }
+        void emitDot(std::ostream &os);
 
         void swap(NodeN* other)
         {

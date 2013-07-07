@@ -36,7 +36,7 @@ void NormalScope::removeVarDef(DeclExpr* decl)
 DeclExpr* NormalScope::getVarDef(Ident name)
 {
     for (auto def : varDefs)
-        if (def->name == name)
+        if (def->Name() == name)
             return def;
 
     if (parent)
@@ -52,7 +52,7 @@ std::vector<DeclExpr*> NormalScope::getVarDefs(Ident name)
         ret = parent->getVarDefs(name);
 
     for (auto def : varDefs)
-        if (def->name == name)
+        if (def->Name() == name)
             ret.push_back(def);
 
     return ret;

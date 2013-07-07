@@ -3,7 +3,6 @@
 #include "SemaNodes.h"
 #include "Value.h"
 #include "Global.h"
-#include "Intrinsic.h"
 #include "Error.h"
 
 #include <set>
@@ -146,7 +145,7 @@ Value* ast::NullStmt::generate(CodeGen&)
 
 Value* ast::DeclExpr::generate(CodeGen& cgen)
 {
-    llvm::Value* addr = new AllocaInst(Type().toLLVM(), Global().getIdent(name), cgen.curBB);
+    llvm::Value* addr = new AllocaInst(Type().toLLVM(), Global().getIdent(Name()), cgen.curBB);
     Annotate(addr);
     //TODO: call constructor
 
@@ -201,97 +200,4 @@ Value* ast::ArithCast::generate(CodeGen& cgen)
 
     return CastInst::Create(CastInst::getCastOpcode(arg, true, Type().toLLVM(), true),
         arg, Type().toLLVM(), "", cgen.curBB);
-}
-
-//---------------------------------------------------
-//intrinsic node
-
-#define INTS(op) \
-    case (op) + (intr::TYPES::INT8):  \
-    case (op) + (intr::TYPES::INT16): \
-    case (op) + (intr::TYPES::INT32): \
-    case (op) + (intr::TYPES::INT64)
-
-#define FLOATS(op) \
-    case (op) + (intr::TYPES::FLOAT): \
-    case (op) + (intr::TYPES::DOUBLE): \
-    case (op) + (intr::TYPES::LONG_DOUBLE)
-
-#define NUMERICS(op) \
-    INTS(op): \
-    FLOATS(op)
-    
-#define SET_FOR(var, types, op, llvmop) \
-        types(op): \
-            var = llvmop; \
-            break
-
-#define SET_BIN_OP(types, op, llvmop)   SET_FOR(binOp, types, op, llvmop)
-#define SET_PRED(types, op, llvmop)     SET_FOR(pred,  types, op, llvmop)
-
-Value* ast::IntrinCallExpr::generate(CodeGen& cgen)
-{
-    //first handle the easy cases
-    Instruction::BinaryOps otherOp = Instruction::BinaryOps(-1);
-    Instruction::BinaryOps binOp;
-
-    switch (intrin_id)
-    {
-        SET_BIN_OP(INTS, intr::OPS::PLUS, Instruction::BinaryOps::Add);
-        SET_BIN_OP(FLOATS, intr::OPS::PLUS, Instruction::BinaryOps::FAdd);
-        SET_BIN_OP(INTS, intr::OPS::MINUS, Instruction::BinaryOps::Sub);
-        SET_BIN_OP(FLOATS, intr::OPS::MINUS, Instruction::BinaryOps::FSub);
-        SET_BIN_OP(INTS, intr::OPS::TIMES, Instruction::BinaryOps::Mul);
-        SET_BIN_OP(FLOATS, intr::OPS::TIMES, Instruction::BinaryOps::FMul);
-        SET_BIN_OP(INTS, intr::OPS::DIVIDE, Instruction::BinaryOps::SDiv);
-        SET_BIN_OP(FLOATS, intr::OPS::DIVIDE, Instruction::BinaryOps::FDiv);
-
-        SET_BIN_OP(INTS, intr::OPS::BITAND, Instruction::BinaryOps::And);
-        SET_BIN_OP(INTS, intr::OPS::BITOR, Instruction::BinaryOps::Or);
-        SET_BIN_OP(INTS, intr::OPS::BITXOR, Instruction::BinaryOps::Xor);
-
-    default:
-        binOp = otherOp;
-    }
-
-    if (binOp != otherOp)
-    {
-        llvm::Value* lhs = getChild(0)->gen(cgen);
-        llvm::Value* rhs = getChild(1)->gen(cgen);
-        return BinaryOperator::Create(binOp, lhs, rhs, "", cgen.curBB);
-    }
-
-
-    //now the comparison operators
-    CmpInst::Predicate otherPr = CmpInst::Predicate(-1);
-    CmpInst::Predicate pred;
-
-    switch (intrin_id)
-    {
-        SET_PRED(INTS, intr::OPS::LESS, CmpInst::Predicate::ICMP_SLT);
-        SET_PRED(FLOATS, intr::OPS::LESS, CmpInst::Predicate::FCMP_OLT);
-        SET_PRED(INTS, intr::OPS::GREATER, CmpInst::Predicate::ICMP_SGT);
-        SET_PRED(FLOATS, intr::OPS::GREATER, CmpInst::Predicate::FCMP_OGT);
-
-        SET_PRED(INTS, intr::OPS::NOGREATER, CmpInst::Predicate::ICMP_SLE);
-        SET_PRED(INTS, intr::OPS::NOLESS, CmpInst::Predicate::ICMP_SGE);
-        SET_PRED(INTS, intr::OPS::EQUAL, CmpInst::Predicate::ICMP_EQ);
-        SET_PRED(INTS, intr::OPS::NOTEQUAL, CmpInst::Predicate::ICMP_NE);
-
-    default:
-        pred = otherPr;
-    }
-
-    if (pred != otherPr)
-    {
-        llvm::Value* lhs = getChild(0)->gen(cgen);
-        llvm::Value* rhs = getChild(1)->gen(cgen);
-        return CmpInst::Create(
-            getChild(0)->Type().getPrimitive().isInt()
-                ? Instruction::OtherOps::ICmp
-                : Instruction::OtherOps::FCmp,
-            (unsigned short)pred, lhs, rhs, "", cgen.curBB);
-    }
-    assert(false && "not implemented");
-    return nullptr;
 }

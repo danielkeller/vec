@@ -102,4 +102,4 @@ bool:bool operator! = __intrin;
 [?T]:{?T, [?T]} operator$ = __intrin;
 [?T]:{[?T], ?T} operator$ = __intrin;
 
-?T:{[?T], int!32} operator[] = __intrin;
+?T:{[?T], int!64} operator[] = __intrin;

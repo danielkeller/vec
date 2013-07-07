@@ -8,12 +8,10 @@ int:[String] main {args}
 
     if (undef)
     (
-        //bar = (
         if (foo == 7)
             foo = 8;
         else
             int a = foo + 1;
-        //);
     )
     else
     (

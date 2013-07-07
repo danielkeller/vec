@@ -36,10 +36,23 @@ namespace ast
     struct VarExpr : public Node0
     {
         NormalScope* sco; //the scope we're in
-        Ident name; //name of the variable
+        bool isOp; //is this an operator?
+
+    private:
+        union { //isOp tags this union
+            Ident name; //name of the variable
+            tok::TokenType op; //operator
+        };
+        
+    public:
+        Ident Name() {return isOp ? Global().findIdent(op) : name;}
+
+        tok::TokenType Op() {return isOp ? op : tok::none;}
 
         VarExpr(Ident n, NormalScope* s, tok::Location const &l)
-            : Node0(l), sco(s), name(n) {}
+            : Node0(l), sco(s), name(n), isOp(false) {}
+        VarExpr(const tok::Token opt, NormalScope* s)
+            : Node0(opt.loc), sco(s), op(opt.type), isOp(true) {}
         inline std::string myLbl();
         const char *myColor() {return "5";};
         inline annot_t& Annot();
@@ -61,13 +74,13 @@ namespace ast
         }
 
         DeclExpr(DeclExpr& other)
-            : VarExpr(other.name, other.sco, other.loc)
+            : VarExpr(other.Name(), other.sco, other.loc)
         {
             other.sco->addVarDef(this);
             Annotate(other.Type());
         }
 
-        std::string myLbl() {return Type().to_str() + " " + Global().getIdent(name);}
+        std::string myLbl() {return Type().to_str() + " " + Global().getIdent(Name());}
 
         //have to re-override it back to the original
         annot_t& Annot() {return Node0::Annot();}
@@ -117,86 +130,43 @@ namespace ast
 
     struct IntrinCallExpr;
 
-    struct OverloadableExpr
+    struct AssignExpr : public Node2
     {
-        NormalScope* sco;
-        Ident name;
-        DeclExpr* ovrResult;
-        virtual IntrinCallExpr* makeICall() = 0;
-        OverloadableExpr(NormalScope* o, Ident n)
-            : sco(o), name(n), ovrResult(0) {}
-
-        //ex is optional; null if we don't want to exec it now
-        void resolveOverload(typ::Type argType, sa::Exec* ex);
-    };
-
-    //general binary expressions
-    struct BinExpr : public OverloadableExpr, public Node2
-    {
-        tok::TokenType op;
-        tok::Location opLoc;
-        BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
-            : OverloadableExpr(sc, Global().reserved.opIdents[o.Type()]),
-            Node2(move(lhs), move(rhs)), op(o.type), opLoc(o.loc)
-        {};
-        BinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::TokenType o)
-            : OverloadableExpr(sc, Global().reserved.opIdents[o]),
-            Node2(move(lhs), move(rhs)), op(o)
-        {};
-        std::string myLbl() {return tok::Name(op);}
-
-        IntrinCallExpr* makeICall();
-        void preExec(sa::Exec&);
-    };
-
-    struct AssignExpr : public BinExpr
-    {
-        AssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
-            : BinExpr(move(lhs), move(rhs), sc, o) {};
+        AssignExpr(Ptr lhs, Ptr rhs, tok::Location &opLoc)
+            : Node2(move(lhs), move(rhs), tok::Location()), opLoc(opLoc)
+        {
+            loc = getChildA()->loc + getChildB()->loc;
+        };
         std::string myLbl() {return "'='";}
         annot_t& Annot() {return getChildA()->Annot();}
         void preExec(sa::Exec&);
         llvm::Value* generate(cg::CodeGen& gen);
+        tok::Location opLoc;
     };
 
     struct OpAssignExpr : public AssignExpr
     {
         tok::TokenType assignOp;
-        OpAssignExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
-            : AssignExpr(move(lhs), move(rhs), sc, o), assignOp(o.value.op) {};
+        NormalScope* sco;
+        OpAssignExpr(Ptr lhs, Ptr rhs, tok::Token &o, NormalScope* sco)
+            : AssignExpr(move(lhs), move(rhs), o.loc), assignOp(o.value.op), sco(sco) {};
         std::string myLbl() {return std::string(tok::Name(assignOp)) + '=';}
     };
 
-    struct OverloadCallExpr : public OverloadableExpr, public NodeN
+    struct OverloadCallExpr : public NodeN
     {
         OverloadCallExpr(NPtr<VarExpr>::type lhs, Ptr rhs, const tok::Location & l)
-            : OverloadableExpr(lhs->sco, lhs->name), NodeN(move(rhs), l) {}
-        std::string myLbl() {return utl::to_str(name) + " ?:?";};
+            : fun(move(lhs)), NodeN(move(rhs), l) {}
+        OverloadCallExpr(tok::Token op, ast::NormalScope *sco, Ptr a, Ptr b)
+            : fun(new VarExpr(op, sco)), NodeN(move(a), move(b), op.loc) {}
+        std::string myLbl() {return utl::to_str(fun->Name()) + " ?:?";};
 
-        IntrinCallExpr* makeICall();
         void preExec(sa::Exec&);
-    };
+        NPtr<VarExpr>::type fun;
+        DeclExpr* ovrResult;
 
-    inline BinExpr* makeBinExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &op)
-    {
-        if (op == tok::equals)
-            return new AssignExpr(move(lhs), move(rhs), sc, op);
-        else if (op == tok::opequals)
-            return new OpAssignExpr(move(lhs), move(rhs), sc, op);
-        else
-            return new BinExpr(move(lhs), move(rhs), sc, op);
-    }
-
-    //unary expressions
-    struct UnExpr : public Node1
-    {
-        tok::TokenType op;
-        UnExpr(Ptr arg, tok::Token &o)
-            : Node1(move(arg)), op(o.type)
-        {
-            loc = o.loc + getChildA()->loc;
-        };
-        std::string myLbl() {return tok::Name(op);}
+        //ex is optional; null if we don't want to exec it now
+        void resolveOverload(typ::Type argType, sa::Exec* ex);
     };
 
     struct IterExpr : public Node1
@@ -257,19 +227,19 @@ namespace ast
         std::string myLbl() {return tok::Name(op);}
     };
 
-    struct TupAccExpr : public BinExpr
+    struct TupAccExpr : public OverloadCallExpr
     {
-        TupAccExpr(Ptr lhs, Ptr rhs, tok::Token &o)
-            : BinExpr(move(lhs), move(rhs), 0, o)
+        TupAccExpr(Ptr lhs, Ptr rhs, tok::Token &o, ast::NormalScope *sco)
+            : OverloadCallExpr(o, sco, move(lhs), move(rhs))
         {}
 
         std::string myLbl() {return "a{b}";}
     };
 
-    struct ListAccExpr : public BinExpr
+    struct ListAccExpr : public OverloadCallExpr
     {
-        ListAccExpr(Ptr lhs, Ptr rhs, NormalScope* sc, tok::Token &o)
-            : BinExpr(move(lhs), move(rhs), sc, o)
+        ListAccExpr(Ptr lhs, Ptr rhs, tok::Token &o, ast::NormalScope *sco)
+            : OverloadCallExpr(o, sco, move(lhs), move(rhs))
         {}
 
         std::string myLbl() {return "a[b]";}

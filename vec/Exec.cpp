@@ -25,11 +25,13 @@ struct pairComp
 };
 typedef std::priority_queue<ovr_result, std::vector<ovr_result>, pairComp> ovr_queue;
 
-void OverloadableExpr::resolveOverload(typ::Type argType, Exec* ex)
+void OverloadCallExpr::resolveOverload(typ::Type argType, Exec* ex)
 {
     ovr_queue result;
 
-    std::vector<DeclExpr*> functions = sco->getVarDefs(name);
+    Ident name = fun->Name();
+
+    std::vector<DeclExpr*> functions = fun->sco->getVarDefs(name);
 
     for (auto func : functions)
     {
@@ -84,16 +86,20 @@ void OverloadableExpr::resolveOverload(typ::Type argType, Exec* ex)
         call->Annotate(ovrResult->Type().getFunc().ret());
 
         //if its an intrinsic, switch it to a special node
-        if (exact_cast<IntrinDeclExpr*>(ovrResult))
+        if (IntrinDeclExpr* intrin = exact_cast<IntrinDeclExpr*>(ovrResult))
         {
             Node0* parent = call->parent;
 
-            auto iCall = makeICall();
-
-            parent->replaceDetachedChild(Ptr(iCall));
+            auto iCall = MkNPtr(new IntrinCallExpr(
+                detachSelfAs<OverloadCallExpr>(), intrin->intrin_id));
 
             if (ex)
                 iCall->preExec(*ex);
+
+            parent->replaceDetachedChild(move(iCall));
+
+            //because *this is invalid, we don't want to accidentally do anything after here
+            return;
         }
 
         //TODO: process the function
@@ -119,7 +125,7 @@ void AssignExpr::preExec(Exec& ex)
             err::Error(getChildA()->loc) << "cannot convert from "
                 << getChildB()->Type() << " to "
                 << getChildA()->Type() << " in assignment"
-                << err::underline << opLoc << err::caret
+                << err::underline << loc << err::caret
                 << getChildB()->loc << err::underline;
             return;
         }
@@ -133,49 +139,36 @@ void AssignExpr::preExec(Exec& ex)
 
 void OverloadCallExpr::preExec(Exec& ex)
 {
-    typ::TupleBuilder builder;
     for (auto& arg : Children())
-    {
         arg->preExec(ex);
-        builder.push_back(arg->Type(), Global().reserved.null);
-    }
-    typ::Type argType = typ::mgr.makeTuple(builder);
-
-    resolveOverload(argType, &ex);
-}
-
-void BinExpr::preExec(Exec& ex)
-{
-    getChildA()->preExec(ex);
-    getChildB()->preExec(ex);
 
     //TODO: should this be an intrinsic?
-    if (op == tok::colon) //function pointer call
+    if (fun->Name() == Global().findIdent(tok::colon)) //function pointer call
     {
-        Node0* lhs = getChildA();
+        Node0* lhs = getChild(0);
         typ::FuncType ft = lhs->Type().getFunc();
         if (!ft.isValid())
         {
             err::Error(lhs->loc) << "cannot call object of non-function type "
                 << lhs->Type() << err::underline
-                << opLoc << err::caret;
+                << fun->loc << err::caret;
             Type() = lhs->Type(); //sorta recover
         }
         else
         {
             Annotate(ft.ret());
-            if (!ft.arg().compare(getChildB()->Type()).isValid())
-                err::Error(getChildA()->loc)
+            if (!ft.arg().compare(getChild(1)->Type()).isValid())
+                err::Error(getChild(0)->loc)
                     << "function arguments are inappropriate for function"
-                    << ft.arg().to_str() << " != " << getChildB()->Type()
-                    << err::underline << opLoc << err::caret
-                    << getChildB()->loc << err::underline;
+                    << ft.arg().to_str() << " != " << getChild(1)->Type()
+                    << err::underline << fun->loc << err::caret
+                    << getChild(1)->loc << err::underline;
         }
     }
-    else if (tok::CanBeOverloaded(op))
+    else if (tok::CanBeOverloaded(fun->Op())) //operator call
     {
-        typ::Type lhs_t = getChildA()->Type();
-        typ::Type rhs_t = getChildB()->Type();
+        typ::Type lhs_t = getChild(0)->Type();
+        typ::Type rhs_t = getChild(1)->Type();
         //first do usual arithmetic conversions, if applicable
         //these are stated in the c standard §6.3.1.8 (omitting unsigned types)
         //if unsigned types are added, they should conform to the standard
@@ -184,13 +177,14 @@ void BinExpr::preExec(Exec& ex)
         //TODO: integer-only cases (==, %, etc)
         if (lhs_t.getPrimitive().isArith() && rhs_t.getPrimitive().isArith() && lhs_t != rhs_t)
         {
-            Ptr childA = detachChildA();
-            Ptr childB = detachChildB();
+            Ptr childB = popChild();
+            Ptr childA = popChild();
 
             auto promoteOther = [&](typ::Type target) -> bool
             {
                 if (lhs_t == target)
                 {
+                    //FIXME: this will do bad things if there are side effects
                     childB = Ptr(new ArithCast(target, move(childB)));
                     childB->preExec(ex);
                 }
@@ -217,19 +211,17 @@ void BinExpr::preExec(Exec& ex)
             || promoteOther(typ::int32)
             || promoteOther(typ::int16); //deviate from the standard for consistency
 
-            setChildA(move(childA));
-            setChildB(move(childB));
+            appendChild(move(childA));
+            appendChild(move(childB));
         }
-
-        typ::TupleBuilder builder;
-        builder.push_back(getChildA()->Type(), Global().reserved.null);
-        builder.push_back(getChildB()->Type(), Global().reserved.null);
-        typ::Type argType = typ::mgr.makeTuple(builder);
-
-        resolveOverload(argType, &ex);
     }
-    else
-        assert("operator not yet implemented");
+
+    typ::TupleBuilder builder;
+    for (auto& arg : Children())
+        builder.push_back(arg->Type(), Global().reserved.null);
+    typ::Type argType = typ::mgr.makeTuple(builder);
+
+    resolveOverload(argType, &ex);
 }
 
 #define LL_BITS (sizeof(long long)*8)
@@ -403,7 +395,7 @@ void Exec::processFunc (ast::DeclExpr* n)
     assert(ft.isValid() && "that's not a function!");
 
     if (!n->Value())
-        err::Error(n->loc) << "function '" << n->name << "' is never defined";
+        err::Error(n->loc) << "function '" << n->Name() << "' is never defined";
     else
     {
         Lambda* def = n->Value().getFunc().get();
@@ -479,7 +471,7 @@ Exec::Exec(ast::Module* mainMod)
     args->Annotate(typ::mgr.makeList(Global().reserved.string_t));
 
     OverloadCallExpr entryPt(
-        MkNPtr(new VarExpr(mainVar->name, mainVar->sco, mainVar->loc)),
+        MkNPtr(new VarExpr(mainVar->Name(), mainVar->sco, mainVar->loc)),
         move(args), mainVar->loc);
 
     //resolveOverload may be modified at some point to call processFunc
@@ -493,16 +485,4 @@ Exec::Exec(ast::Module* mainMod)
 
     Global().entryPt = entryPt.ovrResult;
     processFunc(entryPt.ovrResult);
-}
-
-IntrinCallExpr* OverloadCallExpr::makeICall()
-{
-    IntrinDeclExpr* intrin = assert_cast<IntrinDeclExpr*>(ovrResult, "this is not an intrin");
-    return new IntrinCallExpr(detachSelfAs<OverloadCallExpr>(), intrin->intrin_id);
-}
-
-IntrinCallExpr* BinExpr::makeICall()
-{
-    IntrinDeclExpr* intrin = assert_cast<IntrinDeclExpr*>(ovrResult, "this is not an intrin");
-    return new IntrinCallExpr(detachSelfAs<BinExpr>(), intrin->intrin_id);
 }

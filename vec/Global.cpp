@@ -148,9 +148,9 @@ void GlobalData::Initialize()
         if (tok::CanBeOverloaded(tt))
         {
             if (tt == tok::lbrace) //special case
-                reserved.opIdents[tt] = addIdent("operator[]");
+                reserved.opIdents[tt] = addIdent("[]");
             else
-                reserved.opIdents[tt] = addIdent(std::string("operator") + tok::Name(tt));
+                reserved.opIdents[tt] = addIdent(tok::Name(tt));
         }
     }
 }
