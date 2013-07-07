@@ -30,6 +30,21 @@ void ifyFlatten (NodeN* ify)
     ify->setChild(ify->Children().size() - 1, move(comma));
 }
 
+bool isValIgnored(Node0* val)
+{
+    if (StmtPair* p = exact_cast<StmtPair*>(val->parent))
+        if (p->getChildA() == val)
+            return true;
+    if (BranchStmt* br = exact_cast<BranchStmt*>(val->parent))
+    {
+        if (br->ifFalse != nullptr && br->ifTrue != nullptr)
+            return true;
+        else
+            return isValIgnored(br->parent);
+    }
+    return false;
+}
+
 void Sema::Phase1()
 {
     //TODO: insert ScopeEntryExpr and ScopeExitExpr or somesuch
@@ -58,6 +73,15 @@ void Sema::Phase1()
         ifyFlatten(ify);
     for (auto ify : Subtree<TuplifyExpr>(mod))
         ifyFlatten(ify);
+
+    //now throw away any other commas
+    for (auto comma : Subtree<OverloadCallExpr>(mod).cached())
+    {
+        if (comma->fun->Op() != tok::comma)
+            continue;
+        Ptr pair = Ptr(new StmtPair(comma->detachChild(0), comma->detachChild(1)));
+        comma->parent->replaceChild(comma, move(pair));
+    }
 
     //push flattened tuplify exprs into func calls
     for (auto call : Subtree<OverloadCallExpr>(mod))
@@ -260,11 +284,7 @@ void Sema::Phase1()
 
             Ptr tmp;
             //don't do this for nodes that ignore this child's value
-            //TODO: do this more flexibly
-            OverloadCallExpr* be = exact_cast<OverloadCallExpr*>(node->parent);
-            if (exact_cast<StmtPair*>(node->parent))
-                tmp = Ptr(new NullExpr("Temp Ignored"));
-            else if (be && be->fun->Op() == tok::comma)
+            if (isValIgnored(node))
                 tmp = Ptr(new NullExpr("Temp Ignored"));
             else
                 tmp = Ptr(new TmpExpr(node));
@@ -315,12 +335,18 @@ void Sema::Phase1()
         auto newOwner = MkNPtr(new RhoStmt());
         
         Node0* rhoParent = rho->parent;
+        bool rhoIgnored = isValIgnored(rho); //this doesn't work if it's detached
         auto rhoPtr = rho->detachSelfAs<RhoStmt>();
         //now take care of rho's value
-        auto phi = MkNPtr(new PhiExpr(rho->loc));
-        for (auto br : ends)
-            phi->inputs.push_back(br);
-        rhoParent->replaceDetachedChild(move(phi));
+        if (rhoIgnored)
+            rhoParent->replaceDetachedChild(Ptr(new NullExpr("Rho Ignored")));
+        else
+        {
+            auto phi = MkNPtr(new PhiExpr(rho->loc));
+            for (auto br : ends)
+                phi->inputs.push_back(br);
+            rhoParent->replaceDetachedChild(move(phi));
+        }
 
         for (auto& it : oldOwner->Children())
         {
@@ -350,9 +376,10 @@ void Sema::Phase1()
         if (exact_cast<NullStmt*>(sp->getChildA()) != 0
          || exact_cast<NullExpr*>(sp->getChildA()) != 0)
             sp->parent->replaceChild(sp, sp->detachChildB());
+        /* //this changes the semantics!
         else if (exact_cast<NullStmt*>(sp->getChildB()) != 0
               || exact_cast<NullExpr*>(sp->getChildB()) != 0)
-            sp->parent->replaceChild(sp, sp->detachChildA());
+            sp->parent->replaceChild(sp, sp->detachChildA());*/
     }
 
     //TODO: it might be worthwhile, after each stage of sema to validate the tree and check for
